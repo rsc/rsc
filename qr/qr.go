@@ -274,6 +274,30 @@ func vplan(v Version) (*Plan, os.Error) {
 			x += info.astride
 		}
 	}
+
+	// Format pixels.
+	for i := 0; i < 15; i++ {
+		pix := Format.Pixel() + OffsetPixel(i)
+		// top left
+		switch {
+		case i < 6:
+			m[i][8] = pix
+		case i < 8:
+			m[i+1][8] = pix
+		case i < 9:
+			m[8][7] = pix
+		default:
+			m[8][14-i] = pix
+		}
+		// bottom right
+		switch {
+		case i < 8:
+			m[8][siz-1-i] = pix
+		default:
+			m[siz-1-(14-i)][8] = pix
+		}
+	}
+
 	return p, nil
 }
 

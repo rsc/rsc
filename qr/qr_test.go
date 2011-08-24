@@ -35,8 +35,11 @@ Version:
 					want = Alignment.Pixel()
 				} else if cpix&qrencode.Timing != 0 {
 					want = Timing.Pixel()
+				} else if cpix&qrencode.Format != 0 {
+					want = Format.Pixel()
+					want |= OffsetPixel(pix.Offset()) // sic
 				}
-				if want != 0 && cpix&qrencode.Black != 0 {
+				if want != 0 && want.Role() != Format && cpix&qrencode.Black != 0 {
 					want |= Black
 				}
 				if want != 0 && pix != want {
