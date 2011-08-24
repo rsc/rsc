@@ -283,8 +283,8 @@ func vplan(v Version) (*Plan, os.Error) {
 // fplan adds the format pixels
 func fplan(l Level, m Mask, p *Plan) os.Error {
 	// Format pixels.
-	fb := uint32(l^1)<<13  // level: L=01, M=00, Q=11, H=10
-	fb |= uint32(m)<<10  // mask
+	fb := uint32(l^1) << 13 // level: L=01, M=00, Q=11, H=10
+	fb |= uint32(m) << 10   // mask
 	const formatPoly = 0x537
 	rem := fb
 	for i := 14; i >= 10; i-- {
@@ -301,7 +301,7 @@ func fplan(l Level, m Mask, p *Plan) os.Error {
 			pix |= Black
 		}
 		if (invert>>uint(i))&1 == 1 {
-			pix ^= Invert|Black
+			pix ^= Invert | Black
 		}
 		// top left
 		switch {
@@ -334,15 +334,15 @@ func lplan(l Level, p *Plan) os.Error {
 }
 
 // http://www.swetake.com/qr/qr5_en.html
-var mfunc = []func(int, int) bool {
+var mfunc = []func(int, int) bool{
 	func(i, j int) bool { return (i+j)%2 == 0 },
 	func(i, j int) bool { return i%2 == 0 },
 	func(i, j int) bool { return j%3 == 0 },
 	func(i, j int) bool { return (i+j)%3 == 0 },
 	func(i, j int) bool { return (i/2+j/3)%2 == 0 },
-	func(i, j int) bool { return i*j%2 + i*j%3 == 0 },
-	func(i, j int) bool { return (i*j%2 + i*j%3)%2 == 0 },
-	func(i, j int) bool { return (i*j%3 + (i+j)%2)%2 == 0 },
+	func(i, j int) bool { return i*j%2+i*j%3 == 0 },
+	func(i, j int) bool { return (i*j%2+i*j%3)%2 == 0 },
+	func(i, j int) bool { return (i*j%3+(i+j)%2)%2 == 0 },
 }
 
 // mplan edits a version+level-only Plan to add the mask.

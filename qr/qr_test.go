@@ -14,7 +14,7 @@ Version:
 			t.Errorf("qrencode.Encode(%v, L, 8bit, hi): %v", v, err)
 			continue
 		}
-		mask := (^c.Pixel[8][2]&1)<<2 | (c.Pixel[8][3]&1)<<1 | (^c.Pixel[8][4]&1)
+		mask := (^c.Pixel[8][2]&1)<<2 | (c.Pixel[8][3]&1)<<1 | (^c.Pixel[8][4] & 1)
 		p, err := NewPlan(v, L, Mask(mask))
 		if err != nil {
 			t.Errorf("NewPlan(%v, L, %d): %v", v, err, mask)
