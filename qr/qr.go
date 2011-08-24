@@ -159,6 +159,9 @@ func NewPlan(version Version, level Level, mask Mask) (*Plan, os.Error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := fplan(level, mask, p); err != nil {
+		return nil, err
+	}
 	if err := lplan(level, p); err != nil {
 		return nil, err
 	}
@@ -274,31 +277,52 @@ func vplan(v Version) (*Plan, os.Error) {
 			x += info.astride
 		}
 	}
+	return p, nil
+}
 
+// fplan adds the format pixels
+func fplan(l Level, m Mask, p *Plan) os.Error {
 	// Format pixels.
+	fb := uint32(l^1)<<13  // level: L=01, M=00, Q=11, H=10
+	fb |= uint32(m)<<10  // mask
+	const formatPoly = 0x537
+	rem := fb
+	for i := 14; i >= 10; i-- {
+		if rem&(1<<uint(i)) != 0 {
+			rem ^= formatPoly << uint(i-10)
+		}
+	}
+	fb |= rem
+	invert := uint32(0x5412)
+	siz := len(p.Pixel)
 	for i := 0; i < 15; i++ {
 		pix := Format.Pixel() + OffsetPixel(i)
+		if (fb>>uint(i))&1 == 1 {
+			pix |= Black
+		}
+		if (invert>>uint(i))&1 == 1 {
+			pix ^= Invert|Black
+		}
 		// top left
 		switch {
 		case i < 6:
-			m[i][8] = pix
+			p.Pixel[i][8] = pix
 		case i < 8:
-			m[i+1][8] = pix
+			p.Pixel[i+1][8] = pix
 		case i < 9:
-			m[8][7] = pix
+			p.Pixel[8][7] = pix
 		default:
-			m[8][14-i] = pix
+			p.Pixel[8][14-i] = pix
 		}
 		// bottom right
 		switch {
 		case i < 8:
-			m[8][siz-1-i] = pix
+			p.Pixel[8][siz-1-i] = pix
 		default:
-			m[siz-1-(14-i)][8] = pix
+			p.Pixel[siz-1-(14-i)][8] = pix
 		}
 	}
-
-	return p, nil
+	return nil
 }
 
 // lplan edits a version-only Plan to add information
@@ -309,10 +333,29 @@ func lplan(l Level, p *Plan) os.Error {
 	return nil
 }
 
+// http://www.swetake.com/qr/qr5_en.html
+var mfunc = []func(int, int) bool {
+	func(i, j int) bool { return (i+j)%2 == 0 },
+	func(i, j int) bool { return i%2 == 0 },
+	func(i, j int) bool { return j%3 == 0 },
+	func(i, j int) bool { return (i+j)%3 == 0 },
+	func(i, j int) bool { return (i/2+j/3)%2 == 0 },
+	func(i, j int) bool { return i*j%2 + i*j%3 == 0 },
+	func(i, j int) bool { return (i*j%2 + i*j%3)%2 == 0 },
+	func(i, j int) bool { return (i*j%3 + (i+j)%2)%2 == 0 },
+}
+
 // mplan edits a version+level-only Plan to add the mask.
 func mplan(m Mask, p *Plan) os.Error {
+	f := mfunc[m]
 	p.Mask = m
-	// TODO: invert pixels
+	for y, row := range p.Pixel {
+		for x, pix := range row {
+			if r := pix.Role(); (r == Data || r == Check) && f(x, y) {
+				row[x] = pix | Invert
+			}
+		}
+	}
 	return nil
 }
 

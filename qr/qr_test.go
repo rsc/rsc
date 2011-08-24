@@ -9,14 +9,15 @@ func TestVersion(t *testing.T) {
 	badvers := 0
 Version:
 	for v := Version(1); v <= 40; v++ {
-		p, err := NewPlan(v, L, 0)
-		if err != nil {
-			t.Errorf("NewPlan(%v, L, 0): %v", v, err)
-			continue
-		}
 		c, err := qrencode.Encode(qrencode.Version(v), qrencode.L, qrencode.EightBit, "hi")
 		if err != nil {
 			t.Errorf("qrencode.Encode(%v, L, 8bit, hi): %v", v, err)
+			continue
+		}
+		mask := (^c.Pixel[8][2]&1)<<2 | (c.Pixel[8][3]&1)<<1 | (^c.Pixel[8][4]&1)
+		p, err := NewPlan(v, L, Mask(mask))
+		if err != nil {
+			t.Errorf("NewPlan(%v, L, %d): %v", v, err, mask)
 			continue
 		}
 		if len(p.Pixel) != len(c.Pixel) {
@@ -38,6 +39,10 @@ Version:
 				} else if cpix&qrencode.Format != 0 {
 					want = Format.Pixel()
 					want |= OffsetPixel(pix.Offset()) // sic
+					if cpix&qrencode.Black != 0 {
+						want |= Black
+					}
+					pix &^= Invert
 				}
 				if want != 0 && want.Role() != Format && cpix&qrencode.Black != 0 {
 					want |= Black
