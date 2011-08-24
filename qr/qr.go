@@ -329,7 +329,39 @@ func fplan(l Level, m Mask, p *Plan) os.Error {
 // about the error correction levels.
 func lplan(l Level, p *Plan) os.Error {
 	p.Level = l
-	// TODO: fill in info
+	
+	// TODO: prepare actual pix
+	siz := len(p.Pixel)
+	pix := make([]Pixel, siz*siz)
+	
+	// Sweep up pair of columns,
+	// then down, assigning to right then left pixel.
+	// Repeat.
+	// See Figure 2 of http://www.pclviewer.com/rs2/qrtopology.htm
+	for x := siz; x > 0; {
+		for y := siz-1; y >= 0; y-- {
+			if p.Pixel[y][x-1].Role() == 0 {
+				p.Pixel[y][x-1], pix = pix[0], pix[1:]
+			}
+			if p.Pixel[y][x-2].Role() == 0 {
+				p.Pixel[y][x-2], pix = pix[0], pix[1:]
+			}
+		}
+		x -= 2
+		if x == 7 {  // vertical timing strip
+			x--
+		}
+		for y := 0; y < siz; y++ {
+			if p.Pixel[y][x-1].Role() == 0 {
+				p.Pixel[y][x-1], pix = pix[0], pix[1:]
+			}
+			if p.Pixel[y][x-2].Role() == 0 {
+				p.Pixel[y][x-2], pix = pix[0], pix[1:]
+			}
+		}
+		x -= 2
+	}
+
 	return nil
 }
 
@@ -352,7 +384,7 @@ func mplan(m Mask, p *Plan) os.Error {
 	for y, row := range p.Pixel {
 		for x, pix := range row {
 			if r := pix.Role(); (r == Data || r == Check) && f(x, y) {
-				row[x] ^= Black | Invert
+				row[x] ^= Black|Invert
 			}
 		}
 	}
