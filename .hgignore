@@ -1,0 +1,5 @@
+syntax:glob
+_*
+[568].out
+core
+*.cgo*.o
