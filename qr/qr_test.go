@@ -32,7 +32,7 @@ Version:
 				if cpix&qrencode.Finder != 0 {
 					want = Position.Pixel()
 				} else if cpix&qrencode.Alignment != 0 {
-					//want = Alignment.Pixel()
+					want = Alignment.Pixel()
 				} else if cpix&qrencode.Timing != 0 {
 					want = Timing.Pixel()
 				}
@@ -54,5 +54,5 @@ Version:
 				break Version
 			}
 		}
-	}			
+	}
 }

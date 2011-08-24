@@ -50,24 +50,24 @@ func (m Mode) String() string {
 type Pixel uint32
 
 const (
-	Black Pixel = 1<<iota
+	Black Pixel = 1 << iota
 	Invert
 )
 
 func (p Pixel) Offset() int {
-	return int(p>>5)
+	return int(p >> 5)
 }
 
 func OffsetPixel(o int) Pixel {
-	return Pixel(o<<5)
+	return Pixel(o << 5)
 }
 
 func (r PixelRole) Pixel() Pixel {
-	return Pixel(r<<2)
+	return Pixel(r << 2)
 }
 
 func (p Pixel) Role() PixelRole {
-	return PixelRole(p>>2)&7
+	return PixelRole(p>>2) & 7
 }
 
 func (p Pixel) String() string {
@@ -84,14 +84,15 @@ func (p Pixel) String() string {
 
 // A PixelRole describes the role of a QR pixel.
 type PixelRole uint32
+
 const (
-	_ PixelRole = iota
-	Position // position squares (large)
-	Alignment  // alignment squares (small)
-	Timing  // timing strip between position squares
-	Format  // format metadata
-	Data  // data bit
-	Check  // error correction check bit
+	_         PixelRole = iota
+	Position            // position squares (large)
+	Alignment           // alignment squares (small)
+	Timing              // timing strip between position squares
+	Format              // format metadata
+	Data                // data bit
+	Check               // error correction check bit
 )
 
 var roles = []string{
@@ -124,7 +125,7 @@ const (
 
 func (l Level) String() string {
 	if L <= l && l <= H {
-		return "LMQH"[l:l+1]
+		return "LMQH"[l : l+1]
 	}
 	return strconv.Itoa(int(l))
 }
@@ -141,14 +142,14 @@ type Mask int
 // with a specific version, level, and mask.
 type Plan struct {
 	Version Version
-	Level Level
-	Mask Mask
-	
-	DataBytes int // number of data bytes
+	Level   Level
+	Mask    Mask
+
+	DataBytes  int // number of data bytes
 	CheckBytes int // number of error correcting (checksum) bytes
-	Blocks  int // number of data blocks
-	
-	Pixel [][]Pixel  // pixel map
+	Blocks     int // number of data blocks
+
+	Pixel [][]Pixel // pixel map
 }
 
 // NewPlan returns a Plan for a QR code with the given
@@ -167,6 +168,60 @@ func NewPlan(version Version, level Level, mask Mask) (*Plan, os.Error) {
 	return p, nil
 }
 
+// A version describes metadata associated with a version.
+type version struct {
+	apos    int
+	astride int
+}
+
+var vtab = []version{
+	{}, // dummy version 0
+	// 1-10
+	{100, 100},
+	{16, 100},
+	{20, 100},
+	{24, 100},
+	{28, 100},
+	{32, 100},
+	{20, 16},
+	{22, 18},
+	{24, 20},
+	{26, 22},
+	// 11-20
+	{28, 24},
+	{30, 26},
+	{32, 28},
+	{24, 20},
+	{24, 22},
+	{24, 24},
+	{28, 24},
+	{28, 26},
+	{28, 28},
+	{32, 28},
+	// 21-30
+	{26, 22},
+	{24, 24},
+	{28, 24},
+	{26, 26},
+	{30, 26},
+	{28, 28},
+	{32, 28},
+	{24, 24},
+	{28, 24},
+	{24, 26},
+	// 31-40
+	{28, 26},
+	{32, 26},
+	{28, 28},
+	{32, 28},
+	{28, 24},
+	{22, 26},
+	{26, 26},
+	{30, 26},
+	{24, 28},
+	{28, 28},
+}
+
 // vplan creates a Plan for the given version.
 func vplan(v Version) (*Plan, os.Error) {
 	p := &Plan{Version: v}
@@ -180,10 +235,10 @@ func vplan(v Version) (*Plan, os.Error) {
 		m[i], pix = pix[:siz], pix[siz:]
 	}
 	p.Pixel = m
-	
+
 	// Timing markers (overwritten by boxes).
 	// TODO: are there more in higher versions?
-	const ti = 6  // timing is in row/column 6 (counting from 0)
+	const ti = 6 // timing is in row/column 6 (counting from 0)
 	for i := range m {
 		p := Timing.Pixel()
 		if i&1 == 0 {
@@ -192,15 +247,33 @@ func vplan(v Version) (*Plan, os.Error) {
 		m[i][ti] = p
 		m[ti][i] = p
 	}
-	
+
 	// Position boxes.
 	posBox(m, 0, 0)
 	posBox(m, siz-7, 0)
 	posBox(m, 0, siz-7)
 
 	// Alignment boxes.
-	// TODO.
-	
+	info := &vtab[v]
+	for x := 4; x+5 < siz; {
+		for y := 4; y+5 < siz; {
+			// don't overwrite timing markers
+			if (x < 7 && y < 7) || (x < 7 && y+5 >= siz-7) || (x+5 >= siz-7 && y < 7) {
+			} else {
+				alignBox(m, x, y)
+			}
+			if y == 4 {
+				y = info.apos
+			} else {
+				y += info.astride
+			}
+		}
+		if x == 4 {
+			x = info.apos
+		} else {
+			x += info.astride
+		}
+	}
 	return p, nil
 }
 
