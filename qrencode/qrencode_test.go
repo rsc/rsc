@@ -12,7 +12,7 @@ import (
 )
 
 func TestEncode(t *testing.T) {
-	c, err := Encode(10, L, Alphanumeric, "HELLO WORLD")
+	c, err := Encode(2, L, Alphanumeric, "HELLO WORLD")
 	if err != nil {
 		t.Fatal(err)
 	}
