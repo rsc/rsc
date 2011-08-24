@@ -352,7 +352,7 @@ func mplan(m Mask, p *Plan) os.Error {
 	for y, row := range p.Pixel {
 		for x, pix := range row {
 			if r := pix.Role(); (r == Data || r == Check) && f(x, y) {
-				row[x] = pix | Invert
+				row[x] ^= Black | Invert
 			}
 		}
 	}
