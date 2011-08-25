@@ -2,9 +2,13 @@ package qr
 
 import (
 	"fmt"
+	"gf256"
 	"os"
 	"strconv"
 )
+
+// field is the field for QR error correction.
+var field = gf256.NewField(0x11d)
 
 // A Version represents a QR version.
 // The version specifies the size of the QR code:
@@ -55,11 +59,11 @@ const (
 )
 
 func (p Pixel) Offset() int {
-	return int(p >> 5)
+	return int(p >> 6)
 }
 
 func OffsetPixel(o int) Pixel {
-	return Pixel(o << 5)
+	return Pixel(o << 6)
 }
 
 func (r PixelRole) Pixel() Pixel {
@@ -67,7 +71,7 @@ func (r PixelRole) Pixel() Pixel {
 }
 
 func (p Pixel) Role() PixelRole {
-	return PixelRole(p>>2) & 7
+	return PixelRole(p>>2) & 15
 }
 
 func (p Pixel) String() string {
@@ -91,8 +95,11 @@ const (
 	Alignment           // alignment squares (small)
 	Timing              // timing strip between position squares
 	Format              // format metadata
+	PVersion   // version pattern
+	Unused   // unused pixel
 	Data                // data bit
 	Check               // error correction check bit
+	Extra
 )
 
 var roles = []string{
@@ -101,8 +108,11 @@ var roles = []string{
 	"alignment",
 	"timing",
 	"format",
+	"pversion",
+	"unused",
 	"data",
 	"check",
+	"extra",
 }
 
 func (r PixelRole) String() string {
@@ -162,7 +172,7 @@ func NewPlan(version Version, level Level, mask Mask) (*Plan, os.Error) {
 	if err := fplan(level, mask, p); err != nil {
 		return nil, err
 	}
-	if err := lplan(level, p); err != nil {
+	if err := lplan(version, level, p); err != nil {
 		return nil, err
 	}
 	if err := mplan(mask, p); err != nil {
@@ -175,54 +185,58 @@ func NewPlan(version Version, level Level, mask Mask) (*Plan, os.Error) {
 type version struct {
 	apos    int
 	astride int
+	bytes int
+	pattern int
+	level [4]level
+}
+
+type level struct {
+	nblock int
+	check int
 }
 
 var vtab = []version{
-	{}, // dummy version 0
-	// 1-10
-	{100, 100},
-	{16, 100},
-	{20, 100},
-	{24, 100},
-	{28, 100},
-	{32, 100},
-	{20, 16},
-	{22, 18},
-	{24, 20},
-	{26, 22},
-	// 11-20
-	{28, 24},
-	{30, 26},
-	{32, 28},
-	{24, 20},
-	{24, 22},
-	{24, 24},
-	{28, 24},
-	{28, 26},
-	{28, 28},
-	{32, 28},
-	// 21-30
-	{26, 22},
-	{24, 24},
-	{28, 24},
-	{26, 26},
-	{30, 26},
-	{28, 28},
-	{32, 28},
-	{24, 24},
-	{28, 24},
-	{24, 26},
-	// 31-40
-	{28, 26},
-	{32, 26},
-	{28, 28},
-	{32, 28},
-	{28, 24},
-	{22, 26},
-	{26, 26},
-	{30, 26},
-	{24, 28},
-	{28, 28},
+	{},
+	{100, 100, 26, 0x0, [4]level{{1, 7}, {1, 10}, {1, 13}, {1, 17}}},  // 1
+	{16, 100, 44, 0x0, [4]level{{1, 10}, {1, 16}, {1, 22}, {1, 28}}},  // 2
+	{20, 100, 70, 0x0, [4]level{{1, 15}, {1, 26}, {2, 18}, {2, 22}}},  // 3
+	{24, 100, 100, 0x0, [4]level{{1, 20}, {2, 18}, {2, 26}, {4, 16}}},  // 4
+	{28, 100, 134, 0x0, [4]level{{1, 26}, {2, 24}, {4, 18}, {4, 22}}},  // 5
+	{32, 100, 172, 0x0, [4]level{{2, 18}, {4, 16}, {4, 24}, {4, 28}}},  // 6
+	{20, 16, 196, 0x7c94, [4]level{{2, 20}, {4, 18}, {6, 18}, {5, 26}}},  // 7
+	{22, 18, 242, 0x85bc, [4]level{{2, 24}, {4, 22}, {6, 22}, {6, 26}}},  // 8
+	{24, 20, 292, 0x9a99, [4]level{{2, 30}, {5, 22}, {8, 20}, {8, 24}}},  // 9
+	{26, 22, 346, 0xa4d3, [4]level{{4, 18}, {5, 26}, {8, 24}, {8, 28}}},  // 10
+	{28, 24, 404, 0xbbf6, [4]level{{4, 20}, {5, 30}, {8, 28}, {11, 24}}},  // 11
+	{30, 26, 466, 0xc762, [4]level{{4, 24}, {8, 22}, {10, 26}, {11, 28}}},  // 12
+	{32, 28, 532, 0xd847, [4]level{{4, 26}, {9, 22}, {12, 24}, {16, 22}}},  // 13
+	{24, 20, 581, 0xe60d, [4]level{{4, 30}, {9, 24}, {16, 20}, {16, 24}}},  // 14
+	{24, 22, 655, 0xf928, [4]level{{6, 22}, {10, 24}, {12, 30}, {18, 24}}},  // 15
+	{24, 24, 733, 0x10b78, [4]level{{6, 24}, {10, 28}, {17, 24}, {16, 30}}},  // 16
+	{28, 24, 815, 0x1145d, [4]level{{6, 28}, {11, 28}, {16, 28}, {19, 28}}},  // 17
+	{28, 26, 901, 0x12a17, [4]level{{6, 30}, {13, 26}, {18, 28}, {21, 28}}},  // 18
+	{28, 28, 991, 0x13532, [4]level{{7, 28}, {14, 26}, {21, 26}, {25, 26}}},  // 19
+	{32, 28, 1085, 0x149a6, [4]level{{8, 28}, {16, 26}, {20, 30}, {25, 28}}},  // 20
+	{26, 22, 1156, 0x15683, [4]level{{8, 28}, {17, 26}, {23, 28}, {25, 30}}},  // 21
+	{24, 24, 1258, 0x168c9, [4]level{{9, 28}, {17, 28}, {23, 30}, {34, 24}}},  // 22
+	{28, 24, 1364, 0x177ec, [4]level{{9, 30}, {18, 28}, {25, 30}, {30, 30}}},  // 23
+	{26, 26, 1474, 0x18ec4, [4]level{{10, 30}, {20, 28}, {27, 30}, {32, 30}}},  // 24
+	{30, 26, 1588, 0x191e1, [4]level{{12, 26}, {21, 28}, {29, 30}, {35, 30}}},  // 25
+	{28, 28, 1706, 0x1afab, [4]level{{12, 28}, {23, 28}, {34, 28}, {37, 30}}},  // 26
+	{32, 28, 1828, 0x1b08e, [4]level{{12, 30}, {25, 28}, {34, 30}, {40, 30}}},  // 27
+	{24, 24, 1921, 0x1cc1a, [4]level{{13, 30}, {26, 28}, {35, 30}, {42, 30}}},  // 28
+	{28, 24, 2051, 0x1d33f, [4]level{{14, 30}, {28, 28}, {38, 30}, {45, 30}}},  // 29
+	{24, 26, 2185, 0x1ed75, [4]level{{15, 30}, {29, 28}, {40, 30}, {48, 30}}},  // 30
+	{28, 26, 2323, 0x1f250, [4]level{{16, 30}, {31, 28}, {43, 30}, {51, 30}}},  // 31
+	{32, 26, 2465, 0x209d5, [4]level{{17, 30}, {33, 28}, {45, 30}, {54, 30}}},  // 32
+	{28, 28, 2611, 0x216f0, [4]level{{18, 30}, {35, 28}, {48, 30}, {57, 30}}},  // 33
+	{32, 28, 2761, 0x228ba, [4]level{{19, 30}, {37, 28}, {51, 30}, {60, 30}}},  // 34
+	{28, 24, 2876, 0x2379f, [4]level{{19, 30}, {38, 28}, {53, 30}, {63, 30}}},  // 35
+	{22, 26, 3034, 0x24b0b, [4]level{{20, 30}, {40, 28}, {56, 30}, {66, 30}}},  // 36
+	{26, 26, 3196, 0x2542e, [4]level{{21, 30}, {43, 28}, {59, 30}, {70, 30}}},  // 37
+	{30, 26, 3362, 0x26a64, [4]level{{22, 30}, {45, 28}, {62, 30}, {74, 30}}},  // 38
+	{24, 28, 3532, 0x27541, [4]level{{24, 30}, {47, 28}, {65, 30}, {77, 30}}},  // 39
+	{28, 28, 3706, 0x28c69, [4]level{{25, 30}, {49, 28}, {68, 30}, {81, 30}}},  // 40
 }
 
 // vplan creates a Plan for the given version.
@@ -277,6 +291,27 @@ func vplan(v Version) (*Plan, os.Error) {
 			x += info.astride
 		}
 	}
+
+	// Version pattern.
+	pat := vtab[v].pattern
+	if pat != 0 {
+		v := pat
+		for x := 0; x < 6; x++ {
+			for y := 0; y < 3; y++ {
+				p := PVersion.Pixel()
+				if v&1 != 0 {
+					p |= Black
+				}
+				m[siz-11+y][x] = p
+				m[x][siz-11+y] = p
+				v >>= 1
+			}
+		}
+	}
+
+	// One lonely black pixel
+	m[siz-8][8] = Unused.Pixel() | Black
+
 	return p, nil
 }
 
@@ -327,24 +362,80 @@ func fplan(l Level, m Mask, p *Plan) os.Error {
 
 // lplan edits a version-only Plan to add information
 // about the error correction levels.
-func lplan(l Level, p *Plan) os.Error {
+func lplan(v Version, l Level, p *Plan) os.Error {
 	p.Level = l
 
-	// TODO: prepare actual pix
-	siz := len(p.Pixel)
-	pix := make([]Pixel, siz*siz)
+	nblock := vtab[v].level[l].nblock
+	ne := vtab[v].level[l].check
+	nde := (vtab[v].bytes - ne*nblock)/nblock
+	extra := (vtab[v].bytes - ne*nblock)%nblock
+	dataBits := (nde*nblock+extra)*8
+	checkBits := ne*nblock*8
+
+	// Make data + checksum pixels.
+	data := make([]Pixel, dataBits)
+	for i := range data {
+		data[i] = Data.Pixel() | OffsetPixel(i)
+	}
+	check := make([]Pixel, checkBits)
+	for i := range check {
+		check[i] = Check.Pixel() | OffsetPixel(i)
+	}
+	
+	// Split into blocks.
+	dataList := make([][]Pixel, nblock)
+	checkList := make([][]Pixel, nblock)
+	for i := 0; i < nblock; i++ {
+		// The last few blocks have an extra data byte (8 pixels).
+		nd := nde
+		if i >= nblock-extra {
+			nd++
+		}
+		dataList[i], data = data[0:nd*8], data[nd*8:]
+		checkList[i], check = check[0:ne*8], check[ne*8:]
+	}
+	
+	// Build up bit sequence, taking first byte of each block,
+	// then second byte, and so on.  Then checksums.
+	bits := make([]Pixel, dataBits+checkBits)
+	dst := bits
+	for i := 0; i < nde+1; i++ {
+		for _, b := range dataList {
+			if i*8 < len(b) {
+				copy(dst, b[i*8:(i+1)*8])
+				dst = dst[8:]
+			}
+		}
+	}
+	for i := 0; i < ne; i++ {
+		for _, b := range checkList {
+			if i*8 < len(b) {
+				copy(dst, b[i*8:(i+1)*8])
+				dst = dst[8:]
+			}
+		}
+	}
+	if len(dst) != 0 {
+		panic("dst math")
+	}
 
 	// Sweep up pair of columns,
 	// then down, assigning to right then left pixel.
 	// Repeat.
 	// See Figure 2 of http://www.pclviewer.com/rs2/qrtopology.htm
+	siz := len(p.Pixel)
+	rem := make([]Pixel, 7)
+	for i := range rem {
+		rem[i] = Extra.Pixel()
+	}
+	src := append(bits, rem...)
 	for x := siz; x > 0; {
 		for y := siz - 1; y >= 0; y-- {
 			if p.Pixel[y][x-1].Role() == 0 {
-				p.Pixel[y][x-1], pix = pix[0], pix[1:]
+				p.Pixel[y][x-1], src = src[0], src[1:]
 			}
 			if p.Pixel[y][x-2].Role() == 0 {
-				p.Pixel[y][x-2], pix = pix[0], pix[1:]
+				p.Pixel[y][x-2], src = src[0], src[1:]
 			}
 		}
 		x -= 2
@@ -353,15 +444,14 @@ func lplan(l Level, p *Plan) os.Error {
 		}
 		for y := 0; y < siz; y++ {
 			if p.Pixel[y][x-1].Role() == 0 {
-				p.Pixel[y][x-1], pix = pix[0], pix[1:]
+				p.Pixel[y][x-1], src = src[0], src[1:]
 			}
 			if p.Pixel[y][x-2].Role() == 0 {
-				p.Pixel[y][x-2], pix = pix[0], pix[1:]
+				p.Pixel[y][x-2], src = src[0], src[1:]
 			}
 		}
 		x -= 2
 	}
-
 	return nil
 }
 
@@ -383,7 +473,7 @@ func mplan(m Mask, p *Plan) os.Error {
 	p.Mask = m
 	for y, row := range p.Pixel {
 		for x, pix := range row {
-			if r := pix.Role(); (r == Data || r == Check) && f(x, y) {
+			if r := pix.Role(); (r == Data || r == Check || r == Extra) && f(y, x) {
 				row[x] ^= Black | Invert
 			}
 		}

@@ -1,6 +1,7 @@
 package qr
 
 import (
+	"bytes"
 	"qrencode"
 	"testing"
 )
@@ -30,25 +31,44 @@ Version:
 			for x, pix := range prow {
 				cpix := c.Pixel[y][x]
 				want := Pixel(0)
-				if cpix&qrencode.Finder != 0 {
+				switch {
+				case cpix&qrencode.Finder != 0:
 					want = Position.Pixel()
-				} else if cpix&qrencode.Alignment != 0 {
+				case cpix&qrencode.Alignment != 0:
 					want = Alignment.Pixel()
-				} else if cpix&qrencode.Timing != 0 {
+				case cpix&qrencode.Timing != 0:
 					want = Timing.Pixel()
-				} else if cpix&qrencode.Format != 0 {
+				case cpix&qrencode.Format != 0:
 					want = Format.Pixel()
 					want |= OffsetPixel(pix.Offset()) // sic
+					want |= pix&Invert
+				case cpix&qrencode.PVersion != 0:
+					want = PVersion.Pixel()
+				case cpix&qrencode.DataECC != 0:
+					if pix.Role() == Check || pix.Role() == Extra {
+						want = pix.Role().Pixel()
+					} else {
+						want = Data.Pixel()
+					}
+					want |= OffsetPixel(pix.Offset())
+					want |= pix&Invert
+					// KLUDGE
+					if pix.Role() != Extra {
+						want |= pix&Black
+					}
+				default:
+					want = Unused.Pixel()
+				}
+				switch want.Role() {
+				case Check, Data:
+					//
+				default:
 					if cpix&qrencode.Black != 0 {
 						want |= Black
 					}
-					pix &^= Invert
 				}
-				if want != 0 && want.Role() != Format && cpix&qrencode.Black != 0 {
-					want |= Black
-				}
-				if want != 0 && pix != want {
-					t.Errorf("%v: Pixel[%d][%d] = %v, want %v", v, y, x, pix, want)
+				if pix != want {
+					t.Errorf("%v/%v: Pixel[%d][%d] = %v, want %v %#x", v, mask, y, x, pix, want, cpix)
 					if badpix++; badpix >= 10 {
 						t.Errorf("stopping after %d bad pixels", badpix)
 						break Pixel
@@ -63,4 +83,14 @@ Version:
 			}
 		}
 	}
+}
+
+func TestEncode(t *testing.T) {
+	data := []byte{0x10, 0x20, 0x0c, 0x56, 0x61, 0x80, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11}
+	check := []byte{0xa5, 0x24, 0xd4, 0xc1, 0xed, 0x36, 0xc7, 0x87, 0x2c, 0x55}
+	const poly = 0x11d
+	out := field.ECBytes(data, len(check))
+	if !bytes.Equal(out, check) {
+		t.Errorf("have %x want %x", out, check)
+	}		
 }
