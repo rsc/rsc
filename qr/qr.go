@@ -49,7 +49,7 @@ type Encoding interface {
 }
 
 type Bits struct {
-	b []byte
+	b    []byte
 	nbit int
 }
 
@@ -73,15 +73,15 @@ func (b *Bits) Write(v uint, nbit int) {
 		if b.nbit%8 == 0 {
 			b.b = append(b.b, 0)
 		} else {
-			m := -b.nbit&7
+			m := -b.nbit & 7
 			if n > m {
 				n = m
 			}
 		}
 		b.nbit += n
-		sh := uint(nbit-n)
-		b.b[len(b.b)-1] |= uint8(v>>sh<<uint(-b.nbit&7))
-		v -= v>>sh<<sh
+		sh := uint(nbit - n)
+		b.b[len(b.b)-1] |= uint8(v >> sh << uint(-b.nbit&7))
+		v -= v >> sh << sh
 		nbit -= n
 	}
 }
@@ -113,7 +113,7 @@ func (s Num) Encode(b *Bits, v Version) {
 	b.Write(1, 4)
 	b.Write(uint(len(s)), numLen[v.sizeClass()])
 	var i int
-	for i = 0; i+3 <= len(s); i+=3 {
+	for i = 0; i+3 <= len(s); i += 3 {
 		w := uint(s[i]-'0')*100 + uint(s[i+1]-'0')*10 + uint(s[i+2]-'0')
 		b.Write(w, 10)
 	}
@@ -122,7 +122,7 @@ func (s Num) Encode(b *Bits, v Version) {
 		w := uint(s[i] - '0')
 		b.Write(w, 4)
 	case 2:
-		w := uint(s[i] - '0')*10 + uint(s[i+1] - '0')
+		w := uint(s[i]-'0')*10 + uint(s[i+1]-'0')
 		b.Write(w, 7)
 	}
 }
@@ -156,8 +156,8 @@ func (s Alpha) Encode(b *Bits, v Version) {
 	b.Write(2, 4)
 	b.Write(uint(len(s)), alphaLen[v.sizeClass()])
 	var i int
-	for i = 0; i+2 <= len(s); i+=2 {
-		w := uint(strings.IndexRune(alphabet, int(s[i]))) * 45 +
+	for i = 0; i+2 <= len(s); i += 2 {
+		w := uint(strings.IndexRune(alphabet, int(s[i])))*45 +
 			uint(strings.IndexRune(alphabet, int(s[i+1])))
 		b.Write(w, 11)
 	}
@@ -238,8 +238,8 @@ const (
 	Alignment           // alignment squares (small)
 	Timing              // timing strip between position squares
 	Format              // format metadata
-	PVersion   // version pattern
-	Unused   // unused pixel
+	PVersion            // version pattern
+	Unused              // unused pixel
 	Data                // data bit
 	Check               // error correction check bit
 	Extra
@@ -287,7 +287,7 @@ func (l Level) String() string {
 // It implements image.Image.
 type Code struct {
 	Pixel [][]Pixel
-	Scale int  // number of image pixels per QR pixel
+	Scale int // number of image pixels per QR pixel
 }
 
 func (*Code) ColorModel() image.ColorModel {
@@ -302,23 +302,23 @@ func (c *Code) Bounds() image.Rectangle {
 var (
 	white image.Color = image.RGBAColor{0xFF, 0xFF, 0xFF, 0xFF}
 	black image.Color = image.RGBAColor{0x00, 0x00, 0x00, 0xFF}
-	blue image.Color = image.RGBAColor{0x00, 0x00, 0xFF, 0xFF}
+	blue  image.Color = image.RGBAColor{0x00, 0x00, 0xFF, 0xFF}
 )
 
 func rgb(rgb uint) image.Color {
-	return image.RGBAColor{uint8(rgb>>16), uint8(rgb>>8), uint8(rgb), 0xFF}
+	return image.RGBAColor{uint8(rgb >> 16), uint8(rgb >> 8), uint8(rgb), 0xFF}
 }
 
 var colormap = [][2]image.Color{
-	Position: {white, black},
+	Position:  {white, black},
 	Alignment: {white, black},
-	Timing: {white, black},
-	Format: {white, black},
-	PVersion: {white, black},
-	Unused: {rgb(0xe0e0e0), rgb(0x202020)},
-	Data: {rgb(0xffe0e0), rgb(0xff0000)},
-	Check: {rgb(0xe0e0ff), rgb(0x0000ff)},
-	Extra: {rgb(0xffffe0), rgb(0xffff00)},
+	Timing:    {white, black},
+	Format:    {white, black},
+	PVersion:  {white, black},
+	Unused:    {rgb(0xe0e0e0), rgb(0x202020)},
+	Data:      {rgb(0xffe0e0), rgb(0xff0000)},
+	Check:     {rgb(0xe0e0ff), rgb(0x0000ff)},
+	Extra:     {rgb(0xffffe0), rgb(0xffff00)},
 }
 
 func (c *Code) At(x, y int) image.Color {
@@ -412,7 +412,7 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 		b.Write(0, 4)
 		b.Write(0, -b.Bits()&7)
 		pad := p.DataBytes - b.Bits()/8
-		for i := 0; i < pad; i+=2 {
+		for i := 0; i < pad; i += 2 {
 			b.Write(0xec, 8)
 			if i+1 >= pad {
 				break
@@ -431,7 +431,7 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 		panic("oops")
 	}
 	for i := 0; i < p.Blocks; i++ {
-		if i == p.Blocks - extra {
+		if i == p.Blocks-extra {
 			nd++
 		}
 		check = append(check, field.ECBytes(src[:nd], nc)...)
@@ -440,15 +440,15 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 	if len(src) != 0 || len(check) != p.CheckBytes {
 		panic("src math")
 	}
-	
+
 	// Now we have the checksum bytes and the data bytes.
 	// Construct the actual code.
-	
+
 	// Make a new copy of the grid.
 	// Can use a single copy because we know it's
 	// all one big underlying array.
 	m := grid(len(p.Pixel))
-	tot := len(p.Pixel)*len(p.Pixel)
+	tot := len(p.Pixel) * len(p.Pixel)
 	copy(m[0][:tot], p.Pixel[0][:tot])
 
 	// Set the pixels.
@@ -457,13 +457,13 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 			switch p.Role() {
 			case Data:
 				o := p.Offset()
-				if data[o/8] & (1<<(7-o&7)) != 0 {
+				if data[o/8]&(1<<(7-o&7)) != 0 {
 					p ^= Black
 				}
 				row[x] = p
 			case Check:
 				o := p.Offset()
-				if check[o/8] & (1<<(7-o&7)) != 0 {
+				if check[o/8]&(1<<(7-o&7)) != 0 {
 					p ^= Black
 				}
 				row[x] = p
@@ -477,58 +477,58 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 type version struct {
 	apos    int
 	astride int
-	bytes int
+	bytes   int
 	pattern int
-	level [4]level
+	level   [4]level
 }
 
 type level struct {
 	nblock int
-	check int
+	check  int
 }
 
 var vtab = []version{
 	{},
-	{100, 100, 26, 0x0, [4]level{{1, 7}, {1, 10}, {1, 13}, {1, 17}}},  // 1
-	{16, 100, 44, 0x0, [4]level{{1, 10}, {1, 16}, {1, 22}, {1, 28}}},  // 2
-	{20, 100, 70, 0x0, [4]level{{1, 15}, {1, 26}, {2, 18}, {2, 22}}},  // 3
-	{24, 100, 100, 0x0, [4]level{{1, 20}, {2, 18}, {2, 26}, {4, 16}}},  // 4
-	{28, 100, 134, 0x0, [4]level{{1, 26}, {2, 24}, {4, 18}, {4, 22}}},  // 5
-	{32, 100, 172, 0x0, [4]level{{2, 18}, {4, 16}, {4, 24}, {4, 28}}},  // 6
-	{20, 16, 196, 0x7c94, [4]level{{2, 20}, {4, 18}, {6, 18}, {5, 26}}},  // 7
-	{22, 18, 242, 0x85bc, [4]level{{2, 24}, {4, 22}, {6, 22}, {6, 26}}},  // 8
-	{24, 20, 292, 0x9a99, [4]level{{2, 30}, {5, 22}, {8, 20}, {8, 24}}},  // 9
-	{26, 22, 346, 0xa4d3, [4]level{{4, 18}, {5, 26}, {8, 24}, {8, 28}}},  // 10
-	{28, 24, 404, 0xbbf6, [4]level{{4, 20}, {5, 30}, {8, 28}, {11, 24}}},  // 11
-	{30, 26, 466, 0xc762, [4]level{{4, 24}, {8, 22}, {10, 26}, {11, 28}}},  // 12
-	{32, 28, 532, 0xd847, [4]level{{4, 26}, {9, 22}, {12, 24}, {16, 22}}},  // 13
-	{24, 20, 581, 0xe60d, [4]level{{4, 30}, {9, 24}, {16, 20}, {16, 24}}},  // 14
-	{24, 22, 655, 0xf928, [4]level{{6, 22}, {10, 24}, {12, 30}, {18, 24}}},  // 15
-	{24, 24, 733, 0x10b78, [4]level{{6, 24}, {10, 28}, {17, 24}, {16, 30}}},  // 16
-	{28, 24, 815, 0x1145d, [4]level{{6, 28}, {11, 28}, {16, 28}, {19, 28}}},  // 17
-	{28, 26, 901, 0x12a17, [4]level{{6, 30}, {13, 26}, {18, 28}, {21, 28}}},  // 18
-	{28, 28, 991, 0x13532, [4]level{{7, 28}, {14, 26}, {21, 26}, {25, 26}}},  // 19
+	{100, 100, 26, 0x0, [4]level{{1, 7}, {1, 10}, {1, 13}, {1, 17}}},          // 1
+	{16, 100, 44, 0x0, [4]level{{1, 10}, {1, 16}, {1, 22}, {1, 28}}},          // 2
+	{20, 100, 70, 0x0, [4]level{{1, 15}, {1, 26}, {2, 18}, {2, 22}}},          // 3
+	{24, 100, 100, 0x0, [4]level{{1, 20}, {2, 18}, {2, 26}, {4, 16}}},         // 4
+	{28, 100, 134, 0x0, [4]level{{1, 26}, {2, 24}, {4, 18}, {4, 22}}},         // 5
+	{32, 100, 172, 0x0, [4]level{{2, 18}, {4, 16}, {4, 24}, {4, 28}}},         // 6
+	{20, 16, 196, 0x7c94, [4]level{{2, 20}, {4, 18}, {6, 18}, {5, 26}}},       // 7
+	{22, 18, 242, 0x85bc, [4]level{{2, 24}, {4, 22}, {6, 22}, {6, 26}}},       // 8
+	{24, 20, 292, 0x9a99, [4]level{{2, 30}, {5, 22}, {8, 20}, {8, 24}}},       // 9
+	{26, 22, 346, 0xa4d3, [4]level{{4, 18}, {5, 26}, {8, 24}, {8, 28}}},       // 10
+	{28, 24, 404, 0xbbf6, [4]level{{4, 20}, {5, 30}, {8, 28}, {11, 24}}},      // 11
+	{30, 26, 466, 0xc762, [4]level{{4, 24}, {8, 22}, {10, 26}, {11, 28}}},     // 12
+	{32, 28, 532, 0xd847, [4]level{{4, 26}, {9, 22}, {12, 24}, {16, 22}}},     // 13
+	{24, 20, 581, 0xe60d, [4]level{{4, 30}, {9, 24}, {16, 20}, {16, 24}}},     // 14
+	{24, 22, 655, 0xf928, [4]level{{6, 22}, {10, 24}, {12, 30}, {18, 24}}},    // 15
+	{24, 24, 733, 0x10b78, [4]level{{6, 24}, {10, 28}, {17, 24}, {16, 30}}},   // 16
+	{28, 24, 815, 0x1145d, [4]level{{6, 28}, {11, 28}, {16, 28}, {19, 28}}},   // 17
+	{28, 26, 901, 0x12a17, [4]level{{6, 30}, {13, 26}, {18, 28}, {21, 28}}},   // 18
+	{28, 28, 991, 0x13532, [4]level{{7, 28}, {14, 26}, {21, 26}, {25, 26}}},   // 19
 	{32, 28, 1085, 0x149a6, [4]level{{8, 28}, {16, 26}, {20, 30}, {25, 28}}},  // 20
 	{26, 22, 1156, 0x15683, [4]level{{8, 28}, {17, 26}, {23, 28}, {25, 30}}},  // 21
 	{24, 24, 1258, 0x168c9, [4]level{{9, 28}, {17, 28}, {23, 30}, {34, 24}}},  // 22
 	{28, 24, 1364, 0x177ec, [4]level{{9, 30}, {18, 28}, {25, 30}, {30, 30}}},  // 23
-	{26, 26, 1474, 0x18ec4, [4]level{{10, 30}, {20, 28}, {27, 30}, {32, 30}}},  // 24
-	{30, 26, 1588, 0x191e1, [4]level{{12, 26}, {21, 28}, {29, 30}, {35, 30}}},  // 25
-	{28, 28, 1706, 0x1afab, [4]level{{12, 28}, {23, 28}, {34, 28}, {37, 30}}},  // 26
-	{32, 28, 1828, 0x1b08e, [4]level{{12, 30}, {25, 28}, {34, 30}, {40, 30}}},  // 27
-	{24, 24, 1921, 0x1cc1a, [4]level{{13, 30}, {26, 28}, {35, 30}, {42, 30}}},  // 28
-	{28, 24, 2051, 0x1d33f, [4]level{{14, 30}, {28, 28}, {38, 30}, {45, 30}}},  // 29
-	{24, 26, 2185, 0x1ed75, [4]level{{15, 30}, {29, 28}, {40, 30}, {48, 30}}},  // 30
-	{28, 26, 2323, 0x1f250, [4]level{{16, 30}, {31, 28}, {43, 30}, {51, 30}}},  // 31
-	{32, 26, 2465, 0x209d5, [4]level{{17, 30}, {33, 28}, {45, 30}, {54, 30}}},  // 32
-	{28, 28, 2611, 0x216f0, [4]level{{18, 30}, {35, 28}, {48, 30}, {57, 30}}},  // 33
-	{32, 28, 2761, 0x228ba, [4]level{{19, 30}, {37, 28}, {51, 30}, {60, 30}}},  // 34
-	{28, 24, 2876, 0x2379f, [4]level{{19, 30}, {38, 28}, {53, 30}, {63, 30}}},  // 35
-	{22, 26, 3034, 0x24b0b, [4]level{{20, 30}, {40, 28}, {56, 30}, {66, 30}}},  // 36
-	{26, 26, 3196, 0x2542e, [4]level{{21, 30}, {43, 28}, {59, 30}, {70, 30}}},  // 37
-	{30, 26, 3362, 0x26a64, [4]level{{22, 30}, {45, 28}, {62, 30}, {74, 30}}},  // 38
-	{24, 28, 3532, 0x27541, [4]level{{24, 30}, {47, 28}, {65, 30}, {77, 30}}},  // 39
-	{28, 28, 3706, 0x28c69, [4]level{{25, 30}, {49, 28}, {68, 30}, {81, 30}}},  // 40
+	{26, 26, 1474, 0x18ec4, [4]level{{10, 30}, {20, 28}, {27, 30}, {32, 30}}}, // 24
+	{30, 26, 1588, 0x191e1, [4]level{{12, 26}, {21, 28}, {29, 30}, {35, 30}}}, // 25
+	{28, 28, 1706, 0x1afab, [4]level{{12, 28}, {23, 28}, {34, 28}, {37, 30}}}, // 26
+	{32, 28, 1828, 0x1b08e, [4]level{{12, 30}, {25, 28}, {34, 30}, {40, 30}}}, // 27
+	{24, 24, 1921, 0x1cc1a, [4]level{{13, 30}, {26, 28}, {35, 30}, {42, 30}}}, // 28
+	{28, 24, 2051, 0x1d33f, [4]level{{14, 30}, {28, 28}, {38, 30}, {45, 30}}}, // 29
+	{24, 26, 2185, 0x1ed75, [4]level{{15, 30}, {29, 28}, {40, 30}, {48, 30}}}, // 30
+	{28, 26, 2323, 0x1f250, [4]level{{16, 30}, {31, 28}, {43, 30}, {51, 30}}}, // 31
+	{32, 26, 2465, 0x209d5, [4]level{{17, 30}, {33, 28}, {45, 30}, {54, 30}}}, // 32
+	{28, 28, 2611, 0x216f0, [4]level{{18, 30}, {35, 28}, {48, 30}, {57, 30}}}, // 33
+	{32, 28, 2761, 0x228ba, [4]level{{19, 30}, {37, 28}, {51, 30}, {60, 30}}}, // 34
+	{28, 24, 2876, 0x2379f, [4]level{{19, 30}, {38, 28}, {53, 30}, {63, 30}}}, // 35
+	{22, 26, 3034, 0x24b0b, [4]level{{20, 30}, {40, 28}, {56, 30}, {66, 30}}}, // 36
+	{26, 26, 3196, 0x2542e, [4]level{{21, 30}, {43, 28}, {59, 30}, {70, 30}}}, // 37
+	{30, 26, 3362, 0x26a64, [4]level{{22, 30}, {45, 28}, {62, 30}, {74, 30}}}, // 38
+	{24, 28, 3532, 0x27541, [4]level{{24, 30}, {47, 28}, {65, 30}, {77, 30}}}, // 39
+	{28, 28, 3706, 0x28c69, [4]level{{25, 30}, {49, 28}, {68, 30}, {81, 30}}}, // 40
 }
 
 func grid(siz int) [][]Pixel {
@@ -663,13 +663,13 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 
 	nblock := vtab[v].level[l].nblock
 	ne := vtab[v].level[l].check
-	nde := (vtab[v].bytes - ne*nblock)/nblock
-	extra := (vtab[v].bytes - ne*nblock)%nblock
-	dataBits := (nde*nblock+extra)*8
-	checkBits := ne*nblock*8
-	
+	nde := (vtab[v].bytes - ne*nblock) / nblock
+	extra := (vtab[v].bytes - ne*nblock) % nblock
+	dataBits := (nde*nblock + extra) * 8
+	checkBits := ne * nblock * 8
+
 	p.DataBytes = vtab[v].bytes - ne*nblock
-	p.CheckBytes = ne*nblock
+	p.CheckBytes = ne * nblock
 	p.Blocks = nblock
 
 	// Make data + checksum pixels.
@@ -681,7 +681,7 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 	for i := range check {
 		check[i] = Check.Pixel() | OffsetPixel(uint(i))
 	}
-	
+
 	// Split into blocks.
 	dataList := make([][]Pixel, nblock)
 	checkList := make([][]Pixel, nblock)
@@ -697,7 +697,7 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 	if len(data) != 0 || len(check) != 0 {
 		panic("data/check math")
 	}
-	
+
 	// Build up bit sequence, taking first byte of each block,
 	// then second byte, and so on.  Then checksums.
 	bits := make([]Pixel, dataBits+checkBits)

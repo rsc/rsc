@@ -59,7 +59,7 @@ Pixel:
 			case keypix&qrencode.Format != 0:
 				want = Format.Pixel()
 				want |= OffsetPixel(pix.Offset()) // sic
-				want |= pix&Invert
+				want |= pix & Invert
 			case keypix&qrencode.PVersion != 0:
 				want = PVersion.Pixel()
 			case keypix&qrencode.DataECC != 0:
@@ -69,7 +69,7 @@ Pixel:
 					want = Data.Pixel()
 				}
 				want |= OffsetPixel(pix.Offset())
-				want |= pix&Invert
+				want |= pix & Invert
 			default:
 				want = Unused.Pixel()
 			}
@@ -134,7 +134,7 @@ func TestEncode(t *testing.T) {
 	out := field.ECBytes(data, len(check))
 	if !bytes.Equal(out, check) {
 		t.Errorf("have %x want %x", out, check)
-	}		
+	}
 }
 
 func write(m image.Image, format string, args ...interface{}) {
