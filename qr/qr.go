@@ -3,8 +3,10 @@ package qr
 import (
 	"fmt"
 	"gf256"
+	"image"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // field is the field for QR error correction.
@@ -26,28 +28,169 @@ func (v Version) String() string {
 	return strconv.Itoa(int(v))
 }
 
-// A Mode represents a QR mode.
-// The mode specifies the character set and, indirectly,
-// the encoding.  The more precise the mode, the shorter
-// the encoded data.
-type Mode int
-
-const (
-	Numeric      Mode = 1
-	Alphanumeric Mode = 2
-	EightBit     Mode = 4
-)
-
-func (m Mode) String() string {
-	switch m {
-	case Numeric:
-		return "numeric"
-	case Alphanumeric:
-		return "alpha"
-	case EightBit:
-		return "8bit"
+func (v Version) sizeClass() int {
+	if v <= 9 {
+		return 0
 	}
-	return strconv.Itoa(int(m))
+	if v <= 26 {
+		return 1
+	}
+	return 2
+}
+
+// An Encoding represents a QR data encoding scheme.
+// The implementations--Numeric, Alphanumeric, and String--specify
+// the character set and the mapping from UTF-8 to code bits.
+// The more restrictive the mode, the fewer code bits are needed.
+type Encoding interface {
+	Check() os.Error
+	Bits(v Version) int
+	Encode(b *Bits, v Version)
+}
+
+type Bits struct {
+	b []byte
+	nbit int
+}
+
+func (b *Bits) Bits() int {
+	return b.nbit
+}
+
+func (b *Bits) Bytes() []byte {
+	if b.nbit%8 != 0 {
+		panic("extra bits")
+	}
+	return b.b
+}
+
+func (b *Bits) Write(v uint, nbit int) {
+	for nbit > 0 {
+		n := nbit
+		if n > 8 {
+			n = 8
+		}
+		if b.nbit%8 == 0 {
+			b.b = append(b.b, 0)
+		} else {
+			m := -b.nbit&7
+			if n > m {
+				n = m
+			}
+		}
+		b.nbit += n
+		sh := uint(nbit-n)
+		b.b[len(b.b)-1] |= uint8(v>>sh<<uint(-b.nbit&7))
+		v -= v>>sh<<sh
+		nbit -= n
+	}
+}
+
+// Num is the encoding for numeric data.
+// The only valid characters are the decimal digits 0 through 9.
+type Num string
+
+func (s Num) String() string {
+	return fmt.Sprintf("Num(%#q)", string(s))
+}
+
+func (s Num) Check() os.Error {
+	for _, c := range s {
+		if c < '0' || '9' < c {
+			return fmt.Errorf("non-numeric string %#q", string(s))
+		}
+	}
+	return nil
+}
+
+var numLen = [3]int{10, 12, 14}
+
+func (s Num) Bits(v Version) int {
+	return 4 + numLen[v.sizeClass()] + (10*len(s)+2)/3
+}
+
+func (s Num) Encode(b *Bits, v Version) {
+	b.Write(1, 4)
+	b.Write(uint(len(s)), numLen[v.sizeClass()])
+	var i int
+	for i = 0; i+3 <= len(s); i+=3 {
+		w := uint(s[i]-'0')*100 + uint(s[i+1]-'0')*10 + uint(s[i+2]-'0')
+		b.Write(w, 10)
+	}
+	switch len(s) - i {
+	case 1:
+		w := uint(s[i] - '0')
+		b.Write(w, 4)
+	case 2:
+		w := uint(s[i] - '0')*10 + uint(s[i+1] - '0')
+		b.Write(w, 7)
+	}
+}
+
+// Alpha is the encoding for alphanumeric data.
+// The valid characters are 0-9A-Z$%*+-./: and space.
+type Alpha string
+
+const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
+
+func (s Alpha) String() string {
+	return fmt.Sprintf("Alpha(%#q)", string(s))
+}
+
+func (s Alpha) Check() os.Error {
+	for _, c := range s {
+		if strings.IndexRune(alphabet, c) < 0 {
+			return fmt.Errorf("non-alphanumeric string %#q", string(s))
+		}
+	}
+	return nil
+}
+
+var alphaLen = [3]int{9, 11, 13}
+
+func (s Alpha) Bits(v Version) int {
+	return 4 + alphaLen[v.sizeClass()] + (11*len(s)+1)/2
+}
+
+func (s Alpha) Encode(b *Bits, v Version) {
+	b.Write(2, 4)
+	b.Write(uint(len(s)), alphaLen[v.sizeClass()])
+	var i int
+	for i = 0; i+2 <= len(s); i+=2 {
+		w := uint(strings.IndexRune(alphabet, int(s[i]))) * 45 +
+			uint(strings.IndexRune(alphabet, int(s[i+1])))
+		b.Write(w, 11)
+	}
+
+	if i < len(s) {
+		w := uint(strings.IndexRune(alphabet, int(s[i])))
+		b.Write(w, 6)
+	}
+}
+
+// String is the encoding for 8-bit data.  All bytes are valid.
+type String string
+
+func (s String) String() string {
+	return fmt.Sprintf("String(%#q)", string(s))
+}
+
+func (s String) Check() os.Error {
+	return nil
+}
+
+var stringLen = [3]int{8, 16, 16}
+
+func (s String) Bits(v Version) int {
+	return 4 + stringLen[v.sizeClass()] + (11*len(s)+1)/2
+}
+
+func (s String) Encode(b *Bits, v Version) {
+	b.Write(4, 4)
+	b.Write(uint(len(s)), stringLen[v.sizeClass()])
+	for i := 0; i < len(s); i++ {
+		b.Write(uint(s[i]), 8)
+	}
 }
 
 // A Pixel describes a single pixel in a QR code.
@@ -58,11 +201,11 @@ const (
 	Invert
 )
 
-func (p Pixel) Offset() int {
-	return int(p >> 6)
+func (p Pixel) Offset() uint {
+	return uint(p >> 6)
 }
 
-func OffsetPixel(o int) Pixel {
+func OffsetPixel(o uint) Pixel {
 	return Pixel(o << 6)
 }
 
@@ -82,7 +225,7 @@ func (p Pixel) String() string {
 	if p&Invert != 0 {
 		s += "+invert"
 	}
-	s += "+" + strconv.Itoa(p.Offset())
+	s += "+" + strconv.Uitoa(p.Offset())
 	return s
 }
 
@@ -127,7 +270,7 @@ func (r PixelRole) String() string {
 type Level int
 
 const (
-	L Level = 0
+	L Level = iota
 	M
 	Q
 	H
@@ -140,13 +283,83 @@ func (l Level) String() string {
 	return strconv.Itoa(int(l))
 }
 
+// A Code is a square pixel grid.
+// It implements image.Image.
+type Code struct {
+	Pixel [][]Pixel
+	Scale int  // number of image pixels per QR pixel
+}
+
+func (*Code) ColorModel() image.ColorModel {
+	return image.RGBAColorModel
+}
+
+func (c *Code) Bounds() image.Rectangle {
+	d := (len(c.Pixel) + 8) * c.Scale
+	return image.Rect(0, 0, d, d)
+}
+
+var (
+	white image.Color = image.RGBAColor{0xFF, 0xFF, 0xFF, 0xFF}
+	black image.Color = image.RGBAColor{0x00, 0x00, 0x00, 0xFF}
+	blue image.Color = image.RGBAColor{0x00, 0x00, 0xFF, 0xFF}
+)
+
+func rgb(rgb uint) image.Color {
+	return image.RGBAColor{uint8(rgb>>16), uint8(rgb>>8), uint8(rgb), 0xFF}
+}
+
+var colormap = [][2]image.Color{
+	Position: {white, black},
+	Alignment: {white, black},
+	Timing: {white, black},
+	Format: {white, black},
+	PVersion: {white, black},
+	Unused: {rgb(0xe0e0e0), rgb(0x202020)},
+	Data: {rgb(0xffe0e0), rgb(0xff0000)},
+	Check: {rgb(0xe0e0ff), rgb(0x0000ff)},
+	Extra: {rgb(0xffffe0), rgb(0xffff00)},
+}
+
+func (c *Code) At(x, y int) image.Color {
+	x = x/c.Scale - 4
+	y = y/c.Scale - 4
+	i := 0
+	role := Unused
+	if 0 <= x && x < len(c.Pixel) && 0 <= y && y < len(c.Pixel) {
+		role = c.Pixel[y][x].Role()
+		if c.Pixel[y][x]&Black != 0 {
+			i = 1
+		}
+	}
+	if i == 1 {
+		return black
+	}
+	return white
+	return colormap[role][i]
+}
+
 // A Mask describes a mask that is applied to the QR
 // code to avoid QR artifacts being interpreted as
 // alignment and timing patterns (such as the squares
-// in the corners).
+// in the corners).  Valid masks are integers from 0 to 7.
 type Mask int
 
-// TODO: fill in masks
+// http://www.swetake.com/qr/qr5_en.html
+var mfunc = []func(int, int) bool{
+	func(i, j int) bool { return (i+j)%2 == 0 },
+	func(i, j int) bool { return i%2 == 0 },
+	func(i, j int) bool { return j%3 == 0 },
+	func(i, j int) bool { return (i+j)%3 == 0 },
+	func(i, j int) bool { return (i/2+j/3)%2 == 0 },
+	func(i, j int) bool { return i*j%2+i*j%3 == 0 },
+	func(i, j int) bool { return (i*j%2+i*j%3)%2 == 0 },
+	func(i, j int) bool { return (i*j%3+(i+j)%2)%2 == 0 },
+}
+
+func (m Mask) Invert(y, x int) bool {
+	return mfunc[m](y, x)
+}
 
 // A Plan describes how to construct a QR code
 // with a specific version, level, and mask.
@@ -179,6 +392,85 @@ func NewPlan(version Version, level Level, mask Mask) (*Plan, os.Error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
+	var b Bits
+	for _, t := range text {
+		if err := t.Check(); err != nil {
+			return nil, err
+		}
+		t.Encode(&b, p.Version)
+	}
+	n := p.DataBytes*8 - b.Bits()
+	if n < 0 {
+		return nil, fmt.Errorf("cannot encode %d bits into %d-bit code", b.Bits(), p.DataBytes*8)
+	}
+	if n <= 4 {
+		b.Write(0, n)
+	} else {
+		b.Write(0, 4)
+		b.Write(0, -b.Bits()&7)
+		pad := p.DataBytes - b.Bits()/8
+		for i := 0; i < pad; i+=2 {
+			b.Write(0xec, 8)
+			if i+1 >= pad {
+				break
+			}
+			b.Write(0x11, 8)
+		}
+	}
+
+	data := b.Bytes()
+	check := make([]byte, 0, p.CheckBytes)
+	nd := p.DataBytes / p.Blocks
+	nc := p.CheckBytes / p.Blocks
+	extra := p.DataBytes - nd*p.Blocks
+	src := data
+	if len(data) != p.DataBytes {
+		panic("oops")
+	}
+	for i := 0; i < p.Blocks; i++ {
+		if i == p.Blocks - extra {
+			nd++
+		}
+		check = append(check, field.ECBytes(src[:nd], nc)...)
+		src = src[nd:]
+	}
+	if len(src) != 0 || len(check) != p.CheckBytes {
+		panic("src math")
+	}
+	
+	// Now we have the checksum bytes and the data bytes.
+	// Construct the actual code.
+	
+	// Make a new copy of the grid.
+	// Can use a single copy because we know it's
+	// all one big underlying array.
+	m := grid(len(p.Pixel))
+	tot := len(p.Pixel)*len(p.Pixel)
+	copy(m[0][:tot], p.Pixel[0][:tot])
+
+	// Set the pixels.
+	for _, row := range m {
+		for x, p := range row {
+			switch p.Role() {
+			case Data:
+				o := p.Offset()
+				if data[o/8] & (1<<(7-o&7)) != 0 {
+					p ^= Black
+				}
+				row[x] = p
+			case Check:
+				o := p.Offset()
+				if check[o/8] & (1<<(7-o&7)) != 0 {
+					p ^= Black
+				}
+				row[x] = p
+			}
+		}
+	}
+	return &Code{Scale: 16, Pixel: m}, nil
 }
 
 // A version describes metadata associated with a version.
@@ -239,6 +531,15 @@ var vtab = []version{
 	{28, 28, 3706, 0x28c69, [4]level{{25, 30}, {49, 28}, {68, 30}, {81, 30}}},  // 40
 }
 
+func grid(siz int) [][]Pixel {
+	m := make([][]Pixel, siz)
+	pix := make([]Pixel, siz*siz)
+	for i := range m {
+		m[i], pix = pix[:siz], pix[siz:]
+	}
+	return m
+}
+
 // vplan creates a Plan for the given version.
 func vplan(v Version) (*Plan, os.Error) {
 	p := &Plan{Version: v}
@@ -246,15 +547,10 @@ func vplan(v Version) (*Plan, os.Error) {
 		return nil, fmt.Errorf("invalid QR version %d", int(v))
 	}
 	siz := 17 + int(v)*4
-	m := make([][]Pixel, siz)
-	pix := make([]Pixel, siz*siz)
-	for i := range m {
-		m[i], pix = pix[:siz], pix[siz:]
-	}
+	m := grid(siz)
 	p.Pixel = m
 
 	// Timing markers (overwritten by boxes).
-	// TODO: are there more in higher versions?
 	const ti = 6 // timing is in row/column 6 (counting from 0)
 	for i := range m {
 		p := Timing.Pixel()
@@ -330,12 +626,12 @@ func fplan(l Level, m Mask, p *Plan) os.Error {
 	fb |= rem
 	invert := uint32(0x5412)
 	siz := len(p.Pixel)
-	for i := 0; i < 15; i++ {
+	for i := uint(0); i < 15; i++ {
 		pix := Format.Pixel() + OffsetPixel(i)
-		if (fb>>uint(i))&1 == 1 {
+		if (fb>>i)&1 == 1 {
 			pix |= Black
 		}
-		if (invert>>uint(i))&1 == 1 {
+		if (invert>>i)&1 == 1 {
 			pix ^= Invert | Black
 		}
 		// top left
@@ -352,9 +648,9 @@ func fplan(l Level, m Mask, p *Plan) os.Error {
 		// bottom right
 		switch {
 		case i < 8:
-			p.Pixel[8][siz-1-i] = pix
+			p.Pixel[8][siz-1-int(i)] = pix
 		default:
-			p.Pixel[siz-1-(14-i)][8] = pix
+			p.Pixel[siz-1-int(14-i)][8] = pix
 		}
 	}
 	return nil
@@ -371,15 +667,19 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 	extra := (vtab[v].bytes - ne*nblock)%nblock
 	dataBits := (nde*nblock+extra)*8
 	checkBits := ne*nblock*8
+	
+	p.DataBytes = vtab[v].bytes - ne*nblock
+	p.CheckBytes = ne*nblock
+	p.Blocks = nblock
 
 	// Make data + checksum pixels.
 	data := make([]Pixel, dataBits)
 	for i := range data {
-		data[i] = Data.Pixel() | OffsetPixel(i)
+		data[i] = Data.Pixel() | OffsetPixel(uint(i))
 	}
 	check := make([]Pixel, checkBits)
 	for i := range check {
-		check[i] = Check.Pixel() | OffsetPixel(i)
+		check[i] = Check.Pixel() | OffsetPixel(uint(i))
 	}
 	
 	// Split into blocks.
@@ -393,6 +693,9 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 		}
 		dataList[i], data = data[0:nd*8], data[nd*8:]
 		checkList[i], check = check[0:ne*8], check[ne*8:]
+	}
+	if len(data) != 0 || len(check) != 0 {
+		panic("data/check math")
 	}
 	
 	// Build up bit sequence, taking first byte of each block,
@@ -455,25 +758,12 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 	return nil
 }
 
-// http://www.swetake.com/qr/qr5_en.html
-var mfunc = []func(int, int) bool{
-	func(i, j int) bool { return (i+j)%2 == 0 },
-	func(i, j int) bool { return i%2 == 0 },
-	func(i, j int) bool { return j%3 == 0 },
-	func(i, j int) bool { return (i+j)%3 == 0 },
-	func(i, j int) bool { return (i/2+j/3)%2 == 0 },
-	func(i, j int) bool { return i*j%2+i*j%3 == 0 },
-	func(i, j int) bool { return (i*j%2+i*j%3)%2 == 0 },
-	func(i, j int) bool { return (i*j%3+(i+j)%2)%2 == 0 },
-}
-
 // mplan edits a version+level-only Plan to add the mask.
 func mplan(m Mask, p *Plan) os.Error {
-	f := mfunc[m]
 	p.Mask = m
 	for y, row := range p.Pixel {
 		for x, pix := range row {
-			if r := pix.Role(); (r == Data || r == Check || r == Extra) && f(y, x) {
+			if r := pix.Role(); (r == Data || r == Check || r == Extra) && p.Mask.Invert(y, x) {
 				row[x] ^= Black | Invert
 			}
 		}

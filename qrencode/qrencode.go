@@ -22,7 +22,7 @@ type Version int
 
 type Mode int
 const (
-	Numeric Mode = C.QR_MODE_NUL
+	Numeric Mode = C.QR_MODE_NUM
 	Alphanumeric Mode = C.QR_MODE_AN
 	EightBit Mode = C.QR_MODE_8
 )
