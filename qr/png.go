@@ -5,14 +5,6 @@
 package qr
 
 // PNG writer for QR codes.
-//
-// Compression is 2x away from optimal size, but it runs about 50x faster
-// than using png.Writer directly.  This isn't png.Writer's fault:
-// we know a lot more about the structure of the QR image than png.Writer does.
-//
-// Using this code instead of png.Writer drops the fraction of
-// time spent in PNG encoding for a typical qr Encode+PNG cycle
-// from 96% to 32% (hence the 50x).
 
 import (
 	"bytes"
@@ -25,7 +17,7 @@ import (
 //
 // PNG uses a custom encoder tailored to QR codes.
 // Its compressed size is about 2x away from optimal,
-// but it runs significantly faster than calling png.Encode
+// but it runs about 20x faster than calling png.Encode
 // on c.Image().
 func (c *Code) PNG() []byte {
 	var p pngWriter

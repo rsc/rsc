@@ -46,3 +46,28 @@ func TestPNG(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkPNG(b *testing.B) {
+	c, err := Encode("0123456789012345678901234567890123456789", L)
+	if err != nil {
+		panic(err)
+	}
+	var bytes []byte
+	for i := 0; i < b.N; i++ {
+		bytes = c.PNG()
+	}
+	b.SetBytes(int64(len(bytes)))
+}
+
+func BenchmarkImagePNG(b *testing.B) {
+	c, err := Encode("0123456789012345678901234567890123456789", L)
+	if err != nil {
+		panic(err)
+	}
+	var buf bytes.Buffer
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		png.Encode(&buf, c.Image())
+	}
+	b.SetBytes(int64(buf.Len()))
+}
