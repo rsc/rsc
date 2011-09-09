@@ -1,16 +1,23 @@
-package qr
+// Copyright 2011 The Go Authors.  All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+
+// Package coding implements low-level QR coding details.
+package coding
 
 import (
 	"fmt"
-	"gf256"
 	"image"
 	"os"
 	"strconv"
 	"strings"
+
+	"rsc.googlecode.com/hg/gf256"
 )
 
-// field is the field for QR error correction.
-var field = gf256.NewField(0x11d)
+// Field is the field for QR error correction.
+var Field = gf256.NewField(0x11d)
 
 // A Version represents a QR version.
 // The version specifies the size of the QR code:
@@ -20,6 +27,8 @@ var field = gf256.NewField(0x11d)
 // A non-positive version means to select the
 // version automatically.
 type Version int
+
+const Auto Version = 0
 
 func (v Version) String() string {
 	if v < 1 {
@@ -38,7 +47,7 @@ func (v Version) sizeClass() int {
 	return 2
 }
 
-// An Encoding represents a QR data encoding scheme.
+// Encoding implements a QR data encoding scheme.
 // The implementations--Numeric, Alphanumeric, and String--specify
 // the character set and the mapping from UTF-8 to code bits.
 // The more restrictive the mode, the fewer code bits are needed.
@@ -51,6 +60,11 @@ type Encoding interface {
 type Bits struct {
 	b    []byte
 	nbit int
+}
+
+func (b *Bits) Reset() {
+	b.b = b.b[:0]
+	b.nbit = 0
 }
 
 func (b *Bits) Bits() int {
@@ -310,15 +324,16 @@ func rgb(rgb uint) image.Color {
 }
 
 var colormap = [][2]image.Color{
+	0: {white,black},
 	Position:  {white, black},
 	Alignment: {white, black},
 	Timing:    {white, black},
 	Format:    {white, black},
 	PVersion:  {white, black},
-	Unused:    {rgb(0xe0e0e0), rgb(0x202020)},
-	Data:      {rgb(0xffe0e0), rgb(0xff0000)},
-	Check:     {rgb(0xe0e0ff), rgb(0x0000ff)},
-	Extra:     {rgb(0xffffe0), rgb(0xffff00)},
+	Unused:    {white, black},
+	Data:      {white, black},
+	Check:     {white, black},
+	Extra:     {white, black},
 }
 
 func (c *Code) At(x, y int) image.Color {
@@ -332,10 +347,10 @@ func (c *Code) At(x, y int) image.Color {
 			i = 1
 		}
 	}
-	if i == 1 {
-		return black
-	}
-	return white
+//	if i == 1 {
+//		return black
+//	}
+//	return white
 	return colormap[role][i]
 }
 
@@ -358,6 +373,9 @@ var mfunc = []func(int, int) bool{
 }
 
 func (m Mask) Invert(y, x int) bool {
+	if m < 0 {
+		return false
+	}
 	return mfunc[m](y, x)
 }
 
@@ -394,6 +412,28 @@ func NewPlan(version Version, level Level, mask Mask) (*Plan, os.Error) {
 	return p, nil
 }
 
+func (b *Bits) Pad(n int) {
+	if n < 0 {
+		panic("pad")
+	}
+	if n <= 4 {
+		b.Write(0, n)
+	} else {
+		b.Write(0, 4)
+		n -= 4
+		n -= -b.Bits()&7
+		b.Write(0, -b.Bits()&7)
+		pad := n/8
+		for i := 0; i < pad; i += 2 {
+			b.Write(0xec, 8)
+			if i+1 >= pad {
+				break
+			}
+			b.Write(0x11, 8)
+		}
+	}
+}
+
 func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 	var b Bits
 	for _, t := range text {
@@ -406,20 +446,7 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 	if n < 0 {
 		return nil, fmt.Errorf("cannot encode %d bits into %d-bit code", b.Bits(), p.DataBytes*8)
 	}
-	if n <= 4 {
-		b.Write(0, n)
-	} else {
-		b.Write(0, 4)
-		b.Write(0, -b.Bits()&7)
-		pad := p.DataBytes - b.Bits()/8
-		for i := 0; i < pad; i += 2 {
-			b.Write(0xec, 8)
-			if i+1 >= pad {
-				break
-			}
-			b.Write(0x11, 8)
-		}
-	}
+	b.Pad(n)
 
 	data := b.Bytes()
 	check := make([]byte, 0, p.CheckBytes)
@@ -434,7 +461,7 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 		if i == p.Blocks-extra {
 			nd++
 		}
-		check = append(check, field.ECBytes(src[:nd], nc)...)
+		check = append(check, Field.ECBytes(src[:nd], nc)...)
 		src = src[nd:]
 	}
 	if len(src) != 0 || len(check) != p.CheckBytes {
@@ -470,7 +497,7 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 			}
 		}
 	}
-	return &Code{Scale: 16, Pixel: m}, nil
+	return &Code{Scale: 8, Pixel: m}, nil
 }
 
 // A version describes metadata associated with a version.

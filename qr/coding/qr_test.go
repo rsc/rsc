@@ -1,4 +1,8 @@
-package qr
+// Copyright 2011 The Go Authors.  All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package coding
 
 import (
 	"bytes"
@@ -6,26 +10,27 @@ import (
 	"image"
 	"image/png"
 	"os"
-	"qrencode"
 	"testing"
+	
+	"rsc.googlecode.com/hg/qr/libqrencode"
 )
 
 func test(t *testing.T, v Version, l Level, text ...Encoding) bool {
 	s := ""
-	ty := qrencode.EightBit
+	ty := libqrencode.EightBit
 	switch x := text[0].(type) {
 	case String:
 		s = string(x)
 	case Alpha:
 		s = string(x)
-		ty = qrencode.Alphanumeric
+		ty = libqrencode.Alphanumeric
 	case Num:
 		s = string(x)
-		ty = qrencode.Numeric
+		ty = libqrencode.Numeric
 	}
-	key, err := qrencode.Encode(qrencode.Version(v), qrencode.Level(l), ty, s)
+	key, err := libqrencode.Encode(libqrencode.Version(v), libqrencode.Level(l), ty, s)
 	if err != nil {
-		t.Errorf("qrencode.Encode(%v, %v, %d, %#q): %v", v, l, ty, s, err)
+		t.Errorf("libqrencode.Encode(%v, %v, %d, %#q): %v", v, l, ty, s, err)
 		return false
 	}
 	mask := (^key.Pixel[8][2]&1)<<2 | (key.Pixel[8][3]&1)<<1 | (^key.Pixel[8][4] & 1)
@@ -50,19 +55,19 @@ Pixel:
 			keypix := key.Pixel[y][x]
 			want := Pixel(0)
 			switch {
-			case keypix&qrencode.Finder != 0:
+			case keypix&libqrencode.Finder != 0:
 				want = Position.Pixel()
-			case keypix&qrencode.Alignment != 0:
+			case keypix&libqrencode.Alignment != 0:
 				want = Alignment.Pixel()
-			case keypix&qrencode.Timing != 0:
+			case keypix&libqrencode.Timing != 0:
 				want = Timing.Pixel()
-			case keypix&qrencode.Format != 0:
+			case keypix&libqrencode.Format != 0:
 				want = Format.Pixel()
 				want |= OffsetPixel(pix.Offset()) // sic
 				want |= pix & Invert
-			case keypix&qrencode.PVersion != 0:
+			case keypix&libqrencode.PVersion != 0:
 				want = PVersion.Pixel()
-			case keypix&qrencode.DataECC != 0:
+			case keypix&libqrencode.DataECC != 0:
 				if pix.Role() == Check || pix.Role() == Extra {
 					want = pix.Role().Pixel()
 				} else {
@@ -73,7 +78,7 @@ Pixel:
 			default:
 				want = Unused.Pixel()
 			}
-			if keypix&qrencode.Black != 0 {
+			if keypix&libqrencode.Black != 0 {
 				want |= Black
 			}
 			if pix != want {
@@ -92,7 +97,7 @@ Pixel:
 			for x, pix := range row {
 				if pix&Invert != 0 {
 					row[x] ^= Black
-					key.Pixel[y][x] ^= qrencode.Black
+					key.Pixel[y][x] ^= libqrencode.Black
 				}
 			}
 		}
@@ -131,7 +136,7 @@ Version:
 func TestEncode(t *testing.T) {
 	data := []byte{0x10, 0x20, 0x0c, 0x56, 0x61, 0x80, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11}
 	check := []byte{0xa5, 0x24, 0xd4, 0xc1, 0xed, 0x36, 0xc7, 0x87, 0x2c, 0x55}
-	out := field.ECBytes(data, len(check))
+	out := Field.ECBytes(data, len(check))
 	if !bytes.Equal(out, check) {
 		t.Errorf("have %x want %x", out, check)
 	}
