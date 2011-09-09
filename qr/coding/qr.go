@@ -24,16 +24,12 @@ var Field = gf256.NewField(0x11d)
 // a QR code with version v has 4v+17 pixels on a side.
 // Versions number from 1 to 40: the larger the version,
 // the more information the code can store.
-// A non-positive version means to select the
-// version automatically.
 type Version int
 
-const Auto Version = 0
+const MinVersion = 1
+const MaxVersion = 40
 
 func (v Version) String() string {
-	if v < 1 {
-		return "auto"
-	}
 	return strconv.Itoa(int(v))
 }
 
@@ -45,6 +41,14 @@ func (v Version) sizeClass() int {
 		return 1
 	}
 	return 2
+}
+
+// DataBytes returns the number of data bytes that can be
+// stored in a QR code with the given version and level.
+func (v Version) DataBytes(l Level) int {
+	vt := &vtab[v]
+	lev := &vt.level[l]
+	return vt.bytes - lev.nblock*lev.check
 }
 
 // Encoding implements a QR data encoding scheme.
@@ -73,9 +77,17 @@ func (b *Bits) Bits() int {
 
 func (b *Bits) Bytes() []byte {
 	if b.nbit%8 != 0 {
-		panic("extra bits")
+		panic("fractional byte")
 	}
 	return b.b
+}
+
+func (b *Bits) Append(p []byte) {
+	if b.nbit%8 != 0 {
+		panic("fractional byte")
+	}
+	b.b = append(b.b, p...)
+	b.nbit += 8*len(p)
 }
 
 func (b *Bits) Write(v uint, nbit int) {
@@ -300,58 +312,37 @@ func (l Level) String() string {
 // A Code is a square pixel grid.
 // It implements image.Image.
 type Code struct {
-	Pixel [][]Pixel
+	Bitmap []byte  // 1 is black, 0 is white
+	Size int  // number of pixels on a side
+	Stride int  // number of bytes per row
 	Scale int // number of image pixels per QR pixel
 }
 
+func (c *Code) Black(x, y int) bool {
+	return c.Bitmap[y*c.Stride+x/8]&(1<<uint(7-x&7)) != 0
+}
+
 func (*Code) ColorModel() image.ColorModel {
-	return image.RGBAColorModel
+	return image.GrayColorModel
 }
 
 func (c *Code) Bounds() image.Rectangle {
-	d := (len(c.Pixel) + 8) * c.Scale
+	d := (c.Size + 8) * c.Scale
 	return image.Rect(0, 0, d, d)
 }
 
 var (
-	white image.Color = image.RGBAColor{0xFF, 0xFF, 0xFF, 0xFF}
-	black image.Color = image.RGBAColor{0x00, 0x00, 0x00, 0xFF}
-	blue  image.Color = image.RGBAColor{0x00, 0x00, 0xFF, 0xFF}
+	white image.Color = image.GrayColor{0xFF}
+	black image.Color = image.GrayColor{0x00}
 )
-
-func rgb(rgb uint) image.Color {
-	return image.RGBAColor{uint8(rgb >> 16), uint8(rgb >> 8), uint8(rgb), 0xFF}
-}
-
-var colormap = [][2]image.Color{
-	0: {white,black},
-	Position:  {white, black},
-	Alignment: {white, black},
-	Timing:    {white, black},
-	Format:    {white, black},
-	PVersion:  {white, black},
-	Unused:    {white, black},
-	Data:      {white, black},
-	Check:     {white, black},
-	Extra:     {white, black},
-}
 
 func (c *Code) At(x, y int) image.Color {
 	x = x/c.Scale - 4
 	y = y/c.Scale - 4
-	i := 0
-	role := Unused
-	if 0 <= x && x < len(c.Pixel) && 0 <= y && y < len(c.Pixel) {
-		role = c.Pixel[y][x].Role()
-		if c.Pixel[y][x]&Black != 0 {
-			i = 1
-		}
+	if 0 <= x && x < c.Size && 0 <= y && y < c.Size && c.Bitmap[y*c.Stride+x/8] & 1<<uint(7-x&7) != 0 {
+		return black
 	}
-//	if i == 1 {
-//		return black
-//	}
-//	return white
-	return colormap[role][i]
+	return white
 }
 
 // A Mask describes a mask that is applied to the QR
@@ -414,7 +405,7 @@ func NewPlan(version Version, level Level, mask Mask) (*Plan, os.Error) {
 
 func (b *Bits) Pad(n int) {
 	if n < 0 {
-		panic("pad")
+		panic("qr: invalid pad size")
 	}
 	if n <= 4 {
 		b.Write(0, n)
@@ -434,6 +425,33 @@ func (b *Bits) Pad(n int) {
 	}
 }
 
+func (b *Bits) AddCheckBytes(v Version, l Level) {
+	nd := v.DataBytes(l)
+	if b.nbit < nd*8 {
+		b.Pad(nd*8 - b.nbit)
+	}
+	if b.nbit != nd*8 {
+		panic("qr: too much data")
+	}
+
+	dat := b.Bytes()
+	vt := &vtab[v]
+	lev := &vt.level[l]
+	db := nd / lev.nblock
+	extra := nd % lev.nblock
+	for i := 0; i < lev.nblock; i++ {
+		if i == lev.nblock - extra {
+			db++
+		}
+		b.Append(Field.ECBytes(dat[:db], lev.check))
+		dat = dat[db:]
+	}
+
+	if len(b.Bytes()) != vt.bytes {
+		panic("qr: internal error")
+	}
+}
+
 func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 	var b Bits
 	for _, t := range text {
@@ -442,62 +460,33 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 		}
 		t.Encode(&b, p.Version)
 	}
-	n := p.DataBytes*8 - b.Bits()
-	if n < 0 {
+	if b.Bits() > p.DataBytes*8 {
 		return nil, fmt.Errorf("cannot encode %d bits into %d-bit code", b.Bits(), p.DataBytes*8)
 	}
-	b.Pad(n)
-
-	data := b.Bytes()
-	check := make([]byte, 0, p.CheckBytes)
-	nd := p.DataBytes / p.Blocks
-	nc := p.CheckBytes / p.Blocks
-	extra := p.DataBytes - nd*p.Blocks
-	src := data
-	if len(data) != p.DataBytes {
-		panic("oops")
-	}
-	for i := 0; i < p.Blocks; i++ {
-		if i == p.Blocks-extra {
-			nd++
-		}
-		check = append(check, Field.ECBytes(src[:nd], nc)...)
-		src = src[nd:]
-	}
-	if len(src) != 0 || len(check) != p.CheckBytes {
-		panic("src math")
-	}
+	b.AddCheckBytes(p.Version, p.Level)
+	bytes := b.Bytes()
 
 	// Now we have the checksum bytes and the data bytes.
 	// Construct the actual code.
-
-	// Make a new copy of the grid.
-	// Can use a single copy because we know it's
-	// all one big underlying array.
-	m := grid(len(p.Pixel))
-	tot := len(p.Pixel) * len(p.Pixel)
-	copy(m[0][:tot], p.Pixel[0][:tot])
-
-	// Set the pixels.
-	for _, row := range m {
-		for x, p := range row {
-			switch p.Role() {
-			case Data:
-				o := p.Offset()
-				if data[o/8]&(1<<(7-o&7)) != 0 {
-					p ^= Black
+	c := &Code{Scale: 8, Size: len(p.Pixel), Stride: (len(p.Pixel)+7)&^7}
+	c.Bitmap = make([]byte, c.Stride*c.Size)
+	crow := c.Bitmap
+	for _, row := range p.Pixel {
+		for x, pix := range row {
+			switch pix.Role() {
+			case Data, Check:
+				o := pix.Offset()
+				if bytes[o/8]&(1<<uint(7-o&7)) != 0 {
+					pix ^= Black
 				}
-				row[x] = p
-			case Check:
-				o := p.Offset()
-				if check[o/8]&(1<<(7-o&7)) != 0 {
-					p ^= Black
-				}
-				row[x] = p
+			}
+			if pix&Black != 0 {
+				crow[x/8] |= 1<<uint(7-x&7)
 			}
 		}
+		crow = crow[c.Stride:]
 	}
-	return &Code{Scale: 8, Pixel: m}, nil
+	return c, nil
 }
 
 // A version describes metadata associated with a version.
@@ -706,7 +695,7 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 	}
 	check := make([]Pixel, checkBits)
 	for i := range check {
-		check[i] = Check.Pixel() | OffsetPixel(uint(i))
+		check[i] = Check.Pixel() | OffsetPixel(uint(i + dataBits))
 	}
 
 	// Split into blocks.

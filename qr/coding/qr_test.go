@@ -6,10 +6,6 @@ package coding
 
 import (
 	"bytes"
-	"fmt"
-	"image"
-	"image/png"
-	"os"
 	"testing"
 	
 	"rsc.googlecode.com/hg/qr/libqrencode"
@@ -50,8 +46,13 @@ func test(t *testing.T, v Version, l Level, text ...Encoding) bool {
 	}
 	badpix := 0
 Pixel:
-	for y, prow := range c.Pixel {
+	for y, prow := range p.Pixel {
 		for x, pix := range prow {
+			pix &^= Black
+			if c.Black(x, y) {
+				pix |= Black
+			}
+				
 			keypix := key.Pixel[y][x]
 			want := Pixel(0)
 			switch {
@@ -90,20 +91,6 @@ Pixel:
 			}
 		}
 	}
-	if false {
-		write(key, "v%d-key.png", int(v))
-		write(c, "v%d-out.png", int(v))
-		for y, row := range c.Pixel {
-			for x, pix := range row {
-				if pix&Invert != 0 {
-					row[x] ^= Black
-					key.Pixel[y][x] ^= libqrencode.Black
-				}
-			}
-		}
-		write(key, "v%du-key.png", int(v))
-		write(c, "v%du-out.png", int(v))
-	}
 	return badpix == 0
 }
 
@@ -140,15 +127,4 @@ func TestEncode(t *testing.T) {
 	if !bytes.Equal(out, check) {
 		t.Errorf("have %x want %x", out, check)
 	}
-}
-
-func write(m image.Image, format string, args ...interface{}) {
-	f, err := os.Create(fmt.Sprintf(format, args...))
-	if err != nil {
-		panic(err)
-	}
-	if err := png.Encode(f, m); err != nil {
-		panic(err)
-	}
-	f.Close()
 }
