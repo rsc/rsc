@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package qrencode wraps the C libqrencode library.
-package qrencode
+// Package libqrencode wraps the C libqrencode library.
+// The qr package (in this package's parent directory)
+// does not use any C wrapping.  This code is here only
+// for use during that package's tests.
+package libqrencode
 
 /*
 #cgo LDFLAGS: -lqrencode
