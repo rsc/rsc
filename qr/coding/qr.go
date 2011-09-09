@@ -8,7 +8,6 @@ package coding
 
 import (
 	"fmt"
-	"image"
 	"os"
 	"strconv"
 	"strings"
@@ -310,39 +309,15 @@ func (l Level) String() string {
 }
 
 // A Code is a square pixel grid.
-// It implements image.Image.
 type Code struct {
 	Bitmap []byte  // 1 is black, 0 is white
 	Size int  // number of pixels on a side
 	Stride int  // number of bytes per row
-	Scale int // number of image pixels per QR pixel
 }
 
 func (c *Code) Black(x, y int) bool {
-	return c.Bitmap[y*c.Stride+x/8]&(1<<uint(7-x&7)) != 0
-}
-
-func (*Code) ColorModel() image.ColorModel {
-	return image.GrayColorModel
-}
-
-func (c *Code) Bounds() image.Rectangle {
-	d := (c.Size + 8) * c.Scale
-	return image.Rect(0, 0, d, d)
-}
-
-var (
-	white image.Color = image.GrayColor{0xFF}
-	black image.Color = image.GrayColor{0x00}
-)
-
-func (c *Code) At(x, y int) image.Color {
-	x = x/c.Scale - 4
-	y = y/c.Scale - 4
-	if 0 <= x && x < c.Size && 0 <= y && y < c.Size && c.Bitmap[y*c.Stride+x/8] & 1<<uint(7-x&7) != 0 {
-		return black
-	}
-	return white
+	return 0 <= x && x < c.Size && 0 <= y && y < c.Size &&
+		c.Bitmap[y*c.Stride+x/8]&(1<<uint(7-x&7)) != 0
 }
 
 // A Mask describes a mask that is applied to the QR
