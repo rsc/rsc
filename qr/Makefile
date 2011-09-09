@@ -1,4 +1,4 @@
 include $(GOROOT)/src/Make.inc
-TARG=qr
-GOFILES=qr.go
+TARG=rsc.googlecode.com/hg/qr
+GOFILES=qr.go png.go
 include $(GOROOT)/src/Make.pkg
