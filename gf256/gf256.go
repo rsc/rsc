@@ -8,7 +8,7 @@ package gf256
 import "strconv"
 
 type Field struct {
-	log [256]byte	// log[0] is unused
+	log [256]byte // log[0] is unused
 	exp [255]byte
 }
 
@@ -109,7 +109,7 @@ func (f *Field) MulPoly(x, y Poly) Poly {
 	if len(x) == 0 || len(y) == 0 {
 		return nil
 	}
-	z := make(Poly, len(x) + len(y) - 1)
+	z := make(Poly, len(x)+len(y)-1)
 	for i, xi := range x {
 		if xi == 0 {
 			continue
@@ -139,7 +139,7 @@ func (f *Field) DivPoly(x, y Poly) (q, r Poly) {
 
 func (p Poly) String() string {
 	s := ""
-	for i := len(p)-1; i >= 0; i-- {
+	for i := len(p) - 1; i >= 0; i-- {
 		v := p[i]
 		if v != 0 {
 			if s != "" {
@@ -153,7 +153,6 @@ func (p Poly) String() string {
 	}
 	return s
 }
-
 
 func (f *Field) Gen(e int) Poly {
 	p := Poly{1}
@@ -169,16 +168,16 @@ func (f *Field) ECBytes(data []byte, ecBytes int) []byte {
 	}
 
 	p := make(Poly, len(data))
-	n := len(p)-1
+	n := len(p) - 1
 	for i, v := range data {
 		p[n-i] = v
 	}
 	p = p.Norm()
 	p = f.MulPoly(p, Mono(1, ecBytes))
-	
+
 	_, r := f.DivPoly(p, f.Gen(ecBytes))
 	ec := make([]byte, ecBytes)
-	n = ecBytes-1
+	n = ecBytes - 1
 	for i, v := range r {
 		ec[n-i] = v
 	}

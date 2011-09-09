@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-var f = NewField(0x11d)	// x^8 + x^4 + x^3 + x^2 + 1
+var f = NewField(0x11d) // x^8 + x^4 + x^3 + x^2 + 1
 
 func TestBasic(t *testing.T) {
 	if f.Exp(0) != 1 || f.Exp(1) != 2 || f.Exp(255) != 1 {
@@ -50,34 +50,34 @@ func TestLinear(t *testing.T) {
 }
 
 func TestGaussJordan(t *testing.T) {
-	
+
 	m := make([][]byte, 16)
 	for i := range m {
 		m[i] = make([]byte, 4)
-		m[i][i/8] = 1<<uint(i%8)
+		m[i][i/8] = 1 << uint(i%8)
 		copy(m[i][2:], f.ECBytes(m[i][:2], 2))
 	}
 	fmt.Printf("---\n")
 	for _, row := range m {
 		fmt.Printf("%x\n", row)
 	}
-	b := []uint{0,1,2,3,12,13,14,15,20,21,22,23,24,25,26,27}
+	b := []uint{0, 1, 2, 3, 12, 13, 14, 15, 20, 21, 22, 23, 24, 25, 26, 27}
 	for i := 0; i < 16; i++ {
 		bi := b[i]
-		if m[i][bi/8] & (1<<(7-bi%8)) == 0 {
-			for j := i+1;; j++ {
+		if m[i][bi/8]&(1<<(7-bi%8)) == 0 {
+			for j := i + 1; ; j++ {
 				if j >= len(m) {
 					t.Errorf("lost track for %d", bi)
 					break
 				}
-				if m[j][bi/8] & (1<<(7-bi%8)) != 0 {
+				if m[j][bi/8]&(1<<(7-bi%8)) != 0 {
 					m[i], m[j] = m[j], m[i]
 					break
 				}
 			}
 		}
-		for j := i+1; j < len(m); j++ {
-			if m[j][bi/8] & (1<<(7-bi%8)) != 0 {
+		for j := i + 1; j < len(m); j++ {
+			if m[j][bi/8]&(1<<(7-bi%8)) != 0 {
 				for k := range m[j] {
 					m[j][k] ^= m[i][k]
 				}
@@ -90,8 +90,8 @@ func TestGaussJordan(t *testing.T) {
 	}
 	for i := 15; i >= 0; i-- {
 		bi := b[i]
-		for j := i-1; j >= 0; j-- {
-			if m[j][bi/8] & (1<<(7-bi%8)) != 0 {
+		for j := i - 1; j >= 0; j-- {
+			if m[j][bi/8]&(1<<(7-bi%8)) != 0 {
 				for k := range m[j] {
 					m[j][k] ^= m[i][k]
 				}

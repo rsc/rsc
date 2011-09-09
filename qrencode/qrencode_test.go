@@ -35,7 +35,7 @@ func TestEncode(t *testing.T) {
 	fmt.Println()
 	fmt.Println()
 	fmt.Println()
-	
+
 	f, err := os.Create("x.png")
 	if err != nil {
 		t.Fatal(err)

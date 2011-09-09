@@ -7,7 +7,7 @@ package coding
 import (
 	"bytes"
 	"testing"
-	
+
 	"rsc.googlecode.com/hg/qr/libqrencode"
 )
 
@@ -52,7 +52,7 @@ Pixel:
 			if c.Black(x, y) {
 				pix |= Black
 			}
-				
+
 			keypix := key.Pixel[y][x]
 			want := Pixel(0)
 			switch {

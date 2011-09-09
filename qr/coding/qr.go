@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-
 // Package coding implements low-level QR coding details.
 package coding
 
@@ -86,7 +85,7 @@ func (b *Bits) Append(p []byte) {
 		panic("fractional byte")
 	}
 	b.b = append(b.b, p...)
-	b.nbit += 8*len(p)
+	b.nbit += 8 * len(p)
 }
 
 func (b *Bits) Write(v uint, nbit int) {
@@ -310,9 +309,9 @@ func (l Level) String() string {
 
 // A Code is a square pixel grid.
 type Code struct {
-	Bitmap []byte  // 1 is black, 0 is white
-	Size int  // number of pixels on a side
-	Stride int  // number of bytes per row
+	Bitmap []byte // 1 is black, 0 is white
+	Size   int    // number of pixels on a side
+	Stride int    // number of bytes per row
 }
 
 func (c *Code) Black(x, y int) bool {
@@ -387,9 +386,9 @@ func (b *Bits) Pad(n int) {
 	} else {
 		b.Write(0, 4)
 		n -= 4
-		n -= -b.Bits()&7
+		n -= -b.Bits() & 7
 		b.Write(0, -b.Bits()&7)
-		pad := n/8
+		pad := n / 8
 		for i := 0; i < pad; i += 2 {
 			b.Write(0xec, 8)
 			if i+1 >= pad {
@@ -415,7 +414,7 @@ func (b *Bits) AddCheckBytes(v Version, l Level) {
 	db := nd / lev.nblock
 	extra := nd % lev.nblock
 	for i := 0; i < lev.nblock; i++ {
-		if i == lev.nblock - extra {
+		if i == lev.nblock-extra {
 			db++
 		}
 		b.Append(Field.ECBytes(dat[:db], lev.check))
@@ -443,7 +442,7 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 
 	// Now we have the checksum bytes and the data bytes.
 	// Construct the actual code.
-	c := &Code{Scale: 8, Size: len(p.Pixel), Stride: (len(p.Pixel)+7)&^7}
+	c := &Code{Scale: 8, Size: len(p.Pixel), Stride: (len(p.Pixel) + 7) &^ 7}
 	c.Bitmap = make([]byte, c.Stride*c.Size)
 	crow := c.Bitmap
 	for _, row := range p.Pixel {
@@ -456,7 +455,7 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 				}
 			}
 			if pix&Black != 0 {
-				crow[x/8] |= 1<<uint(7-x&7)
+				crow[x/8] |= 1 << uint(7-x&7)
 			}
 		}
 		crow = crow[c.Stride:]
@@ -670,7 +669,7 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 	}
 	check := make([]Pixel, checkBits)
 	for i := range check {
-		check[i] = Check.Pixel() | OffsetPixel(uint(i + dataBits))
+		check[i] = Check.Pixel() | OffsetPixel(uint(i+dataBits))
 	}
 
 	// Split into blocks.

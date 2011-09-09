@@ -24,13 +24,15 @@ import (
 type Version int
 
 type Mode int
+
 const (
-	Numeric Mode = C.QR_MODE_NUM
+	Numeric      Mode = C.QR_MODE_NUM
 	Alphanumeric Mode = C.QR_MODE_AN
-	EightBit Mode = C.QR_MODE_8
+	EightBit     Mode = C.QR_MODE_8
 )
 
 type Level int
+
 const (
 	L Level = C.QR_ECLEVEL_L
 	M Level = C.QR_ECLEVEL_M
@@ -39,8 +41,9 @@ const (
 )
 
 type Pixel int
+
 const (
-	Black Pixel = 1<<iota
+	Black Pixel = 1 << iota
 	DataECC
 	Format
 	PVersion
@@ -49,12 +52,12 @@ const (
 	Finder
 	NonData
 )
-	
+
 type Code struct {
 	Version int
-	Width int
-	Pixel [][]Pixel
-	Scale int
+	Width   int
+	Pixel   [][]Pixel
+	Scale   int
 }
 
 func (*Code) ColorModel() image.ColorModel {
@@ -67,13 +70,13 @@ func (c *Code) Bounds() image.Rectangle {
 }
 
 var (
-	white image.Color = image.RGBAColor{0xFF, 0xFF, 0xFF, 0xFF}
-	black image.Color = image.RGBAColor{0x00, 0x00, 0x00, 0xFF}
-	blue image.Color = image.RGBAColor{0x00, 0x00, 0x80, 0xFF}
-	red image.Color = image.RGBAColor{0xFF, 0x40, 0x40, 0xFF}
+	white  image.Color = image.RGBAColor{0xFF, 0xFF, 0xFF, 0xFF}
+	black  image.Color = image.RGBAColor{0x00, 0x00, 0x00, 0xFF}
+	blue   image.Color = image.RGBAColor{0x00, 0x00, 0x80, 0xFF}
+	red    image.Color = image.RGBAColor{0xFF, 0x40, 0x40, 0xFF}
 	yellow image.Color = image.RGBAColor{0xFF, 0xFF, 0x00, 0xFF}
-	gray image.Color = image.RGBAColor{0x80, 0x80, 0x80, 0xFF}
-	green image.Color = image.RGBAColor{0x22, 0x8B, 0x22, 0xFF}
+	gray   image.Color = image.RGBAColor{0x80, 0x80, 0x80, 0xFF}
+	green  image.Color = image.RGBAColor{0x22, 0x8B, 0x22, 0xFF}
 )
 
 func (c *Code) At(x, y int) image.Color {
@@ -122,26 +125,25 @@ func EncodeChunk(version Version, level Level, chunk ...Chunk) (*Code, os.Error)
 			return nil, fmt.Errorf("QRinput_append %q: %v", data, err)
 		}
 	}
-	
+
 	qc, err := C.QRcode_encodeInput(qi)
 	if qc == nil {
 		return nil, fmt.Errorf("QRinput_encodeInput: %v", err)
 	}
-	
+
 	c := &Code{
 		Version: int(qc.version),
-		Width: int(qc.width),
-		Scale: 16,
+		Width:   int(qc.width),
+		Scale:   16,
 	}
 	pix := make([]Pixel, c.Width*c.Width)
-	cdat := (*[1000*1000]byte)(unsafe.Pointer(qc.data))[:len(pix)]
+	cdat := (*[1000 * 1000]byte)(unsafe.Pointer(qc.data))[:len(pix)]
 	for i := range pix {
 		pix[i] = Pixel(cdat[i])
 	}
 	c.Pixel = make([][]Pixel, c.Width)
 	for i := range c.Pixel {
-		c.Pixel[i] = pix[i*c.Width:(i+1)*c.Width]
+		c.Pixel[i] = pix[i*c.Width : (i+1)*c.Width]
 	}
 	return c, nil
 }
-

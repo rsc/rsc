@@ -26,8 +26,7 @@ func TestPNG(t *testing.T) {
 		t.Fatal(err)
 	}
 	gm := m.(*image.Gray)
-	
-	
+
 	scale := c.Scale
 	siz := c.Size
 	nbad := 0

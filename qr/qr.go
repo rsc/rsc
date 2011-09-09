@@ -14,16 +14,15 @@ import (
 	"rsc.googlecode.com/hg/qr/coding"
 )
 
-
 // A Level denotes a QR error correction level.
 // From least to most tolerant of errors, they are L, M, Q, H.
 type Level int
 
 const (
-	L Level = iota  // 20% redundant
-	M  // 38% redundant
-	Q  // 55% redundant
-	H  // 65% redundant
+	L Level = iota // 20% redundant
+	M              // 38% redundant
+	Q              // 55% redundant
+	H              // 65% redundant
 )
 
 // Encode returns an encoding of text at the given error correction level.
@@ -40,11 +39,11 @@ func Encode(text string, level Level) (*Code, os.Error) {
 	default:
 		enc = coding.String(text)
 	}
-	
+
 	// Pick size.
 	l := coding.Level(level)
 	var v coding.Version
-	for v = coding.MinVersion;; v++ {
+	for v = coding.MinVersion; ; v++ {
 		if v > coding.MaxVersion {
 			return nil, os.NewError("text too long to encode as QR")
 		}
@@ -62,19 +61,19 @@ func Encode(text string, level Level) (*Code, os.Error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// TODO: Pick appropriate mask.
-	
+
 	return &Code{cc.Bitmap, cc.Size, cc.Stride, 8}, nil
 }
 
 // A Code is a square pixel grid.
 // It implements image.Image and direct PNG encoding.
 type Code struct {
-	Bitmap []byte  // 1 is black, 0 is white
-	Size int  // number of pixels on a side
-	Stride int  // number of bytes per row
-	Scale int // number of image pixels per QR pixel
+	Bitmap []byte // 1 is black, 0 is white
+	Size   int    // number of pixels on a side
+	Stride int    // number of bytes per row
+	Scale  int    // number of image pixels per QR pixel
 }
 
 // Black returns true if the pixel at (x,y) is black.
@@ -86,7 +85,7 @@ func (c *Code) Black(x, y int) bool {
 // Image returns an Image displaying the code.
 func (c *Code) Image() image.Image {
 	return &codeImage{c}
-	
+
 }
 
 // codeImage implements image.Image
@@ -100,7 +99,7 @@ var (
 )
 
 func (c *codeImage) Bounds() image.Rectangle {
-	d := (c.Size+8)*c.Scale
+	d := (c.Size + 8) * c.Scale
 	return image.Rect(0, 0, d, d)
 }
 

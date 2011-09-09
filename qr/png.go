@@ -25,11 +25,11 @@ func (c *Code) PNG() []byte {
 }
 
 type pngWriter struct {
-	tmp [16]byte
+	tmp   [16]byte
 	wctmp [4]byte
-	buf bytes.Buffer
-	zlib bitWriter
-	crc hash.Hash32
+	buf   bytes.Buffer
+	zlib  bitWriter
+	crc   hash.Hash32
 }
 
 var pngHeader = []byte("\x89PNG\r\n\x1a\n")
@@ -39,20 +39,20 @@ func (w *pngWriter) encode(c *Code) []byte {
 	siz := c.Size
 
 	w.buf.Reset()
-	
+
 	// Header
 	w.buf.Write(pngHeader)
 
 	// Header block
 	binary.BigEndian.PutUint32(w.tmp[0:4], uint32((siz+8)*scale))
 	binary.BigEndian.PutUint32(w.tmp[4:8], uint32((siz+8)*scale))
-	w.tmp[8] = 1  // 1-bit
-	w.tmp[9] = 0  // gray
+	w.tmp[8] = 1 // 1-bit
+	w.tmp[9] = 0 // gray
 	w.tmp[10] = 0
 	w.tmp[11] = 0
 	w.tmp[12] = 0
 	w.writeChunk("IHDR", w.tmp[:13])
-	
+
 	// Comment
 	w.writeChunk("tEXt", comment)
 
@@ -62,7 +62,7 @@ func (w *pngWriter) encode(c *Code) []byte {
 
 	// End
 	w.writeChunk("IEND", nil)
-	
+
 	return w.buf.Bytes()
 }
 
@@ -102,13 +102,13 @@ func (b *bitWriter) writeCode(c *Code) {
 	b.bytes.Write(b.tmp[0:2])
 
 	// Start flate block.
-	b.writeBits(1, 1, false)  // final block
-	b.writeBits(1, 2, false)  // compressed, fixed Huffman tables
+	b.writeBits(1, 1, false) // final block
+	b.writeBits(1, 2, false) // compressed, fixed Huffman tables
 
 	// White border.
 	// First row.
 	b.byte(ftNone)
-	n := (scale*(siz+8)+7)/8
+	n := (scale*(siz+8) + 7) / 8
 	b.byte(255)
 	b.repeat(n-1, 1)
 	// 4*scale rows total.
@@ -118,7 +118,7 @@ func (b *bitWriter) writeCode(c *Code) {
 		b.adler32.WriteNByte(ftNone, 1)
 		b.adler32.WriteNByte(255, n)
 	}
-	
+
 	row := make([]byte, 1+n)
 	for y := 0; y < siz; y++ {
 		row[0] = ftNone
@@ -177,10 +177,10 @@ func (b *bitWriter) writeCode(c *Code) {
 // A bitWriter is a write buffer for bit-oriented data like deflate.
 type bitWriter struct {
 	bytes bytes.Buffer
-	bit uint32
-	nbit uint
-	
-	tmp [4]byte
+	bit   uint32
+	nbit  uint
+
+	tmp     [4]byte
 	adler32 adigest
 }
 
@@ -189,7 +189,7 @@ func (b *bitWriter) writeBits(bit uint32, nbit uint, rev bool) {
 	if rev {
 		br := uint32(0)
 		for i := uint(0); i < nbit; i++ {
-			br |= ((bit>>i)&1)<<(nbit-1-i)
+			br |= ((bit >> i) & 1) << (nbit - 1 - i)
 		}
 		bit = br
 	}
@@ -212,16 +212,16 @@ func (b *bitWriter) flushBits() {
 
 func (b *bitWriter) hcode(v int) {
 	/*
-       Lit Value    Bits        Codes
-       ---------    ----        -----
-         0 - 143     8          00110000 through
-                                10111111
-       144 - 255     9          110010000 through
-                                111111111
-       256 - 279     7          0000000 through
-                                0010111
-       280 - 287     8          11000000 through
-                                11000111
+	   Lit Value    Bits        Codes
+	   ---------    ----        -----
+	     0 - 143     8          00110000 through
+	                            10111111
+	   144 - 255     9          110010000 through
+	                            111111111
+	   256 - 279     7          0000000 through
+	                            0010111
+	   280 - 287     8          11000000 through
+	                            11000111
 	*/
 	switch {
 	case v <= 143:
@@ -264,19 +264,19 @@ func (b *bitWriter) repeat(n, d int) {
 
 func (b *bitWriter) repeat1(n, d int) {
 	/*
-             Extra               Extra               Extra
-        Code Bits Length(s) Code Bits Lengths   Code Bits Length(s)
-        ---- ---- ------     ---- ---- -------   ---- ---- -------
-         257   0     3       267   1   15,16     277   4   67-82
-         258   0     4       268   1   17,18     278   4   83-98
-         259   0     5       269   2   19-22     279   4   99-114
-         260   0     6       270   2   23-26     280   4  115-130
-         261   0     7       271   2   27-30     281   5  131-162
-         262   0     8       272   2   31-34     282   5  163-194
-         263   0     9       273   3   35-42     283   5  195-226
-         264   0    10       274   3   43-50     284   5  227-257
-         265   1  11,12      275   3   51-58     285   0    258
-         266   1  13,14      276   3   59-66
+	        Extra               Extra               Extra
+	   Code Bits Length(s) Code Bits Lengths   Code Bits Length(s)
+	   ---- ---- ------     ---- ---- -------   ---- ---- -------
+	    257   0     3       267   1   15,16     277   4   67-82
+	    258   0     4       268   1   17,18     278   4   83-98
+	    259   0     5       269   2   19-22     279   4   99-114
+	    260   0     6       270   2   23-26     280   4  115-130
+	    261   0     7       271   2   27-30     281   5  131-162
+	    262   0     8       272   2   31-34     282   5  163-194
+	    263   0     9       273   3   35-42     283   5  195-226
+	    264   0    10       274   3   43-50     284   5  227-257
+	    265   1  11,12      275   3   51-58     285   0    258
+	    266   1  13,14      276   3   59-66
 	*/
 	switch {
 	case n <= 10:
@@ -298,19 +298,19 @@ func (b *bitWriter) repeat1(n, d int) {
 	}
 
 	/*
-              Extra           Extra               Extra
-         Code Bits Dist  Code Bits   Dist     Code Bits Distance
-         ---- ---- ----  ---- ----  ------    ---- ---- --------
-           0   0    1     10   4     33-48    20    9   1025-1536
-           1   0    2     11   4     49-64    21    9   1537-2048
-           2   0    3     12   5     65-96    22   10   2049-3072
-           3   0    4     13   5     97-128   23   10   3073-4096
-           4   1   5,6    14   6    129-192   24   11   4097-6144
-           5   1   7,8    15   6    193-256   25   11   6145-8192
-           6   2   9-12   16   7    257-384   26   12  8193-12288
-           7   2  13-16   17   7    385-512   27   12 12289-16384
-           8   3  17-24   18   8    513-768   28   13 16385-24576
-           9   3  25-32   19   8   769-1024   29   13 24577-32768
+	        Extra           Extra               Extra
+	   Code Bits Dist  Code Bits   Dist     Code Bits Distance
+	   ---- ---- ----  ---- ----  ------    ---- ---- --------
+	     0   0    1     10   4     33-48    20    9   1025-1536
+	     1   0    2     11   4     49-64    21    9   1537-2048
+	     2   0    3     12   5     65-96    22   10   2049-3072
+	     3   0    4     13   5     97-128   23   10   3073-4096
+	     4   1   5,6    14   6    129-192   24   11   4097-6144
+	     5   1   7,8    15   6    193-256   25   11   6145-8192
+	     6   2   9-12   16   7    257-384   26   12  8193-12288
+	     7   2  13-16   17   7    385-512   27   12 12289-16384
+	     8   3  17-24   18   8    513-768   28   13 16385-24576
+	     9   3  25-32   19   8   769-1024   29   13 24577-32768
 	*/
 	if d <= 4 {
 		b.writeBits(uint32(d-1), 5, true)
@@ -319,11 +319,11 @@ func (b *bitWriter) repeat1(n, d int) {
 		for d <= 1<<(nbit-1) {
 			nbit--
 		}
-		v := uint32(d-1)
-		v &^= 1<<(nbit-1)  // top bit is implicit
-		code := uint32(2*nbit-2)  // second bit is low bit of code
-		code |= v>>(nbit-2)
-		v &^= 1<<(nbit-2)
+		v := uint32(d - 1)
+		v &^= 1 << (nbit - 1)      // top bit is implicit
+		code := uint32(2*nbit - 2) // second bit is low bit of code
+		code |= v >> (nbit - 2)
+		v &^= 1 << (nbit - 2)
 		b.writeBits(code, 5, true)
 		// rest of bits follow
 		b.writeBits(uint32(v), nbit-2, false)
@@ -353,14 +353,15 @@ type adigest struct {
 func (d *adigest) Reset() { d.a, d.b = 1, 0 }
 
 const amod = 65521
+
 func aupdate(a, b uint32, pi byte, n int) (aa, bb uint32) {
 	// TODO(rsc): 6g doesn't do magic multiplies for b %= amod,
 	// only for b = b%amod.
 
 	// invariant: a, b < amod
 	if pi == 0 {
-		b += uint32(n%amod)*a
-		b = b%amod
+		b += uint32(n%amod) * a
+		b = b % amod
 		return a, b
 	}
 
@@ -371,12 +372,12 @@ func aupdate(a, b uint32, pi byte, n int) (aa, bb uint32) {
 	//	b += n*a + n*(n+1)/2*pi
 	//	a += n*pi
 	m := uint32(n)
-	b += (m%amod)*a
-	b = b%amod
-	b += (m*(m+1)/2)%amod * uint32(pi)
-	b = b%amod
-	a += (m%amod)*uint32(pi)
-	a = a%amod
+	b += (m % amod) * a
+	b = b % amod
+	b += (m * (m + 1) / 2) % amod * uint32(pi)
+	b = b % amod
+	a += (m % amod) * uint32(pi)
+	a = a % amod
 	return a, b
 }
 
