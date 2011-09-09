@@ -3,6 +3,6 @@
 # license that can be found in the LICENSE file.
 
 include $(GOROOT)/src/Make.inc
-TARG=gf256
+TARG=rsc.googlecode.com/hg/gf256
 GOFILES=gf256.go #rs.go
 include $(GOROOT)/src/Make.pkg
