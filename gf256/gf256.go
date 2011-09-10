@@ -9,7 +9,7 @@ import "strconv"
 
 type Field struct {
 	log [256]byte // log[0] is unused
-	exp [255]byte
+	exp [510]byte
 }
 
 func NewField(poly int) *Field {
@@ -18,11 +18,12 @@ func NewField(poly int) *Field {
 	}
 	var f Field
 	x := 1
-	for i := range f.exp {
+	for i := 0; i < 255; i++ {
 		if x == 1 && i != 0 {
 			panic("gf256: reducible polynomial: " + strconv.Itoa(poly))
 		}
 		f.exp[i] = byte(x)
+		f.exp[i+255] = byte(x)
 		f.log[x] = byte(i)
 		x *= 2
 		if x >= 0x100 {
@@ -61,7 +62,7 @@ func (f *Field) Inv(x byte) byte {
 	if x == 0 {
 		return 0
 	}
-	return f.Exp(255 - f.Log(x))
+	return f.exp[255 - f.log[x]]
 }
 
 // Mul returns the product of x and y in the field.
@@ -69,7 +70,7 @@ func (f *Field) Mul(x, y byte) byte {
 	if x == 0 || y == 0 {
 		return 0
 	}
-	return f.Exp((f.Log(x) + f.Log(y)) % 255)
+	return f.exp[int(f.log[x]) + int(f.log[y])]
 }
 
 type Poly []byte
@@ -162,9 +163,9 @@ func (f *Field) Gen(e int) Poly {
 	return p
 }
 
-func (f *Field) ECBytes(data []byte, ecBytes int) []byte {
-	if ecBytes == 0 {
-		return nil
+func (f *Field) ECBytes(data []byte, ecBytes []byte) {
+	if len(ecBytes) == 0 {
+		return
 	}
 
 	p := make(Poly, len(data))
@@ -173,13 +174,76 @@ func (f *Field) ECBytes(data []byte, ecBytes int) []byte {
 		p[n-i] = v
 	}
 	p = p.Norm()
-	p = f.MulPoly(p, Mono(1, ecBytes))
+	p = f.MulPoly(p, Mono(1, len(ecBytes)))
 
-	_, r := f.DivPoly(p, f.Gen(ecBytes))
-	ec := make([]byte, ecBytes)
-	n = ecBytes - 1
+	_, r := f.DivPoly(p, f.Gen(len(ecBytes)))
+	n = len(ecBytes) - 1
 	for i, v := range r {
-		ec[n-i] = v
+		ecBytes[n-i] = v
 	}
-	return ec
 }
+
+// ReedSolomon implements Reed-Solomon encoding
+// over a given field using a given number of error correction bytes.
+type ReedSolomon struct {
+	f *Field
+	c int
+	lgen []byte
+	p []byte
+}
+
+func NewReedSolomon(f *Field, c int) *ReedSolomon {
+	gen := f.Gen(c)
+	for i, j := 0, len(gen)-1; i < j; i, j = i+1, j-1 {
+		gen[i], gen[j] = gen[j], gen[i]
+	}
+	for i, g := range gen {
+		if g == 0 {
+			panic("gen 0")
+		}
+		gen[i] = f.log[g]
+	}
+	return &ReedSolomon{f: f, c: c, lgen: gen}
+}
+
+func (rs *ReedSolomon) ECC(data []byte, check []byte) {
+	if len(check) != rs.c {
+		panic("gf256.ReedSolomon: invalid check byte length")
+	}
+	if len(check) == 0 {
+		return
+	}
+
+	var p []byte
+	n := len(data)+len(check)
+	if len(rs.p) >= n {
+		p = rs.p
+	} else {
+		p = make([]byte, n)
+	}
+	copy(p, data)
+	for i := len(data); i < len(p); i++ {
+		p[i] = 0
+	}
+	f := rs.f
+	lgen := rs.lgen
+	linv := 255 - int(lgen[0])
+	for i := 0; i < len(data); i++ {
+		if p[i] == 0 {
+			continue
+		}
+		q := p[i:]
+		// m = p[i] / gen[0]
+		lm := int(f.log[p[i]])+linv
+		if lm >= 255 {
+			lm -= 255
+		}
+		exp := f.exp[lm:]
+		for j, lg := range lgen {
+			q[j] ^= exp[lg]
+		}
+	}
+	copy(check, p[len(data):])
+	rs.p = p
+}
+
