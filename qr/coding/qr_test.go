@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"testing"
 
+	"rsc.googlecode.com/hg/gf256"
 	"rsc.googlecode.com/hg/qr/libqrencode"
 )
 
@@ -123,7 +124,9 @@ Version:
 func TestEncode(t *testing.T) {
 	data := []byte{0x10, 0x20, 0x0c, 0x56, 0x61, 0x80, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11}
 	check := []byte{0xa5, 0x24, 0xd4, 0xc1, 0xed, 0x36, 0xc7, 0x87, 0x2c, 0x55}
-	out := Field.ECBytes(data, len(check))
+	rs := gf256.NewRSEncoder(Field, len(check))
+	out := make([]byte, len(check))
+	rs.ECC(data, out)
 	if !bytes.Equal(out, check) {
 		t.Errorf("have %x want %x", out, check)
 	}

@@ -413,11 +413,14 @@ func (b *Bits) AddCheckBytes(v Version, l Level) {
 	lev := &vt.level[l]
 	db := nd / lev.nblock
 	extra := nd % lev.nblock
+	chk := make([]byte, lev.check)
+	rs := gf256.NewRSEncoder(Field, lev.check)
 	for i := 0; i < lev.nblock; i++ {
 		if i == lev.nblock-extra {
 			db++
 		}
-		b.Append(Field.ECBytes(dat[:db], lev.check))
+		rs.ECC(dat[:db], chk)
+		b.Append(chk)
 		dat = dat[db:]
 	}
 
@@ -442,7 +445,7 @@ func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
 
 	// Now we have the checksum bytes and the data bytes.
 	// Construct the actual code.
-	c := &Code{Scale: 8, Size: len(p.Pixel), Stride: (len(p.Pixel) + 7) &^ 7}
+	c := &Code{Size: len(p.Pixel), Stride: (len(p.Pixel) + 7) &^ 7}
 	c.Bitmap = make([]byte, c.Stride*c.Size)
 	crow := c.Bitmap
 	for _, row := range p.Pixel {
