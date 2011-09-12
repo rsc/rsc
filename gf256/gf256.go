@@ -8,7 +8,7 @@ package gf256
 import "strconv"
 
 type Field struct {
-	log [256]byte  // log[0] is unused
+	log [256]byte // log[0] is unused
 	exp [510]byte
 }
 
@@ -82,7 +82,7 @@ type RSEncoder struct {
 	lgen []byte
 	p    []byte
 }
- 
+
 func (f *Field) lgen(e int) []byte {
 	// p = 1
 	p := make([]byte, e+1)
@@ -97,7 +97,7 @@ func (f *Field) lgen(e int) []byte {
 		}
 		p[e] = f.Mul(p[e], c)
 	}
-	
+
 	// replace p with log p.
 	for i, c := range p {
 		if c == 0 {
@@ -157,7 +157,7 @@ func (rs *RSEncoder) ECC(data []byte, check []byte) {
 		q := p[i+1:]
 		exp := f.exp[f.log[c]:]
 		for j, lg := range lgen {
-			if lg != 255 {  // lgen uses 255 for log 0
+			if lg != 255 { // lgen uses 255 for log 0
 				q[j] ^= exp[lg]
 			}
 		}
