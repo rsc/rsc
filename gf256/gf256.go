@@ -163,36 +163,18 @@ func (f *Field) Gen(e int) Poly {
 	return p
 }
 
-func (f *Field) ECBytes(data []byte, ecBytes []byte) {
-	if len(ecBytes) == 0 {
-		return
-	}
-
-	p := make(Poly, len(data))
-	n := len(p) - 1
-	for i, v := range data {
-		p[n-i] = v
-	}
-	p = p.Norm()
-	p = f.MulPoly(p, Mono(1, len(ecBytes)))
-
-	_, r := f.DivPoly(p, f.Gen(len(ecBytes)))
-	n = len(ecBytes) - 1
-	for i, v := range r {
-		ecBytes[n-i] = v
-	}
-}
-
-// ReedSolomon implements Reed-Solomon encoding
+// An RSEncoder implements Reed-Solomon encoding
 // over a given field using a given number of error correction bytes.
-type ReedSolomon struct {
+type RSEncoder struct {
 	f *Field
 	c int
 	lgen []byte
 	p []byte
 }
 
-func NewReedSolomon(f *Field, c int) *ReedSolomon {
+// NewRSEncoder returns a new Reed-Solomon encoder
+// over the given field and number of error correction bytes.
+func NewRSEncoder(f *Field, c int) *RSEncoder {
 	gen := f.Gen(c)
 	for i, j := 0, len(gen)-1; i < j; i, j = i+1, j-1 {
 		gen[i], gen[j] = gen[j], gen[i]
@@ -203,19 +185,25 @@ func NewReedSolomon(f *Field, c int) *ReedSolomon {
 		}
 		gen[i] = f.log[g]
 	}
-	return &ReedSolomon{f: f, c: c, lgen: gen}
+	return &RSEncoder{f: f, c: c, lgen: gen}
 }
 
-func (rs *ReedSolomon) ECC(data []byte, check []byte) {
-	if len(check) != rs.c {
-		panic("gf256.ReedSolomon: invalid check byte length")
+// ECC writes to check the error correcting code bytes
+// for data using the given Reed-Solomon parameters.
+func (rs *RSEncoder) ECC(data []byte, check []byte) {
+	if len(check) < rs.c {
+		panic("gf256.RSEncoder: invalid check byte length")
 	}
-	if len(check) == 0 {
+	if rs.c == 0 {
 		return
 	}
+	
+	// The check bytes are the remainder after dividing
+	// data padded with c zeros by the generator polynomial.  
 
+	// p = data padded with c zeros.
 	var p []byte
-	n := len(data)+len(check)
+	n := len(data)+rs.c
 	if len(rs.p) >= n {
 		p = rs.p
 	} else {
@@ -225,6 +213,12 @@ func (rs *ReedSolomon) ECC(data []byte, check []byte) {
 	for i := len(data); i < len(p); i++ {
 		p[i] = 0
 	}
+
+	// Divide p by gen, leaving the remainder in p[len(data):].
+	// p[0] is the most significant term in p, and
+	// gen[0] is the most significant term in the generator.
+	// To avoid repeated work, we store various values as
+	// lv, not v, where lv = log[v].
 	f := rs.f
 	lgen := rs.lgen
 	linv := 255 - int(lgen[0])
@@ -246,4 +240,3 @@ func (rs *ReedSolomon) ECC(data []byte, check []byte) {
 	copy(check, p[len(data):])
 	rs.p = p
 }
-
