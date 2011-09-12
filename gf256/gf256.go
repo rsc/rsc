@@ -62,7 +62,7 @@ func (f *Field) Inv(x byte) byte {
 	if x == 0 {
 		return 0
 	}
-	return f.exp[255 - f.log[x]]
+	return f.exp[255-f.log[x]]
 }
 
 // Mul returns the product of x and y in the field.
@@ -70,7 +70,7 @@ func (f *Field) Mul(x, y byte) byte {
 	if x == 0 || y == 0 {
 		return 0
 	}
-	return f.exp[int(f.log[x]) + int(f.log[y])]
+	return f.exp[int(f.log[x])+int(f.log[y])]
 }
 
 type Poly []byte
@@ -166,10 +166,10 @@ func (f *Field) Gen(e int) Poly {
 // An RSEncoder implements Reed-Solomon encoding
 // over a given field using a given number of error correction bytes.
 type RSEncoder struct {
-	f *Field
-	c int
+	f    *Field
+	c    int
 	lgen []byte
-	p []byte
+	p    []byte
 }
 
 // NewRSEncoder returns a new Reed-Solomon encoder
@@ -197,13 +197,13 @@ func (rs *RSEncoder) ECC(data []byte, check []byte) {
 	if rs.c == 0 {
 		return
 	}
-	
+
 	// The check bytes are the remainder after dividing
 	// data padded with c zeros by the generator polynomial.  
 
 	// p = data padded with c zeros.
 	var p []byte
-	n := len(data)+rs.c
+	n := len(data) + rs.c
 	if len(rs.p) >= n {
 		p = rs.p
 	} else {
@@ -228,7 +228,7 @@ func (rs *RSEncoder) ECC(data []byte, check []byte) {
 		}
 		q := p[i:]
 		// m = p[i] / gen[0]
-		lm := int(f.log[p[i]])+linv
+		lm := int(f.log[p[i]]) + linv
 		if lm >= 255 {
 			lm -= 255
 		}
