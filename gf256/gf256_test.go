@@ -135,3 +135,12 @@ func BenchmarkECBytes(b *testing.B) {
 		fmt.Printf("have %#v want %#v\n", out, check)
 	}
 }
+
+func TestGen(t *testing.T) {
+	for i := 0; i < 256; i++ {
+		lg := f.lgen(i)
+		if lg[0] != 0 {
+			t.Errorf("#%d: %x", i, lg)
+		}
+	}
+}

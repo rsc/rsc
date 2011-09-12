@@ -8,7 +8,7 @@ package gf256
 import "strconv"
 
 type Field struct {
-	log [256]byte // log[0] is unused
+	log [256]byte  // log[0] is unused
 	exp [510]byte
 }
 
@@ -30,6 +30,7 @@ func NewField(poly int) *Field {
 			x ^= poly
 		}
 	}
+	f.log[0] = 255
 	return &f
 }
 
@@ -73,96 +74,6 @@ func (f *Field) Mul(x, y byte) byte {
 	return f.exp[int(f.log[x])+int(f.log[y])]
 }
 
-type Poly []byte
-
-var Zero = Poly{}
-var One = Poly{1}
-
-func (z Poly) Norm() Poly {
-	i := len(z)
-	for i > 0 && z[i-1] == 0 {
-		i--
-	}
-	return z[0:i]
-}
-
-func (x Poly) Add(y Poly) Poly {
-	if len(x) < len(y) {
-		x, y = y, x
-	}
-	z := make(Poly, len(x))
-	for i := range y {
-		z[i] = x[i] ^ y[i]
-	}
-	for i := len(y); i < len(x); i++ {
-		z[i] = x[i]
-	}
-	return z.Norm()
-}
-
-func Mono(a byte, i int) Poly {
-	p := make(Poly, i+1)
-	p[i] = a
-	return p
-}
-
-func (f *Field) MulPoly(x, y Poly) Poly {
-	if len(x) == 0 || len(y) == 0 {
-		return nil
-	}
-	z := make(Poly, len(x)+len(y)-1)
-	for i, xi := range x {
-		if xi == 0 {
-			continue
-		}
-		for j, yj := range y {
-			z[i+j] = z[i+j] ^ f.Mul(xi, yj)
-		}
-	}
-	return z
-}
-
-func (f *Field) DivPoly(x, y Poly) (q, r Poly) {
-	y = y.Norm()
-	if len(y) == 0 {
-		panic("divide by zero")
-	}
-
-	r = x
-	inv := f.Inv(y[len(y)-1])
-	for len(r) >= len(y) {
-		iq := Mono(f.Mul(r[len(r)-1], inv), len(r)-len(y))
-		q = q.Add(iq)
-		r = r.Add(f.MulPoly(iq, y))
-	}
-	return
-}
-
-func (p Poly) String() string {
-	s := ""
-	for i := len(p) - 1; i >= 0; i-- {
-		v := p[i]
-		if v != 0 {
-			if s != "" {
-				s += " + "
-			}
-			if v != 1 {
-				s += strconv.Itoa(int(v)) + " "
-			}
-			s += "x^" + strconv.Itoa(i)
-		}
-	}
-	return s
-}
-
-func (f *Field) Gen(e int) Poly {
-	p := Poly{1}
-	for i := 0; i < e; i++ {
-		p = f.MulPoly(p, Poly{f.Exp(i), 1})
-	}
-	return p
-}
-
 // An RSEncoder implements Reed-Solomon encoding
 // over a given field using a given number of error correction bytes.
 type RSEncoder struct {
@@ -171,21 +82,37 @@ type RSEncoder struct {
 	lgen []byte
 	p    []byte
 }
+ 
+func (f *Field) lgen(e int) []byte {
+	// p = 1
+	p := make([]byte, e+1)
+	p[e] = 1
+
+	for i := 0; i < e; i++ {
+		// p *= (x + Exp(i))
+		// p[j] = p[j]*Exp(i) + p[j+1].
+		c := f.Exp(i)
+		for j := 0; j < e; j++ {
+			p[j] = f.Mul(p[j], c) ^ p[j+1]
+		}
+		p[e] = f.Mul(p[e], c)
+	}
+	
+	// replace p with log p.
+	for i, c := range p {
+		if c == 0 {
+			p[i] = 255
+		} else {
+			p[i] = byte(f.Log(c))
+		}
+	}
+	return p
+}
 
 // NewRSEncoder returns a new Reed-Solomon encoder
 // over the given field and number of error correction bytes.
 func NewRSEncoder(f *Field, c int) *RSEncoder {
-	gen := f.Gen(c)
-	for i, j := 0, len(gen)-1; i < j; i, j = i+1, j-1 {
-		gen[i], gen[j] = gen[j], gen[i]
-	}
-	for i, g := range gen {
-		if g == 0 {
-			panic("gen 0")
-		}
-		gen[i] = f.log[g]
-	}
-	return &RSEncoder{f: f, c: c, lgen: gen}
+	return &RSEncoder{f: f, c: c, lgen: f.lgen(c)}
 }
 
 // ECC writes to check the error correcting code bytes
@@ -216,25 +143,23 @@ func (rs *RSEncoder) ECC(data []byte, check []byte) {
 
 	// Divide p by gen, leaving the remainder in p[len(data):].
 	// p[0] is the most significant term in p, and
-	// gen[0] is the most significant term in the generator.
+	// gen[0] is the most significant term in the generator,
+	// which is always 1.
 	// To avoid repeated work, we store various values as
 	// lv, not v, where lv = log[v].
 	f := rs.f
-	lgen := rs.lgen
-	linv := 255 - int(lgen[0])
+	lgen := rs.lgen[1:]
 	for i := 0; i < len(data); i++ {
-		if p[i] == 0 {
+		c := p[i]
+		if c == 0 {
 			continue
 		}
-		q := p[i:]
-		// m = p[i] / gen[0]
-		lm := int(f.log[p[i]]) + linv
-		if lm >= 255 {
-			lm -= 255
-		}
-		exp := f.exp[lm:]
+		q := p[i+1:]
+		exp := f.exp[f.log[c]:]
 		for j, lg := range lgen {
-			q[j] ^= exp[lg]
+			if lg != 255 {  // lgen uses 255 for log 0
+				q[j] ^= exp[lg]
+			}
 		}
 	}
 	copy(check, p[len(data):])
