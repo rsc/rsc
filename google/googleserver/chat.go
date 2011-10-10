@@ -27,7 +27,7 @@ func (*Server) chatClient(cid *google.ChatID) (*chatClient, os.Error) {
 	id := cid.ID
 	cc := chatClients[cid.ID]
 	if cc == nil {
-		a := cfg.AccountByEmail(cid.Email)
+		a := google.Cfg.AccountByEmail(cid.Email)
 		if a == nil {
 			return nil, fmt.Errorf("unknown account %s", cid.Email)
 		}

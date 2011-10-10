@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"io/ioutil"
-	"json"
 	"rpc"
 	"net"
 	"syscall"
@@ -21,83 +19,12 @@ import (
 	"rsc.googlecode.com/hg/xmpp"
 )
 
-
-type Config struct {
-	Account []*Account
-}
-
-type Account struct {
-	Email string
-	Password string
-}
-
-func (cfg *Config) AccountByEmail(email string) *Account {
-	for _, a := range cfg.Account {
-		if a.Email == email {
-			return a
-		}
-	}
-	return nil
-}
-
-var cfg Config
-
-func readConfig() {
-	file := google.Dir()+"/config"
-	st, err := os.Stat(file)
-	if err != nil {
-		return
-	}
-	if st.Mode&0077 != 0 {
-		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode&0777)
-	}
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg = Config{}
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func writeConfig() {
-	file := google.Dir()+"/config"
-	st, err := os.Stat(file)
-	if err != nil {
-		if err := ioutil.WriteFile(file, nil, 0600); err != nil {
-			log.Fatal(err)
-		}
-		st, err = os.Stat(file)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	if st.Mode&0077 != 0 {
-		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode&0777)
-	}
-	data, err := json.MarshalIndent(&cfg, "", "\t");
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := ioutil.WriteFile(file, data, 0600); err != nil {
-		log.Fatal(err)
-	}
-	st, err = os.Stat(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if st.Mode&0077 != 0 {
-		log.Fatalf("%s allows group or other permissions after writing: %#o", file, st.Mode&0777)
-	}
-}
-
 func main() {
-	readConfig()
+	google.ReadConfig()
 	switch os.Args[1] {
 	case "add":
-		cfg.Account = append(cfg.Account, &Account{Email: os.Args[2], Password: os.Args[3]})
-		writeConfig()
+		google.Cfg.Account = append(google.Cfg.Account, &google.Account{Email: os.Args[2], Password: os.Args[3]})
+		google.WriteConfig()
 	case "serve":
 		serve()
 	case "accounts":
@@ -205,7 +132,7 @@ func (*Server) Ping(*Empty, *Empty) os.Error {
 
 func (*Server) Accounts(_ *Empty, out *[]string) os.Error {
 	var email []string
-	for _, a := range cfg.Account {
+	for _, a := range google.Cfg.Account {
 		email = append(email, a.Email)
 	}
 	*out = email
