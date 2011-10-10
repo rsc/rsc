@@ -39,8 +39,6 @@ type Window struct {
 	dirty bool  // window is dirty
 	blinky bool  // window's dirty box is blinking
 	
-	hostpt int  // where the user's pending input begins
-	lastc2 int  // c2 of previous event received
 	lastTime int64
 }
 
@@ -118,7 +116,7 @@ Loop:
 				log.Fatal(w.err)
 			}
 			if *acmeDebug {
-				fmt.Fprintf(os.Stderr, "%s [%d] %c%c %d,%d %q\n", w.name, w.hostpt, w.C1, w.C2, w.Q0, w.Q1, w.Text)
+				fmt.Fprintf(os.Stderr, "%s %c%c %d,%d %q\n", w.name, w.C1, w.C2, w.Q0, w.Q1, w.Text)
 			}
 			if (w.C2 == 'x' || w.C2 == 'X') && string(w.Text) == "Del" {
 				// TODO: Hangup connection for w.typ == "acct"?
@@ -139,19 +137,7 @@ Loop:
 					continue Loop
 				}					
 			case "chat":
-				lastc2 := w.lastc2
-				w.lastc2 = w.C2
 				if w.C1 == 'F' && w.C2 == 'I' {
-					if lastc2 == 'D' {
-						// Something we said.
-						w.hostpt = w.Q1
-					} else {
-						// Something someone else said.
-						w.hostpt = w.Q1 + 1
-						if w.Q1 == 0 {
-							w.hostpt = 0
-						}
-					}
 					continue Loop
 				}
 				if w.C1 != 'M' && w.C1 != 'K' {
@@ -167,20 +153,7 @@ Loop:
 						w.Printf("ctl", "clean\n")
 					}
 				case 'I':
-					if w.Q0 < w.hostpt {
-						w.hostpt += w.Q1 - w.Q0
-					} else {
-						w.sendMsg()
-					}
-					continue Loop
-				case 'D':
-					if w.Q0 < w.hostpt {
-						if w.hostpt < w.Q1 {
-							w.hostpt = w.Q0
-						} else {
-							w.hostpt -= w.Q1 - w.Q0
-						}
-					}
+					w.sendMsg()
 					continue Loop
 				}
 			}
@@ -204,7 +177,6 @@ Loop:
 					// Probably a composing notification.
 					continue
 				}
-				w.fixHostpt()
 				w.message("> %s\n", text)
 				w.blinky = true
 				w.dirty = true
@@ -402,12 +374,6 @@ func mainStatus(pr *xmpp.Presence, you string) {
 	w.Printf("data", "%s%s", short(pr.Status), space)
 }
 
-func (w *Window) message(format string, args ...interface{}) {
-	w.fixHostpt()
-	w.Addr("#%d", w.hostpt-1)
-	w.Printf("data", w.time() + format, args...)
-}
-
 func (w *Window) expand() {
 	// Use selection if any.
 	w.Printf("ctl", "addr=dot\n")
@@ -437,56 +403,80 @@ Read:
 	return
 }
 
-func (w *Window) fixHostpt() {
-	var buf [2]byte
-	switch w.hostpt {
-	case 0:
-		goto Fix
-	case 1:
-		w.Addr("#%d", w.hostpt-1)
-		w.Read("data", buf[:1])
-		if buf[0] != '\n' {
-			goto Fix
-		}
-	default:
-		w.Addr("#%d", w.hostpt-2)
-		w.Read("data", buf[:2])
-		if buf[0] != '\n' || buf[1] != '\n' {
-			goto Fix
-		}
-	}
-	return
+// Invariant: in chat windows, the acme addr corresponds to the
+// empty string just before the input being typed.  Text before addr
+// is the chat history (usually ending in a blank line).
 
-Fix:
-	w.Addr("#%d,#%d", w.hostpt, w.hostpt)
-	w.Printf("data", "\n")
-	w.hostpt++
+func (w *Window) message(format string, args ...interface{}) {
+	if *acmeDebug {
+		q0, q1, _ := w.ReadAddr()
+		log.Printf("message; addr=%d,%d", q0, q1)
+	}
+	if err := w.Addr(".-/\\n?\\n?/"); err != nil && *acmeDebug {
+		log.Printf("set addr: %s", err)
+	}
+	q0, _, _ := w.ReadAddr()
+	nl := ""
+	if q0 > 0 {
+		nl = "\n"
+	}
+	if *acmeDebug {
+		q0, q1, _ := w.ReadAddr()
+		log.Printf("inserting; addr=%d,%d", q0, q1)
+	}
+	w.Printf("data", nl + w.time() + format + "\n", args...)
+	if *acmeDebug {
+		q0, q1, _ := w.ReadAddr()
+		log.Printf("wrote; addr=%d,%d", q0, q1)
+	}
 }
 
 func (w *Window) sendMsg() {
-	w.fixHostpt()
-	if err := w.Addr("#%d", w.hostpt); err != nil {
-		w.Addr("$+#0")
-		w.hostpt, _, _ = w.ReadAddr()
-		return
+	if *acmeDebug {
+		q0, q1, _ := w.ReadAddr()
+		log.Printf("sendMsg; addr=%d,%d", q0, q1)
 	}
-	if w.Addr(`.,/(.|\n)*\n/`) != nil {
+	if err := w.Addr(`.,./(.|\n)*\n/`); err != nil {
+		if *acmeDebug {
+			q0, q1, _ := w.ReadAddr()
+			log.Printf("no text (%s); addr=%d,%d", err, q0, q1)
+		}
 		return
 	}
 	q0, q1, _ := w.ReadAddr()
+	if *acmeDebug {
+		log.Printf("found msg; addr=%d,%d", q0, q1)
+	}
 	line, _ := w.ReadAll("xdata")
 	trim := string(bytes.TrimSpace(line))
 	if len(trim) > 0 {
 		err := client.Send(xmpp.Chat{Remote: w.remote, Type: "chat", Text: trim})
-		w.Addr("#%d,#%d", q0-1, q1)
+		
+		// Select blank line before input (if any) and input.
+		w.Addr("#%d-/\\n?\\n?/,#%d", q0, q1)
+		if *acmeDebug {
+			q0, q1, _ := w.ReadAddr()
+			log.Printf("selected text; addr=%d,%d", q0, q1)
+		}
+		q0, _, _ := w.ReadAddr()
+		
+		// Overwrite with \nmsg\n\n.
+		// Leaves addr after final \n, which is where we want it.
+		nl := ""
+		if q0 > 0 {
+			nl = "\n"
+		}
 		errstr := ""
 		if err != nil {
-			errstr = fmt.Sprintf("%s\n", errstr)
+			errstr = fmt.Sprintf("\n%s", errstr)
 		}
-		w.Printf("data", w.time() + "%s\n%s\n", trim, errstr)
+		w.Printf("data", "%s%s%s%s\n\n", nl, w.time(), trim, errstr)
+		if *acmeDebug {
+			q0, q1, _ := w.ReadAddr()
+			log.Printf("wrote; addr=%d,%d", q0, q1)
+		}
+		w.Printf("ctl", "clean\n")
 	}
-	_, w.hostpt, _ = w.ReadAddr()
-	w.Printf("ctl", "clean\n")
 }
 
 func (w *Window) readAcme() {
@@ -535,7 +525,8 @@ func showContact(you string) *Window {
 	name := "Chat/" + acct.Nick + "/" + you
 	ww.Name(name)
 	w = &Window{Win: ww, typ: "chat", name: name, remote: you}
-	w.fixHostpt()
+	w.Printf("body", "\n")
+	w.Addr("#1")
 	w.OpenEvent()
 	w.Printf("ctl", "cleartag\n")
 	w.Printf("tag", " Ack")
