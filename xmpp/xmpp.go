@@ -119,8 +119,8 @@ func (c *Client) Close() os.Error {
 
 func (c *Client) init(user, passwd string) os.Error {
 	// For debugging: the following causes the plaintext of the connection to be duplicated to stdout.
-	c.p = xml.NewParser(tee{c.tls, os.Stdout});
-//	c.p = xml.NewParser(c.tls)
+//	c.p = xml.NewParser(tee{c.tls, os.Stdout});
+	c.p = xml.NewParser(c.tls)
 
 	a := strings.SplitN(user, "@", 2)
 	if len(a) != 2 {
@@ -256,7 +256,7 @@ func statusCode(s string) Status {
 			return Status(i)
 		}
 	}
-	return 0
+	return Available
 }
 
 // Recv wait next token of chat.
@@ -277,9 +277,12 @@ func (c *Client) Recv() (chat Chat, err os.Error) {
 			return Chat{Type: "roster", Roster: r}, nil
 		case *clientPresence:
 			pr := &Presence{Remote: val.From, Status: statusCode(val.Show), StatusMsg: val.Status, Priority: atoi(val.Priority)}
+			if val.Type == "unavailable" {
+				pr.Status = Unavailable
+			}
 			return Chat{Remote: val.From, Type: "presence", Presence: pr}, nil
 		default:
-			log.Printf("ignoring %T", val)
+			//log.Printf("ignoring %T", val)
 		}
 	}
 	panic("unreachable")
@@ -302,16 +305,18 @@ func (c *Client) Roster() os.Error {
 
 type Status int
 const (
-	ExtendedAway Status = iota
-	Away
+	Unavailable Status = iota
 	DoNotDisturb
+	ExtendedAway
+	Away
 	Available
 )
 
 var statusName = []string{
+	Unavailable: "unavailable",
+	DoNotDisturb: "dnd",
 	ExtendedAway: "xa",
 	Away: "away",
-	DoNotDisturb: "dnd",
 	Available: "chat",
 }
 
