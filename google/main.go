@@ -8,6 +8,9 @@ package google
 
 import (
 //	"flag"
+	"fmt"
+	"io/ioutil"
+	"json"
 	"log"
 	"os"
 	"rpc"
@@ -86,3 +89,93 @@ func runServer() {
 	}
 }
 
+type Config struct {
+	Account []*Account
+}
+
+type Account struct {
+	Email string
+	Password string
+	Nick string
+}
+
+func (cfg *Config) AccountByEmail(email string) *Account {
+	for _, a := range cfg.Account {
+		if a.Email == email {
+			return a
+		}
+	}
+	return nil
+}
+
+var Cfg Config
+
+func ReadConfig() {
+	file := Dir()+"/config"
+	st, err := os.Stat(file)
+	if err != nil {
+		return
+	}
+	if st.Mode&0077 != 0 {
+		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode&0777)
+	}
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	Cfg = Config{}
+	if err := json.Unmarshal(data, &Cfg); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func WriteConfig() {
+	file := Dir()+"/config"
+	st, err := os.Stat(file)
+	if err != nil {
+		if err := ioutil.WriteFile(file, nil, 0600); err != nil {
+			log.Fatal(err)
+		}
+		st, err = os.Stat(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	if st.Mode&0077 != 0 {
+		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode&0777)
+	}
+	data, err := json.MarshalIndent(&Cfg, "", "\t");
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := ioutil.WriteFile(file, data, 0600); err != nil {
+		log.Fatal(err)
+	}
+	st, err = os.Stat(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if st.Mode&0077 != 0 {
+		log.Fatalf("%s allows group or other permissions after writing: %#o", file, st.Mode&0777)
+	}
+}
+
+func Acct(name string) Account {
+	ReadConfig()
+	if name == "" {
+		if len(Cfg.Account) == 0 {
+			fmt.Fprintf(os.Stderr, "no accounts configured\n")
+			os.Exit(2)
+		}
+		return *Cfg.Account[0]
+	}
+	
+	for _, a := range Cfg.Account {
+		if a.Email == name || a.Nick == name {
+			return *a
+		}
+	}
+	fmt.Fprintf(os.Stderr, "cannot find account %#q", name)
+	os.Exit(2)
+	panic("not reached")
+}
