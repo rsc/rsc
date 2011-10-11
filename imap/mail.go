@@ -2,6 +2,7 @@ package imap
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -24,13 +25,13 @@ const (
 	FlagUnMarked
 	FlagHasChildren
 	FlagHasNoChildren
-	FlagInbox     // Gmail extension
-	FlagAllMail   // Gmail extension
-	FlagDrafts    // Gmail extension
-	FlagSent      // Gmail extension
-	FlagSpam      // Gmail extension
-	FlagStarred   // Gmail extension
-	FlagTrash     // Gmail extension
+	FlagInbox  // Gmail extension
+	FlagAllMail  // Gmail extension
+	FlagDrafts  // Gmail extension
+	FlagSent  // Gmail extension
+	FlagSpam  // Gmail extension
+	FlagStarred  // Gmail extension
+	FlagTrash  // Gmail extension
 	FlagImportant // Gmail extension
 )
 
@@ -61,29 +62,32 @@ var flagNames = []string{
 
 // A Box represents an IMAP mailbox.
 type Box struct {
-	Name   string // name of mailbox
-	Elem   string // last element in name
+	Name string  // name of mailbox
+	Elem string  // last element in name
 	Client *Client
-
-	parent    *Box   // parent in hierarchy
-	child     []*Box // child boxes
-	dead      bool   // box no longer exists
-	inbox     bool   // box is inbox
-	flags     Flags  // allowed flags
+	
+	parent *Box  // parent in hierarchy
+	child []*Box  // child boxes
+	dead bool  // box no longer exists
+	inbox bool  // box is inbox
+	flags Flags  // allowed flags
 	permFlags Flags  // client-modifiable permanent flags
-	readOnly  bool   // box is read-only
-	exists    int64  // number of messages in box (according to server)
-	maxSeen   int64  // maximum message number seen (why?)
-	unseen    int64  // number of first unseen message
-	validity  int64  // UID validity base number
-	msgByUID  map[uint64]*Msg
-	nextUID   int64 // the next UID we expect to see (for polling)
+	readOnly bool  // box is read-only
+
+	exists int  // number of messages in box (according to server)
+	maxSeen int  // maximum message number seen (for polling)
+	unseen int  // number of first unseen message
+	validity uint32  // UID validity base number
+	load bool  // if false, don't track full set of messages
+	firstNum int  // 0 means box not loaded
+	msgByNum []*Msg
+	msgByUID map[uint64]*Msg
 }
 
 func (c *Client) Boxes() []*Box {
 	c.data.lock()
 	defer c.data.unlock()
-
+	
 	box := make([]*Box, len(c.allBox))
 	copy(box, c.allBox)
 	return box
@@ -92,14 +96,14 @@ func (c *Client) Boxes() []*Box {
 func (c *Client) Box(name string) *Box {
 	c.data.lock()
 	defer c.data.unlock()
-
+	
 	return c.boxByName[name]
 }
 
 func (c *Client) Inbox() *Box {
 	c.data.lock()
 	defer c.data.unlock()
-
+	
 	return c.inbox
 }
 
@@ -108,18 +112,17 @@ func (c *Client) newBox(name, sep string, inbox bool) *Box {
 	if b := c.boxByName[name]; b != nil {
 		return b
 	}
-
+	
 	b := &Box{
-		Name:    name,
-		Elem:    name,
-		Client:  c,
-		inbox:   inbox,
-		nextUID: 1,
+		Name: name,
+		Elem: name,
+		Client: c,
+		inbox: inbox,
 	}
 	if !inbox {
 		b.parent = c.rootBox
 	}
-	if !inbox && sep != "" && name != c.root {
+	if !inbox && sep != "" && name != c.root {	
 		if i := strings.LastIndex(name, sep); i >= 0 {
 			b.Elem = name[i+len(sep):]
 			b.parent = c.newBox(name[:i], sep, false)
@@ -135,27 +138,28 @@ func (c *Client) newBox(name, sep string, inbox bool) *Box {
 
 // A Msg represents an IMAP message.
 type Msg struct {
-	Box         *Box    // box containing message
-	Date        int64   // date (seconds)
-	Flags       Flags   // message flags
-	Bytes       int64   // size in bytes
-	Lines       int64   // number of lines
-	Hdr         *MsgHdr // MIME header
-	Root        MsgPart // top-level message part
-	GmailID     uint64  // Gmail message id
+	Box *Box  // box containing message
+	Date int64  // date (seconds)
+	Flags Flags  // message flags
+	Bytes int64  // size in bytes
+	Lines int64  // number of lines
+	Hdr *MsgHdr  // MIME header
+	Root MsgPart  // top-level message part
+	GmailID uint64 // Gmail message id
 	GmailThread uint64  // Gmail thread id
-	UID         uint64  // unique id for this message
+	UID uint64  // unique id for this message
 
 	deleted bool
-	number  int64 // message number in box (up to date?)
+	dead bool
+	num int  // message number in box (changes)
 }
 
 // TODO: Return os.Error too
 
 type byUID []*Msg
 
-func (x byUID) Len() int           { return len(x) }
-func (x byUID) Swap(i, j int)      { x[i], x[j] = x[j], x[i] }
+func (x byUID) Len() int { return len(x) }
+func (x byUID) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x byUID) Less(i, j int) bool { return x[i].UID < x[j].UID }
 
 func (b *Box) Msgs() []*Msg {
@@ -172,7 +176,7 @@ func (b *Box) Msgs() []*Msg {
 	return msgs
 }
 
-func (b *Box) newMsg(uid uint64) *Msg {
+func (b *Box) newMsg(uid uint64, id int) *Msg {
 	b.Client.data.mustBeLocked()
 	if m := b.msgByUID[uid]; m != nil {
 		return m
@@ -183,8 +187,32 @@ func (b *Box) newMsg(uid uint64) *Msg {
 	m := &Msg{
 		UID: uid,
 		Box: b,
+		num: id,
 	}
 	m.Root.Msg = m
+	if b.load {
+		if b.firstNum == 0 {
+			b.firstNum = id
+		}
+		if id < b.firstNum {
+			log.Printf("warning: unexpected id %d < %d", id, b.firstNum)
+			byNum := make([]*Msg, len(b.msgByNum) + b.firstNum - id)
+			copy(byNum[b.firstNum-id:], b.msgByNum)
+			b.msgByNum = byNum
+			b.firstNum = id
+		}
+		if id - b.firstNum < len(b.msgByNum) {
+			b.msgByNum[id - b.firstNum] = m
+		} else {
+			if id - b.firstNum > len(b.msgByNum) {
+				log.Printf("warning: unexpected id %d > %d", id, b.firstNum + len(b.msgByNum))
+				byNum := make([]*Msg, id - b.firstNum)
+				copy(byNum, b.msgByNum)
+				b.msgByNum = byNum
+			}
+			b.msgByNum = append(b.msgByNum, m)
+		}
+	}
 	b.msgByUID[uid] = m
 	return m
 }
@@ -210,6 +238,13 @@ func (b *Box) Delete(msgs []*Msg) os.Error {
 	return err
 }
 
+func (b *Box) Check() os.Error {
+	b.Client.io.lock()
+	defer b.Client.io.unlock()
+
+	return b.Client.check(b)
+}
+
 func (m *Msg) Deleted() bool {
 	// Racy but okay.  Can add a lock later if it matters.
 	return m.Flags&FlagDeleted != 0
@@ -217,24 +252,24 @@ func (m *Msg) Deleted() bool {
 
 // A Hdr represents a message header.
 type MsgHdr struct {
-	Date      string
-	Subject   string
-	From      []Addr
-	Sender    []Addr
-	ReplyTo   []Addr
-	To        []Addr
-	CC        []Addr
-	BCC       []Addr
+	Date string
+	Subject string
+	From []Addr
+	Sender []Addr
+	ReplyTo []Addr
+	To []Addr
+	CC []Addr
+	BCC []Addr
 	InReplyTo string
 	MessageID string
-	Digest    string
+	Digest string
 }
 
 // An Addr represents a single, named email address.
 // If Name is empty, only the email address is known.
 // If Email is empty, the Addr represents an unspecified (but named) group.
 type Addr struct {
-	Name  string
+	Name string
 	Email string
 }
 
@@ -250,34 +285,34 @@ func (a Addr) String() string {
 
 // A MsgPart represents a single part of a MIME-encoded message.
 type MsgPart struct {
-	Msg       *Msg // containing message
-	Type      string
+	Msg *Msg  // containing message
+	Type string
 	ContentID string
-	Desc      string
-	Encoding  string
-	Bytes     int64
-	Lines     int64
-	Charset   string
-	Name      string
-	Hdr       *MsgHdr
-	ID        string
-	Child     []*MsgPart
+	Desc string
+	Encoding string
+	Bytes int64
+	Lines int64
+	Charset string
+	Name string
+	Hdr *MsgHdr
+	ID string
+	Child []*MsgPart
 
-	raw        []byte // raw message
-	rawHeader  []byte // raw RFC-2822 header, for message/rfc822
-	rawBody    []byte // raw RFC-2822 body, for message/rfc822
-	mimeHeader []byte // mime header, for attachments
+	raw []byte  // raw message
+	rawHeader []byte  // raw RFC-2822 header, for message/rfc822
+	rawBody []byte  // raw RFC-2822 body, for message/rfc822
+	mimeHeader []byte  // mime header, for attachments
 }
 
 func (p *MsgPart) newPart() *MsgPart {
 	p.Msg.Box.Client.data.mustBeLocked()
 	dot := "."
-	if p.ID == "" { // no dot at root
+	if p.ID == "" {  // no dot at root
 		dot = ""
 	}
 	pp := &MsgPart{
 		Msg: p.Msg,
-		ID:  fmt.Sprint(p.ID, dot, 1+len(p.Child)),
+		ID: fmt.Sprint(p.ID, dot, 1+len(p.Child)),
 	}
 	p.Child = append(p.Child, pp)
 	return pp

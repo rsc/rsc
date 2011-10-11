@@ -16,7 +16,7 @@ import (
 	"sync"
 )
 
-var Debug = true
+var Debug = false
 
 const tag = "#"
 
@@ -154,11 +154,7 @@ func (c *Client) reconnect() os.Error {
 			goto Error
 		}
 	}
-	// TODO boxes
 	if err := c.getBoxes(); err != nil {
-		goto Error
-	}
-	if err = c.getBox(c.inbox); err != nil {
 		goto Error
 	}
 	c.autoReconnect = true
@@ -399,6 +395,7 @@ func (c *Client) getBoxes() os.Error {
 		if b.dead {
 			c.boxByName[b.Name] = nil, false
 		}
+		b.firstNum = 0
 	}
 	c.allBox = boxTrim(c.allBox)
 	for _, b := range c.allBox {
@@ -418,48 +415,94 @@ func boxTrim(list []*Box) []*Box {
 	return list[:w]
 }
 
-const maxFetch = 10
+const maxFetch = 1000
 
-func (c *Client) getBox(b *Box) os.Error {
+func (c *Client) setAutoReconnect(b bool) {
+	c.autoReconnect = b
+}
+
+func (c *Client) check(b *Box) os.Error {
 	c.io.mustBeLocked()
-	if b == nil {
+	if b.dead {
+		return fmt.Errorf("box is gone")
+	}
+
+	b.load = true
+	
+	// Update exists count.
+	if err := c.cmd(b, "NOOP"); err != nil {
+		return err
+	}
+	
+	// Have to get through this in one session.
+	// Caller can call again if we get disconnected
+	// and return an error.
+	c.autoReconnect = false
+	defer c.setAutoReconnect(true)
+
+	// First load after reconnect: figure out what changed.
+	if b.firstNum == 0 && len(b.msgByUID) > 0 {
+		var lo, hi uint32 = 1<<32-1, 0
+		for _, m := range b.msgByUID {
+			m.dead = true
+			uid := uint32(m.UID)
+			if lo > uid {
+				lo = uid
+			}
+			if hi < uid {
+				hi = uid
+			}
+			m.num = 0
+		}
+		if err := c.cmd(b, "UID FETCH %d:%d FLAGS", lo, hi); err != nil {
+			return err
+		}
+		for _, m := range b.msgByUID {
+			if m.dead {
+				b.msgByUID[m.UID] = nil, false
+			}
+		}
+	}
+	
+	// First-ever load.
+	if b.firstNum == 0 {
+		if b.exists <= maxFetch {
+			b.firstNum = 1
+		} else {
+			b.firstNum = b.exists - maxFetch + 1
+		}
+		n := b.exists - b.firstNum + 1
+		b.msgByNum = make([]*Msg, n)
+		return c.fetchBox(b, b.firstNum, 0)
+	}
+	
+	if b.exists <= b.maxSeen {
 		return nil
 	}
+	return c.fetchBox(b, b.maxSeen, 0)
+}
+
+func (c *Client) fetchBox(b *Box, lo int, hi int) os.Error {
+	c.io.mustBeLocked()
 	if b != c.box {
 		if err := c.cmd(b, "NOOP"); err != nil {
 			return err
 		}
 	}
-	/*
-		if b.exists <= maxFetch {
-			if err := c.cmd(b, "FETCH 1:* (UID FLAGS)"); err != nil {
-				return err
-			}
-		} else {
-			if err := c.cmd(b, "FETCH %d:%d (UID FLAGS)", b.exists-maxFetch+1, b.exists); err != nil {
-				return err
-			}
-		}
-		// TODO: more
-	*/
-	c.checkBox(b)
-	return nil
-}
-
-func (c *Client) IsGmail() bool {
-	return c.capability["X-GM-EXT-1"] 
-}
-
-func (c *Client) checkBox(b *Box) {
-	c.io.mustBeLocked()
-	if err := c.cmd(b, "NOOP"); err != nil {
-		return
-	}
 	extra := ""
 	if c.IsGmail() {
 		extra = " X-GM-MSGID X-GM-THRID X-GM-LABELS"
 	}
-	c.cmd(b, "UID FETCH %d:* (FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY%s)", b.nextUID, extra)
+	slo := fmt.Sprint(lo)
+	shi := "*"
+	if hi > 0 {
+		shi = fmt.Sprint(hi)
+	}
+	return c.cmd(b, "FETCH %s:%s (FLAGS UID INTERNALDATE RFC822.SIZE ENVELOPE BODY%s)", slo, shi, extra)
+}
+
+func (c *Client) IsGmail() bool {
+	return c.capability["X-GM-EXT-1"] 
 }
 
 // Table-driven IMAP "unexpected response" parser.
@@ -479,7 +522,7 @@ var unextab = []struct {
 	{0, "OK", "", xok},
 	//	{0, "SEARCH", "AAN*", xsearch},
 	{1, "EXISTS", "ANA", xexists},
-	//	{1, "EXPUNGE", "ANA", xexpunge},
+	{1, "EXPUNGE", "ANA", xexpunge},
 	{1, "FETCH", "ANAL", xfetch},
 	//	{1, "RECENT", "ANA", xrecent},  // why do we care?
 }
@@ -567,9 +610,30 @@ func xlist(c *Client, x *sx) {
 func xexists(c *Client, x *sx) {
 	c.data.mustBeLocked()
 	if b := c.box; b != nil {
-		b.exists = x.sx[1].number
+		b.exists = int(x.sx[1].number)
 		if b.exists < b.maxSeen {
 			b.maxSeen = b.exists
+		}
+	}
+}
+
+func xexpunge(c *Client, x *sx) {
+	c.data.mustBeLocked()
+	if b := c.box; b != nil {
+		n := int(x.sx[1].number)
+		bynum := b.msgByNum
+		if bynum != nil {
+			if n < b.firstNum {
+				b.firstNum--
+			} else if n < b.firstNum + len(bynum) {
+				copy(bynum[n-b.firstNum:], bynum[n-b.firstNum+1:])
+				b.msgByNum = bynum[:len(bynum)-1]
+			} else {
+				log.Printf("expunge unexpected message %d %d %d", b.firstNum, b.exists, b.firstNum+len(bynum))
+			}
+		}
+		if n <= b.exists {
+			b.exists--
 		}
 	}
 }
@@ -619,10 +683,16 @@ func xok(c *Client, x *sx) {
 
 func xokuidvalidity(c *Client, b *Box, x *sx) {
 	c.data.mustBeLocked()
-	if b.validity != x.number {
-		b.validity = x.number
-		b.nextUID = 1
-		//	b.msg = nil
+	n := uint32(x.number)
+	if b.validity != n {
+		if b.msgByUID != nil {
+			log.Printf("imap: UID validity reset for %s", b.Name)
+		}
+		b.validity = n
+		b.maxSeen = 0
+		b.firstNum = 0
+		b.msgByNum = nil
+		b.msgByUID = nil
 	}
 }
 
@@ -633,7 +703,7 @@ func xokpermflags(c *Client, b *Box, x *sx) {
 
 func xokunseen(c *Client, b *Box, x *sx) {
 	c.data.mustBeLocked()
-	b.unseen = x.number
+	b.unseen = int(x.number)
 }
 
 func xokreadwrite(c *Client, b *Box, x *sx) {
@@ -690,8 +760,13 @@ func xfetch(c *Client, x *sx) {
 	return
 
 HaveUID:
-	m := c.box.newMsg(uid)
-	m.number = n
+	if m := c.box.msgByUID[uid]; m != nil && m.dead {
+		// FETCH during box garbage collection.
+		m.dead = false
+		m.num = int(n)
+		return
+	}
+	m := c.box.newMsg(uid, int(n))
 	for i := 0; i < len(xx.sx); i += 2 {
 		k, v := xx.sx[i], xx.sx[i+1]
 		for _, t := range msgtab {
@@ -795,12 +870,9 @@ func xmsgbody(m *Msg, k, v *sx) {
 	// but the extra layer is redundant - what else would be in
 	// a mailbox?
 	parseStructure(&m.Root, v)
-	if m.Box.maxSeen < m.number {
-		m.Box.maxSeen = m.number
-	}
-	uid := int64(m.UID & (1<<32 - 1))
-	if m.Box.nextUID <= uid {
-		m.Box.nextUID = uid + 1
+	n := m.num
+	if m.Box.maxSeen < n {
+		m.Box.maxSeen = n
 	}
 }
 
@@ -976,7 +1048,7 @@ func (c *Client) deleteList(msgs []*Msg) os.Error {
 		if m.Box != b {
 			return fmt.Errorf("messages span boxes: %q and %q", b.Name, m.Box.Name)
 		}
-		if int64(m.UID>>32) != b.validity {
+		if uint32(m.UID>>32) != b.validity {
 			return fmt.Errorf("stale message")
 		}
 	}

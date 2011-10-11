@@ -94,7 +94,7 @@ func nocrnl(dat []byte) []byte {
 func decode64(dat []byte) []byte {
 	out := make([]byte, len(dat))
 	copy(out, dat)
-	out = nocrnl(dat)
+	out = nocrnl(out)
 	n, err := base64.StdEncoding.Decode(out, out)
 	if err != nil {
 		return nil
