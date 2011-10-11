@@ -446,13 +446,17 @@ func (c *Client) getBox(b *Box) os.Error {
 	return nil
 }
 
+func (c *Client) IsGmail() bool {
+	return c.capability["X-GM-EXT-1"] 
+}
+
 func (c *Client) checkBox(b *Box) {
 	c.io.mustBeLocked()
 	if err := c.cmd(b, "NOOP"); err != nil {
 		return
 	}
 	extra := ""
-	if c.capability["X-GM-EXT-1"] {
+	if c.IsGmail() {
 		extra = " X-GM-MSGID X-GM-THRID X-GM-LABELS"
 	}
 	c.cmd(b, "UID FETCH %d:* (FLAGS INTERNALDATE RFC822.SIZE ENVELOPE BODY%s)", b.nextUID, extra)
