@@ -208,7 +208,7 @@ func (x *sx) fmt(b *bytes.Buffer, paren bool) {
 
 var bytesNIL = []byte("NIL")
 
-var fmtKind = []sxKind {
+var fmtKind = []sxKind{
 	'L': sxList,
 	'S': sxString,
 	'N': sxNumber,
@@ -315,7 +315,7 @@ SX:
 		}
 		for i, name := range flagNames {
 			if xx.isAtom(name) {
-				f |= 1<<uint(i)
+				f |= 1 << uint(i)
 				continue SX
 			}
 		}
@@ -331,7 +331,7 @@ func (x *sx) parseDate() int64 {
 		log.Printf("malformed date: %s", x)
 		return 0
 	}
-	
+
 	t, err := time.Parse("02-Jan-2006 15:04:05 -0700", string(x.data))
 	if err != nil {
 		log.Printf("malformed date: %s (%s)", x, err)

@@ -35,60 +35,91 @@ func decode2047chunk(s string) (conv []byte, rest string, ok bool) {
 		encoding = "base64"
 	}
 
-	dat := decodeText([]byte(text), encoding, charset)
+	dat := decodeText([]byte(text), encoding, charset, true)
 	if dat == nil {
 		return
 	}
 	return dat, rest, true
 }
 
-func decodeQP(dat []byte) []byte {
-		w := 0
-		for i := 0; i < len(dat); i++ {
-			c := dat[i]
-			if c == '_' {
-				dat[w] = ' '
-				w++
-				continue
-			}
-			if c != '=' {
-				dat[w] = c
-				w++
-				continue
-			}
-			if i+2 >= len(dat) {
-				return nil
-			}
-			v := unhex(dat[i+1])<<4 | unhex(dat[i+2])
-			if v < 0 {
-				return nil
-			}
-			dat[w] = byte(v)
+func decodeQP(dat []byte, underscore bool) []byte {
+	out := make([]byte, len(dat))
+	w := 0
+	for i := 0; i < len(dat); i++ {
+		c := dat[i]
+		if underscore && c == '_' {
+			out[w] = ' '
 			w++
-			i += 2
+			continue
 		}
-		return dat[:w]
+		if c == '\r' {
+			continue
+		}
+		if c == '=' {
+			if i+1 < len(dat) && dat[i+1] == '\n' {
+				i++
+				continue
+			}
+			if i+2 < len(dat) && dat[i+1] == '\r' && dat[i+2] == '\n' {
+				i += 2
+				continue
+			}
+			if i+2 < len(dat) {
+				v := unhex(dat[i+1])<<4 | unhex(dat[i+2])
+				if v >= 0 {
+					out[w] = byte(v)
+					w++
+					i += 2
+					continue
+				}
+			}
+		}
+		out[w] = c
+		w++
+	}
+	return out[:w]
+}
+
+func nocrnl(dat []byte) []byte {
+	w := 0
+	for _, c := range dat {
+		if c != '\r' && c != '\n' {
+			dat[w] = c
+			w++
+		}
+	}
+	return dat[:w]
 }
 
 func decode64(dat []byte) []byte {
-	n, err := base64.StdEncoding.Decode(dat, dat)
+	out := make([]byte, len(dat))
+	copy(out, dat)
+	out = nocrnl(dat)
+	n, err := base64.StdEncoding.Decode(out, out)
 	if err != nil {
 		return nil
 	}
-	return dat[:n]
+	return out[:n]
 }
 
-func decodeText(dat []byte, encoding, charset string) []byte {
-	switch encoding {
+func decodeText(dat []byte, encoding, charset string, underscore bool) []byte {
+	odat := dat
+	switch strlwr(encoding) {
 	case "quoted-printable":
-		dat = decodeQP(dat)
+		dat = decodeQP(dat, underscore)
 	case "base64":
 		dat = decode64(dat)
 	}
 	if dat == nil {
 		return nil
 	}
-	
+	if bytes.IndexByte(dat, '\r') >= 0 {
+		if &odat[0] == &dat[0] {
+			dat = append([]byte(nil), dat...)
+		}
+		dat = nocr(dat)
+	}
+
 	charset = strlwr(charset)
 	if charset == "utf-8" || charset == "us-ascii" {
 		return dat
@@ -108,7 +139,7 @@ func decodeText(dat []byte, encoding, charset string) []byte {
 
 	tab := convtab[charset]
 	if tab == nil {
-		return nil
+		return dat
 	}
 	var b bytes.Buffer
 	for _, c := range dat {
