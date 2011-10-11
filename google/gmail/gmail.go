@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"exec"
 	"flag"
 	"fmt"
 	"log"
@@ -43,6 +44,7 @@ var cmdtab = []struct{
 //	{ "s",	1,	scmd,	"s file   append raw message to file" },
 	{ "u",	0,	ucmd,	"u        remove deletion mark" },
 //	{ "w",	1,	wcmd,	"w file   store message contents as file" },
+	{ "W",	0,	Wcmd,	"W	open in web browser" },
 	{ "x",	0,	xcmd,	"x        exit without flushing deleted messages" },
 //	{ "y",	0,	ycmd,	"y        synchronize with mail box" },
 	{ "=",	1,	eqcmd,	"=        print current message number" },
@@ -83,6 +85,8 @@ var (
 	msgs []*imap.Msg
 	msgNum = make(map[*imap.Msg]int)
 	deleted = make(map[*imap.Msg]bool)
+	isGmail = false
+	acct google.Account
 
 	maxfrom int
 	subjlen int
@@ -100,11 +104,12 @@ func nextMsg(m *imap.Msg) *imap.Msg {
 func main() {
 	flag.Parse()
 
-	acct := google.Acct(*acctName)
+	acct = google.Acct(*acctName)
 	c, err := imap.NewClient(imap.TLS, "imap.gmail.com", acct.Email, acct.Password, "")
 	if err != nil {
 		log.Fatal(err)
 	}
+	isGmail = c.IsGmail()
 	
 	inbox = c.Inbox()
 	msgs = inbox.Msgs()
@@ -671,6 +676,21 @@ func qcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	flushDelete()
 	xcmd(c, dot)
 	panic("not reached")
+}
+
+func Wcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+	if dot == nil {
+		return nil
+	}
+	if !isGmail {
+		fmt.Fprintf(bout, "!cmd W requires gmail\n")
+		return dot
+	}
+	url := fmt.Sprintf("https://mail.google.com/mail/b/%s/?shva=1#inbox/%x", acct.Email, dot.Msg.GmailThread)
+	if err := exec.Command("open", url).Run(); err != nil {
+		fmt.Fprintf(bout, "!%s\n", err)
+	}
+	return dot
 }
 
 func xcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
