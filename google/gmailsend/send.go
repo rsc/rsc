@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"smtp"
 	"strings"
 
@@ -57,18 +59,58 @@ func (a *Addrs) Set(s string) bool {
 			return true
 		}
 	}
-	if strings.Contains(s, "@") && !strings.Contains(s, " ") {
-		*a = append(*a, Addr{"", s})
-		return true
+
+	if strings.Contains(s, " ") {
+		fmt.Fprintf(os.Stderr, "invalid address: %s", s)
+		os.Exit(2)
 	}
-	*a = append(*a, Addr{s, ""})
+	*a = append(*a, Addr{"", s})
 	return true
+}
+
+func (a *Addrs) parseLine(s string) {
+	for _, f := range strings.Split(s, ",") {
+		f = strings.TrimSpace(f)
+		if f != "" {
+			a.Set(f)
+		}
+	}
+}
+
+func (a Addrs) fixDomain() {
+	i := strings.Index(acct.Email, "@")
+	if i < 0 {
+		return
+	}
+	dom := acct.Email[i:]
+	for i := range a {
+		if a[i].Email != "" && !strings.Contains(a[i].Email, "@") {
+			a[i].Email += dom
+		}
+	}
 }
 
 var from, to, cc, bcc, replyTo Addrs
 var inReplyTo, subject string
 
+var acct google.Account
 var acctName = flag.String("a", "", "account to use")
+var inputHeader = flag.Bool("i", false, "read additional header lines from stdin")
+
+func holdmode() {
+	if os.Getenv("TERM") == "9term" {
+		// forgive me
+		os.Stdout.WriteString("\x1B];*9term-hold+\x07")
+	}
+}
+
+func match(line, prefix string, arg *string) bool {
+	if len(line) < len(prefix) || !strings.EqualFold(line[:len(prefix)], prefix) {
+		return false
+	}
+	*arg = strings.TrimSpace(line[len(prefix):])
+	return true
+}
 
 func main() {
 	flag.StringVar(&inReplyTo, "in-reply-to", "", "In-Reply-To")
@@ -80,11 +122,58 @@ func main() {
 	flag.Var(&replyTo, "replyTo", "Reply-To (can repeat)")
 
 	flag.Parse()
-	if flag.NArg() != 0 {
+	if flag.NArg() != 0 && !*inputHeader {
 		flag.Usage()
 	}
+
+	var body bytes.Buffer
+	input := bufio.NewReader(os.Stdin)
+	if *inputHeader {
+		holdmode()
+	Loop:	
+		for {
+			s, err := input.ReadString('\n')
+			if err != nil {
+				if err == os.EOF {
+					break Loop
+				}
+				fmt.Fprintf(os.Stderr, "reading stdin: %s\n", err)
+				os.Exit(2)
+			}
+			var arg string
+			switch {
+			default:
+				if ok, _ := regexp.MatchString(`^\S+:`, s); ok {
+					fmt.Fprintf(os.Stderr, "unknown header line: %s", s)
+					os.Exit(2)
+				}
+				body.WriteString(s)
+				break Loop
+			case match(s, "from:", &arg):
+				from.parseLine(arg)
+			case match(s, "to:", &arg):
+				to.parseLine(arg)
+			case match(s, "cc:", &arg):
+				cc.parseLine(arg)
+			case match(s, "bcc:", &arg):
+				bcc.parseLine(arg)
+			case match(s, "reply-to:", &arg):
+				replyTo.parseLine(arg)
+			case match(s, "subject:", &arg):
+				subject = arg
+			case match(s, "in-reply-to:", &arg):
+				inReplyTo = arg
+			}
+		}
+	}
 	
-	acct := google.Acct(*acctName)
+	acct = google.Acct(*acctName)
+	from.fixDomain()
+	to.fixDomain()
+	cc.fixDomain()
+	bcc.fixDomain()
+	replyTo.fixDomain()
+
 	smtpTo := append(append(to, cc...), bcc...)
 
 	if len(from) == 0 {
@@ -111,18 +200,15 @@ func main() {
 		os.Exit(2)
 	}
 
-	if os.Getenv("TERM") == "9term" {
-		// forgive me
-		os.Stdout.WriteString("\x1B];*9term-hold+\x07")
+	if !*inputHeader {
+		holdmode()
 	}
-	
-	var body bytes.Buffer
-	_, err := io.Copy(&body, os.Stdin)
+	_, err := io.Copy(&body, input)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "reading stdin: %s\n", err)
 		os.Exit(2)
 	}
-	
+
 	var msg bytes.Buffer
 	fmt.Fprintf(&msg, "MIME-Version: 1.0\n")
 	if len(from) > 0 {
