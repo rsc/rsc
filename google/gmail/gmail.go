@@ -6,6 +6,7 @@ import (
 	"exec"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -24,7 +25,7 @@ var cmdtab = []struct{
 	F func(*Cmd, *imap.MsgPart) *imap.MsgPart
 	Help string
 }{
-//	{ "a",	1,	acmd,	"a        reply to sender and recipients" },
+	{ "a",	1,	rcmd,	"a        reply to sender and recipients" },
 //	{ "A",	1,	acmd,	"A        reply to sender and recipients with copy" },
 	{ "b",	0,	bcmd,	"b        print the next 10 headers" },
 	{ "d",	0,	dcmd,	"d        mark for deletion" },
@@ -36,6 +37,7 @@ var cmdtab = []struct{
 //	{ "k",	0,	kcmd,	"k        kill (mute) mail" },
 //	{ "m",	1,	mcmd,	"m addr   forward mail" },
 //	{ "M",	1,	mcmd,	"M addr   forward mail with message" },
+	{ "n",	0,	ncmd,	"n        move to next message" },
 	{ "p",	0,	pcmd,	"p        print the processed message" },
 //	{ "p+",	0,	pcmd,	"p        print the processed message, showing all quoted text" },
 	{ "P",	0,	Pcmd,	"P        print the raw message" },
@@ -52,9 +54,9 @@ var cmdtab = []struct{
 	{ "x",	0,	xcmd,	"x        exit without flushing deleted messages" },
 	{ "y",	0,	ycmd,	"y        synchronize with mail box" },
 	{ "=",	1,	eqcmd,	"=        print current message number" },
-//	{ "|",	1,	pipecmd, "|cmd     pipe message body to a command" },
+	{ "|",	1,	pipecmd, "|cmd     pipe message body to a command" },
 //	{ "||",	1,	rpipecmd, "||cmd     pipe raw message to a command" },
-//	{ "!",	1,	bangcmd, "!cmd     run a command" },
+	{ "!",	1,	bangcmd, "!cmd     run a command" },
 }
 
 func init() {
@@ -113,6 +115,22 @@ func main() {
 	flag.Parse()
 
 	acct = google.Acct(*acctName)
+
+	if args := flag.Args(); len(args) > 0 {
+		for i := range args {
+			args[i] = "-to=" + args[i]
+		}
+		cmd := exec.Command("gmailsend", append([]string{"-i"}, args...)...)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "!%s\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+	
 	c, err := imap.NewClient(imap.TLS, "imap.gmail.com", acct.Email, acct.Password, "")
 	if err != nil {
 		log.Fatal(err)
@@ -147,7 +165,7 @@ func main() {
 				interrupted = true
 				continue
 			}
-			if sig == os.SIGCHLD {
+			if sig == os.SIGCHLD || sig == os.SIGWINCH {
 				continue
 			}
 			fmt.Fprintf(os.Stderr, "!%s\n", sig)
@@ -230,7 +248,7 @@ func main() {
 						m = next
 					}
 				}
-				x := cmd.F(nil, &m.Root)
+				x := cmd.F(cmd, &m.Root)
 				if x != nil {
 					dot = x
 				}
@@ -654,6 +672,18 @@ func ycmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	return nil
 }
 
+func ncmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+	if dot == nil {
+		return nil
+	}
+	m := nextMsg(dot.Msg)
+	if m == nil {
+		fmt.Fprintf(bout, "!no more messages\n")
+		return nil
+	}
+	return &m.Root
+}
+
 func addrlist(x []imap.Addr) string {
 	var b bytes.Buffer
 	for i, a := range x {
@@ -665,33 +695,82 @@ func addrlist(x []imap.Addr) string {
 	return b.String()
 }
 
-func pcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+func wpcmd(w io.Writer, c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	if dot == nil {
 		return nil
 	}
 	if dot == &dot.Msg.Root {
 		h := dot.Msg.Hdr
 		if len(h.From) > 0 {
-			fmt.Fprintf(bout, "From: %s\n", addrlist(h.From))
+			fmt.Fprintf(w, "From: %s\n", addrlist(h.From))
 		}
-		fmt.Fprintf(bout, "Date: %s\n", time.SecondsToLocalTime(dot.Msg.Date))
+		fmt.Fprintf(w, "Date: %s\n", time.SecondsToLocalTime(dot.Msg.Date))
 		if len(h.From) > 0 {
-			fmt.Fprintf(bout, "To: %s\n", addrlist(h.To))
+			fmt.Fprintf(w, "To: %s\n", addrlist(h.To))
 		}
 		if len(h.CC) > 0 {
-			fmt.Fprintf(bout, "CC: %s\n", addrlist(h.CC))
+			fmt.Fprintf(w, "CC: %s\n", addrlist(h.CC))
 		}
 		if len(h.BCC) > 0 {
-			fmt.Fprintf(bout, "BCC: %s\n", addrlist(h.BCC))
+			fmt.Fprintf(w, "BCC: %s\n", addrlist(h.BCC))
 		}
 		if len(h.Subject) > 0 {
-			fmt.Fprintf(bout, "Subject: %s\n", h.Subject)
+			fmt.Fprintf(w, "Subject: %s\n", h.Subject)
 		}
-		fmt.Fprintf(bout, "\n")
+		fmt.Fprintf(w, "\n")
 	}
-	printMIME(dot, true, false)
-	fmt.Fprintf(bout, "\n")
+	printMIME(w, dot, true)
+	fmt.Fprintf(w, "\n")
 	return dot
+}
+
+func pcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+	defer bout.Flush()
+	return wpcmd(bout, c, dot)
+}
+
+func pipecmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+	args := c.Args[1:]
+	if len(args) == 0 {
+		fmt.Fprintf(bout, "!no command\n")
+		return dot
+	}
+	bout.Flush()
+	cmd := exec.Command(args[0], args[1:]...)
+	w, err := cmd.StdinPipe()
+	if err != nil {
+		fmt.Fprintf(bout, "!%s\n", err)
+		return dot
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(bout, "!%s\n", err)
+		return dot
+	}
+	wpcmd(w, c, dot)
+	w.Close()
+	if err := cmd.Wait(); err != nil {
+		fmt.Fprintf(bout, "!%s\n", err)
+	}
+	return dot
+}
+
+func bangcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+	args := c.Args[1:]
+	if len(args) == 0 {
+		fmt.Fprintf(bout, "!no command\n")
+		return dot
+	}
+	bout.Flush()
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(bout, "!%s\n", err)
+	}
+	return nil
 }
 
 func unixfrom(h *imap.MsgHdr) string {
@@ -719,16 +798,24 @@ func Pcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	return dot
 }
 
-func printMIME(p *imap.MsgPart, top, quote bool) {
+func printMIME(w io.Writer, p *imap.MsgPart, top bool) {
 	if top && strings.HasPrefix(p.Type, "text/") {
 		text := p.Text()
-		if quote {
-			text = append([]byte("> "), bytes.Replace(text, []byte("\n"), []byte("\n> "), -1)...)
-			if bytes.HasSuffix(text, []byte("\n> ")) {
-				text = text[:len(text)-2]
+		if p.Type == "text/html" {
+			cmd := exec.Command("htmlfmt")
+			cmd.Stdin = bytes.NewBuffer(text)
+			if w == bout {
+				bout.Flush()
+				cmd.Stdout = os.Stdout
+			} else {
+				cmd.Stdout = w
 			}
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintf(w, "%d.%s !%s\n", msgNum[p.Msg]+1, p.ID, err)
+			}
+			return
 		}
-		bout.Write(text)
+		w.Write(text)
 		return
 	}
 	switch p.Type {
@@ -736,23 +823,23 @@ func printMIME(p *imap.MsgPart, top, quote bool) {
 		if top {
 			panic("printMIME loop")
 		}
-		printMIME(p, true, quote)
+		printMIME(w, p, true)
 	case "multipart/alternative":
 		for _, pp := range p.Child {
 			if pp.Type == "text/plain" {
-				printMIME(pp, false, quote)
+				printMIME(w, pp, false)
 				return
 			}
 		}
 		if len(p.Child) > 0 {
-			printMIME(p.Child[0], false, quote)
+			printMIME(w, p.Child[0], false)
 		}
 	case "multipart/mixed":
 		for _, pp := range p.Child {
-			printMIME(pp, false, quote)
+			printMIME(w, pp, false)
 		}
 	default:
-		fmt.Fprintf(bout, "%d.%s !%s %s %s\n", msgNum[p.Msg]+1, p.ID, p.Type, p.Desc, p.Name)
+		fmt.Fprintf(w, "%d.%s !%s %s %s\n", msgNum[p.Msg]+1, p.ID, p.Type, p.Desc, p.Name)
 	}
 }
 
@@ -760,6 +847,32 @@ func qcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	flushDeleted()
 	xcmd(c, dot)
 	panic("not reached")
+}
+
+type quoter struct {
+	bol bool
+	w io.Writer
+}
+
+func (q *quoter) Write(b []byte) (n int, err os.Error) {
+	n = len(b)
+	err = nil
+	for len(b) > 0 {
+		if q.bol {
+			q.w.Write([]byte("> "))
+			q.bol = false
+		}
+		i := bytes.IndexByte(b, '\n')
+		if i < 0 {
+			i = len(b)
+		} else {
+			q.bol = true
+			i++
+		}
+		q.w.Write(b[:i])
+		b = b[i:]
+	}
+	return
 }
 
 func quotecmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
@@ -776,7 +889,7 @@ func quotecmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 		date := time.SecondsToLocalTime(m.Date).Format("Jan 2, 2006 at 15:04")
 		fmt.Fprintf(bout, "On %s, %s wrote:\n", date, name)
 	}
-	printMIME(dot, true, true)
+	printMIME(&quoter{true, bout}, dot, true)
 	return dot
 }
 
@@ -788,25 +901,44 @@ func addre(s string) string {
 }
 
 func rcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
-	if dot == nil {
+	if dot == nil || dot.Msg.Hdr == nil {
 		fmt.Fprintf(bout, "!nothing to reply to\n")
 		return nil
 	}
 
 	h := dot.Msg.Hdr
-	reply := h.ReplyTo
-	if len(reply) == 0 {
-		reply = h.From
+	replyTo := h.ReplyTo
+	have := make(map[string]bool)
+	if len(replyTo) == 0 {
+		replyTo = h.From
 	}
-	if h == nil || len(reply) == 0 {
+	if c.Name[0] == 'a' {
+		for _, a := range replyTo {
+			have[a.Email] = true
+		}
+		for _, a := range append(append(append([]imap.Addr(nil), h.From...), h.To...), h.CC...) {
+			if !have[a.Email] {
+				have[a.Email] = true
+				replyTo = append(replyTo, a)
+			}
+		}
+	}
+	if len(replyTo) == 0 {
 		fmt.Fprintf(bout, "!no one to reply to\n")
 		return dot
 	}
 	
 	args := []string{"-a", acct.Email, "-s", addre(h.Subject), "-in-reply-to", h.MessageID}
-	for _, a := range h.ReplyTo {
+	fmt.Fprintf(bout, "replying to:")
+	for _, a := range replyTo {
+		fmt.Fprintf(bout," %s", a.Email)
 		args = append(args, "-to", a.String())
 	}
+	for _, arg := range c.Args[1:] {
+		fmt.Fprintf(bout, " %s", arg)
+		args = append(args, "-to", arg)
+	}
+	fmt.Fprintf(bout, "\n")
 	bout.Flush()
 	cmd := exec.Command("gmailsend", args...)
 	cmd.Stdin = os.Stdin
@@ -935,7 +1067,7 @@ func loadNew() {
 	for m := range old {
 		// Deleted
 		m.Flags |= imap.FlagDeleted
-		deleted[m] = nil, false
+		deleted[m] = false, false
 	}
 }
 
