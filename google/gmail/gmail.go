@@ -37,7 +37,7 @@ var cmdtab = []struct{
 //	{ "k",	0,	kcmd,	"k        kill (mute) mail" },
 //	{ "m",	1,	mcmd,	"m addr   forward mail" },
 //	{ "M",	1,	mcmd,	"M addr   forward mail with message" },
-	{ "n",	0,	ncmd,	"n        move to next message" },
+	{ "n",	0,	ncmd,	"n        print the next message" },
 	{ "p",	0,	pcmd,	"p        print the processed message" },
 //	{ "p+",	0,	pcmd,	"p        print the processed message, showing all quoted text" },
 	{ "P",	0,	Pcmd,	"P        print the raw message" },
@@ -681,7 +681,7 @@ func ncmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 		fmt.Fprintf(bout, "!no more messages\n")
 		return nil
 	}
-	return &m.Root
+	return pcmd(c, &m.Root)
 }
 
 func addrlist(x []imap.Addr) string {
