@@ -206,7 +206,7 @@ func (s String) Check() os.Error {
 var stringLen = [3]int{8, 16, 16}
 
 func (s String) Bits(v Version) int {
-	return 4 + stringLen[v.sizeClass()] + (11*len(s)+1)/2
+	return 4 + stringLen[v.sizeClass()] + 8*len(s)
 }
 
 func (s String) Encode(b *Bits, v Version) {
