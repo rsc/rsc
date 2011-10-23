@@ -58,6 +58,13 @@ var (
 	mainWin *Window
 	status = xmpp.Available
 	statusMsg = ""
+	lastActivity int64
+)
+
+const (
+	minute = 60e9
+	awayTime = 10*minute
+	extendedAwayTime = 30*minute
 )
 
 func usage() {
@@ -97,8 +104,9 @@ log.Fatal(err)
 	active[w.name] = w
 	go w.readAcme()
 	client.Roster()
-	client.Status(status, statusMsg)
+	setStatus(status)
 	go w.readChat()
+	lastActivity = time.Nanoseconds()
 
 	tick := time.Tick(0.5e9)
 Loop:
@@ -117,6 +125,12 @@ Loop:
 			}
 			if *acmeDebug {
 				fmt.Fprintf(os.Stderr, "%s %c%c %d,%d %q\n", w.name, w.C1, w.C2, w.Q0, w.Q1, w.Text)
+			}
+			if w.C1 == 'M' || w.C1 == 'K' {
+				lastActivity = time.Nanoseconds()
+				if status != xmpp.Available {
+					setStatus(xmpp.Available)
+				}
 			}
 			if (w.C2 == 'x' || w.C2 == 'X') && string(w.Text) == "Del" {
 				// TODO: Hangup connection for w.typ == "acct"?
@@ -195,7 +209,16 @@ Loop:
 			}
 
 		case t := <-tick:
-			_ = t
+			switch status {
+			case xmpp.Available:
+				if t - lastActivity > awayTime {
+					setStatus(xmpp.Away)
+				}
+			case xmpp.Away:
+				if t - lastActivity > extendedAwayTime {
+					setStatus(xmpp.ExtendedAway)
+				}
+			}
 			for _, w := range active {
 				if w.blinky {
 					w.dirty = !w.dirty
@@ -208,6 +231,12 @@ Loop:
 			}
 		}
 	}
+}
+
+func setStatus(st xmpp.Status) {
+	status = st
+	client.Status(status, statusMsg)
+	mainWin.statusTag(status, statusMsg)
 }
 
 func savePresence(pr *xmpp.Presence, you string) (pr1 *xmpp.Presence, new bool) {
@@ -309,6 +338,10 @@ func (w *Window) status(pr *xmpp.Presence) {
 	}
 	w.message("[%s%s]\n", long(pr.Status), msg)
 
+	w.statusTag(pr.Status, pr.StatusMsg)
+}
+
+func (w *Window) statusTag(status xmpp.Status, statusMsg string) {
 	data, err := w.ReadAll("tag")
 	if err != nil {
 		log.Printf("read tag: %v", err)
@@ -328,12 +361,12 @@ func (w *Window) status(pr *xmpp.Presence) {
 	}
 //log.Printf("tag3: %s\n", data)
 
-	msg = ""
-	if pr.StatusMsg != "" {
-		msg = " " + pr.StatusMsg
+	msg := ""
+	if statusMsg != "" {
+		msg = " " + statusMsg
 	}
 	w.Ctl("cleartag\n")
-	w.Write("tag", []byte(" " + short(pr.Status) + msg + " |" + string(data)))
+	w.Write("tag", []byte(" " + short(status) + msg + " |" + string(data)))
 }
 
 func mainStatus(pr *xmpp.Presence, you string) {
