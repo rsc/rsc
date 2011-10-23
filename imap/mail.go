@@ -1,9 +1,11 @@
 package imap
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -238,6 +240,35 @@ func (b *Box) Delete(msgs []*Msg) os.Error {
 	return err
 }
 
+func (b *Box) Copy(msgs []*Msg) os.Error {
+	if len(msgs) == 0 {
+		return nil
+	}
+	src := msgs[0].Box
+	for _, m := range msgs {
+		if m.Box != src {
+			return fmt.Errorf("messages span boxes: %q and %q", src.Name, m.Box.Name)
+		}
+	}
+	b.Client.io.lock()
+	defer b.Client.io.unlock()
+	return b.Client.copyList(b, src, msgs)
+}
+
+func (b *Box) Mute(msgs []*Msg) os.Error {
+	if len(msgs) == 0 {
+		return nil
+	}
+	for _, m := range msgs {
+		if m.Box != b {
+			return fmt.Errorf("messages not from this box")
+		}
+	}
+	b.Client.io.lock()
+	defer b.Client.io.unlock()
+	return b.Client.muteList(b, msgs)
+}
+
 func (b *Box) Check() os.Error {
 	b.Client.io.lock()
 	defer b.Client.io.unlock()
@@ -363,4 +394,75 @@ func (p *MsgPart) Raw() []byte {
 		c.io.unlock()
 	}
 	return raw
+}
+
+var sigDash = []byte("\n--\n")
+var quote = []byte("\n> ")
+var nl = []byte("\n")
+
+var onwrote = regexp.MustCompile(`\A\s*On .* wrote:\s*\z`)
+
+func (p *MsgPart) ShortText() []byte {
+	t := p.Text()
+	
+	return shortText(t)
+}
+
+func shortText(t []byte) []byte {	
+	if t == nil {
+		return nil
+	}
+
+	// Cut signature.
+	i := bytes.LastIndex(t, sigDash)
+	j := bytes.LastIndex(t, quote)
+	if i > j && bytes.Count(t[i+1:], nl) <= 10 {
+		t = t[:i+1]
+	}
+	
+	// Cut trailing quoted text.
+	for {
+		rest, last := lastLine(t)
+		trim := bytes.TrimSpace(last)
+		if len(rest) < len(t) && len(trim) == 0 || trim[0] == '>' {
+			t = rest
+			continue
+		}
+		break
+	}
+	
+	// Cut 'On foo.*wrote:' line.
+	rest, last := lastLine(t)
+	if onwrote.Match(last) {
+		t = rest
+	}
+	
+	// Cut trailing blank lines.
+	for {
+		rest, last := lastLine(t)
+		trim := bytes.TrimSpace(last)
+		if len(rest) < len(t) && len(trim) == 0 {
+			t = rest
+			continue
+		}
+		break
+	}
+
+	// Cut signature again.
+	i = bytes.LastIndex(t, sigDash)
+	j = bytes.LastIndex(t, quote)
+	if i > j && bytes.Count(t[i+1:], nl) <= 10 {
+		t = t[:i+1]
+	}
+	
+	return t
+}
+
+func lastLine(t []byte) (rest, last []byte) {
+	n := len(t)
+	if n > 0 && t[n-1] == '\n' {
+		n--
+	}
+	j := bytes.LastIndex(t[:n], nl)
+	return t[:j+1], t[j+1:]
 }
