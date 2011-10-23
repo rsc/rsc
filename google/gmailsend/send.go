@@ -92,6 +92,7 @@ func (a Addrs) fixDomain() {
 
 var from, to, cc, bcc, replyTo Addrs
 var inReplyTo, subject string
+var appendFile = flag.String("append", "", "file to append to end of body")
 
 var acct google.Account
 var acctName = flag.String("a", "", "account to use")
@@ -207,6 +208,20 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "reading stdin: %s\n", err)
 		os.Exit(2)
+	}
+	
+	if *appendFile != "" {
+		f, err := os.Open(*appendFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "append: %s\n", err)
+			os.Exit(2)
+		}
+		_, err = io.Copy(&body, f)
+		f.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "append: %s\n", err)
+			os.Exit(2)
+		}
 	}
 
 	var msg bytes.Buffer

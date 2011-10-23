@@ -23,40 +23,35 @@ var cmdtab = []struct{
 	Name string
 	Args int
 	F func(*Cmd, *imap.MsgPart) *imap.MsgPart
+	TF func(*Cmd, []*imap.Msg) *imap.MsgPart
 	Help string
 }{
-	{ "a",	1,	rcmd,	"a        reply to sender and recipients" },
-//	{ "A",	1,	acmd,	"A        reply to sender and recipients with copy" },
-	{ "b",	0,	bcmd,	"b        print the next 10 headers" },
-	{ "d",	0,	dcmd,	"d        mark for deletion" },
-//	{ "f",	0,	fcmd,	"f        file message by from address" },
-	{ "h",	0,	hcmd,	"h        print elided message summary (,h for all)" },
-	{ "help", 0,	nil, "help     print this info" },
-	{ "H",	0,	Hcmd,	"H        print message's MIME structure " },
-	{ "i",	0,	icmd,	"i        incorporate new mail" },
-//	{ "k",	0,	kcmd,	"k        kill (mute) mail" },
-//	{ "m",	1,	mcmd,	"m addr   forward mail" },
-//	{ "M",	1,	mcmd,	"M addr   forward mail with message" },
-	{ "n",	0,	ncmd,	"n        print the next message" },
-	{ "p",	0,	pcmd,	"p        print the processed message" },
-//	{ "p+",	0,	pcmd,	"p        print the processed message, showing all quoted text" },
-	{ "P",	0,	Pcmd,	"P        print the raw message" },
-	{ `"`,	0,	quotecmd, "\"        print a quoted version of msg" },
-	{ "q",	0,	qcmd,	"q        exit and remove all deleted mail" },
-	{ "r",	1,	rcmd,	"r [addr] reply to sender plus any addrs specified" },
-//	{ "rf",	1,	rcmd,	"rf [addr]file message and reply" },
-//	{ "R",	1,	rcmd,	"R [addr] reply including copy of message" },
-//	{ "Rf",	1,	rcmd,	"Rf [addr]file message and reply with copy" },
-//	{ "s",	1,	scmd,	"s file   append raw message to file" },
-	{ "u",	0,	ucmd,	"u        remove deletion mark" },
-//	{ "w",	1,	wcmd,	"w file   store message contents as file" },
-	{ "W",	0,	Wcmd,	"W	open in web browser" },
-	{ "x",	0,	xcmd,	"x        exit without flushing deleted messages" },
-	{ "y",	0,	ycmd,	"y        synchronize with mail box" },
-	{ "=",	1,	eqcmd,	"=        print current message number" },
-	{ "|",	1,	pipecmd, "|cmd     pipe message body to a command" },
-//	{ "||",	1,	rpipecmd, "||cmd     pipe raw message to a command" },
-	{ "!",	1,	bangcmd, "!cmd     run a command" },
+	{ "+",	0,	pluscmd, tpluscmd,	"+        print the next message" },
+	{ "a",	1,	rcmd, nil,	"a        reply to sender and recipients" },
+	{ "b",	0,	bcmd, nil,	"b        print the next 10 headers" },
+	{ "d",	0,	dcmd, tdcmd,	"d        mark for deletion" },
+	{ "f",	1,	fcmd, tfcmd,	"f        forward message" },
+	{ "h",	0,	hcmd, nil,	"h        print elided message summary (,h for all)" },
+	{ "help", 0,	nil, nil, "help     print this info" },
+	{ "i",	0,	icmd, nil,	"i        incorporate new mail" },
+	{ "m",	0,	mcmd, tmcmd,	"m        mute and delete thread (gmail only)" },
+	{ "mime",	0,	mimecmd, nil,	"mime     print message's MIME structure " },
+	{ "p",	0,	pcmd, nil,	"p        print the processed message" },
+//	{ "p+",	0,	pcmd, nil,	"p        print the processed message, showing all quoted text" },
+	{ "P",	0,	Pcmd, nil,	"P        print the raw message" },
+	{ `"`,	0,	quotecmd, nil, `"        print a quoted version of msg` },
+	{ "q",	0,	qcmd, nil,	"q        exit and remove all deleted mail" },
+	{ "r",	1,	rcmd, nil,	"r [addr] reply to sender plus any addrs specified" },
+	{ "s",	1,	scmd, tscmd,	"s name   copy message to named mailbox (label for gmail)" },
+	{ "u",	0,	ucmd, nil,	"u        remove deletion mark" },
+//	{ "w",	1,	wcmd, nil,	"w file   store message contents as file" },
+	{ "W",	0,	Wcmd, nil,	"W	open in web browser" },
+	{ "x",	0,	xcmd, nil,	"x        exit without flushing deleted messages" },
+	{ "y",	0,	ycmd, nil,	"y        synchronize with mail box" },
+	{ "=",	1,	eqcmd, nil,	"=        print current message number" },
+	{ "|",	1,	pipecmd, nil, "|cmd     pipe message body to a command" },
+//	{ "||",	1,	rpipecmd, nil, "||cmd     pipe raw message to a command" },
+	{ "!",	1,	bangcmd, nil, "!cmd     run a command" },
 }
 
 func init() {
@@ -72,7 +67,10 @@ func init() {
 type Cmd struct {
 	Name string
 	Args []string
+	Line string // Args[0:] original text
+	ArgLine string  // Args[1:] original text
 	F func(*Cmd, *imap.MsgPart) *imap.MsgPart
+	TF func(*Cmd, []*imap.Msg) *imap.MsgPart
 	Delete bool
 	Thread bool
 	Targ *imap.MsgPart
@@ -120,7 +118,7 @@ func main() {
 		for i := range args {
 			args[i] = "-to=" + args[i]
 		}
-		cmd := exec.Command("gmailsend", append([]string{"-i"}, args...)...)
+		cmd := exec.Command("gmailsend", append([]string{"-a", acct.Email, "-i"}, args...)...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -224,10 +222,18 @@ func main() {
 				}
 				for _, m := range targs {
 					t := m.GmailThread
-					for _, mm := range byThread[t] {
-						x := cmd.F(nil, &mm.Root)
-						if x != nil {
-							dot = x
+					if byThread[t] != nil {
+						if cmd.TF != nil {
+							if x := cmd.TF(cmd, byThread[t]); x != nil {
+								dot = x
+							}
+						} else {
+							for _, mm := range byThread[t] {
+								x := cmd.F(cmd, &mm.Root)
+								if x != nil {
+									dot = x
+								}
+							}
 						}
 					}
 					byThread[t] = nil, false
@@ -351,14 +357,17 @@ func parsecmd(line string) (cmd *Cmd, err os.Error) {
 		}
 	}
 
+	cmd.Line = strings.TrimSpace(line)
+
 	// Insert space after ! or | for tokenization.
-	for j := 0; j < len(line); j++ {
-		if line[j] == '!' || line[j] == '|' {
-			line = line[:j+1] + " " + line[j+1:]
-			break
-		}
+	switch {
+	case strings.HasPrefix(cmd.Line, "||"):
+		cmd.Line = cmd.Line[:2] + " " + cmd.Line[2:]
+	case strings.HasPrefix(cmd.Line, "!"), strings.HasPrefix(cmd.Line, "|"):
+		cmd.Line = cmd.Line[:1] + " " + cmd.Line[1:]
 	}
-	av := strings.Fields(strings.TrimSpace(line))
+
+	av := strings.Fields(cmd.Line)
 	cmd.Args = av
 	if len(av) == 0 || av[0] == "" {
 		// Default is to print.
@@ -367,6 +376,7 @@ func parsecmd(line string) (cmd *Cmd, err os.Error) {
 	}
 
 	name := av[0]
+	cmd.ArgLine = strings.TrimSpace(cmd.Line[len(av[0]):])
 
 	// Hack to allow t prefix on all commands.
 	if len(name) >= 2 && name[0] == 't' {
@@ -388,6 +398,11 @@ func parsecmd(line string) (cmd *Cmd, err os.Error) {
 				return nil, fmt.Errorf("%s doesn't take an argument", name)
 			}
 			cmd.F = ct.F
+			cmd.TF = ct.TF
+			if name == "m" {
+				// mute applies to all thread no matter what
+				cmd.Thread = true
+			}
 			return cmd, nil
 		}
 	}
@@ -573,6 +588,17 @@ func dcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	return &dot.Msg.Root
 }
 
+func tdcmd(c *Cmd, msgs []*imap.Msg) *imap.MsgPart {
+	if len(msgs) == 0 {
+		fmt.Fprintf(bout, "!address\n")
+		return nil
+	}
+	for _, m := range msgs {
+		deleted[m] = true
+	}
+	return &msgs[len(msgs)-1].Root
+}
+
 func ucmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	if dot == nil {
 		fmt.Fprintf(bout, "!address\n")
@@ -645,20 +671,20 @@ func helpcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	return dot
 }
 
-func Hcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+func mimecmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	if dot != nil {
-		H(fmt.Sprint(msgNum[dot.Msg]+1), dot)
+		mimeH(fmt.Sprint(msgNum[dot.Msg]+1), dot)
 	}
 	return nil
 }
 
-func H(id string, p *imap.MsgPart) {
+func mimeH(id string, p *imap.MsgPart) {
 	if p.ID != "" {
 		id = id + "." + p.ID
 	}
 	fmt.Fprintf(bout, "%s %s %s %#q %d\n", id, p.Type, p.Encoding+"/"+p.Charset, p.Name, p.Bytes)
 	for _, child := range p.Child {
-		H(id, child)
+		mimeH(id, child)
 	}
 }
 
@@ -672,7 +698,19 @@ func ycmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	return nil
 }
 
-func ncmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+func tpluscmd(c *Cmd, msgs []*imap.Msg) *imap.MsgPart {
+	if len(msgs) == 0 {
+		return nil
+	}
+	m := nextMsg(msgs[len(msgs)-1])
+	if m == nil {
+		fmt.Fprintf(bout, "!no more messages\n")
+		return nil
+	}
+	return pcmd(c, &m.Root)
+}
+
+func pluscmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	if dot == nil {
 		return nil
 	}
@@ -799,8 +837,9 @@ func Pcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 }
 
 func printMIME(w io.Writer, p *imap.MsgPart, top bool) {
-	if top && strings.HasPrefix(p.Type, "text/") {
-		text := p.Text()
+	switch {
+	case top && strings.HasPrefix(p.Type, "text/"):
+		text := p.ShortText()
 		if p.Type == "text/html" {
 			cmd := exec.Command("htmlfmt")
 			cmd.Stdin = bytes.NewBuffer(text)
@@ -816,15 +855,12 @@ func printMIME(w io.Writer, p *imap.MsgPart, top bool) {
 			return
 		}
 		w.Write(text)
-		return
-	}
-	switch p.Type {
-	case "text/plain":
+	case p.Type == "text/plain":
 		if top {
 			panic("printMIME loop")
 		}
 		printMIME(w, p, true)
-	case "multipart/alternative":
+	case p.Type == "multipart/alternative":
 		for _, pp := range p.Child {
 			if pp.Type == "text/plain" {
 				printMIME(w, pp, false)
@@ -834,7 +870,7 @@ func printMIME(w io.Writer, p *imap.MsgPart, top bool) {
 		if len(p.Child) > 0 {
 			printMIME(w, p.Child[0], false)
 		}
-	case "multipart/mixed":
+	case strings.HasPrefix(p.Type, "multipart/"):
 		for _, pp := range p.Child {
 			printMIME(w, pp, false)
 		}
@@ -951,6 +987,77 @@ func rcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 	return dot
 }
 
+func fcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+	if dot == nil {
+		fmt.Fprintf(bout, "!nothing to forward\n")
+		return nil
+	}
+	
+	return fwd(c, dot, nil)
+}
+
+func tfcmd(c *Cmd, msgs []*imap.Msg) *imap.MsgPart {
+	if len(msgs) == 0 {
+		fmt.Fprintf(bout, "!nothing to forward\n")
+		return nil
+	}
+	
+	return fwd(c, &msgs[len(msgs)-1].Root, msgs)
+}
+
+func fwd(c *Cmd, dot *imap.MsgPart, msgs []*imap.Msg) *imap.MsgPart {
+	addrs := c.Args[1:]
+	if len(addrs) == 0 {
+		fmt.Fprintf(bout, "!f command requires address to forward to\n")
+		return dot
+	}
+	
+	h := dot.Msg.Hdr
+	args := []string{"-a", acct.Email, "-s", "Fwd: " + h.Subject, "-append", "/dev/fd/3"}
+	fmt.Fprintf(bout, "forwarding to:")
+	for _, arg := range addrs {
+		fmt.Fprintf(bout, " %s", arg)
+		args = append(args, "-to", arg)
+	}
+	fmt.Fprintf(bout, "\n")
+	bout.Flush()
+
+	cmd := exec.Command("gmailsend", args...)
+	r, w, err := os.Pipe()
+	if err != nil {
+		fmt.Fprintf(bout, "!%s\n", err)
+		return dot
+	}
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.ExtraFiles = []*os.File{r}
+	if err := cmd.Start(); err != nil {
+		r.Close()
+		fmt.Fprintf(bout, "!%s\n", err)
+		return dot
+	}
+	r.Close()
+	what := "message"
+	if len(msgs) > 1 {
+		what = "conversation"
+	}
+	fmt.Fprintf(w, "\n\n--- Forwarded %s ---\n", what)
+	if msgs == nil {
+		wpcmd(w, c, dot)
+	} else {
+		for _, m := range msgs {
+			wpcmd(w, c, &m.Root)
+			fmt.Fprintf(w, "\n\n")
+		}
+	}
+	w.Close()
+	if err := cmd.Wait(); err != nil {
+		fmt.Fprintf(bout, "!%s\n", err)
+	}
+	return dot
+}
+
 func rethread() {
 	if !threaded {
 		sort.Sort(byUIDRev(msgs))
@@ -1003,6 +1110,52 @@ func subj(m *imap.Msg) string {
 		s = s[4:]
 	}
 	return s
+}
+
+func mcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+	c.ArgLine = "Muted"
+	scmd(c, dot)
+	return dcmd(c, dot)
+}
+
+func tmcmd(c *Cmd, msgs []*imap.Msg) *imap.MsgPart {
+	c.ArgLine = "Muted"
+	tscmd(c, msgs)
+	return tdcmd(c, msgs)
+}
+
+func scmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
+	if dot == nil {
+		return nil
+	}
+	return tscmd(c, []*imap.Msg{dot.Msg})
+}
+
+func tscmd(c *Cmd, msgs []*imap.Msg) *imap.MsgPart {
+	if len(msgs) == 0 {
+		return nil
+	}
+	arg := c.ArgLine
+	dot := &msgs[len(msgs)-1].Root
+	if arg == "" {
+		fmt.Fprintf(bout, "!s needs mailbox (label) name as argument\n")
+		return dot
+	}
+	if strings.EqualFold(arg, "Muted") {
+		if err := dot.Msg.Box.Mute(msgs); err != nil {
+			fmt.Fprintf(bout, "!mute: %s\n", err)
+		}
+	} else {
+		dst := dot.Msg.Box.Client.Box(arg)
+		if dst == nil {
+			fmt.Fprintf(bout, "!unknown mailbox %#q", arg)
+			return dot
+		}
+		if err := dst.Copy(msgs); err != nil {
+			fmt.Fprintf(bout, "!s %#q: %s\n", arg, err)
+		}
+	}
+	return dot
 }
 
 func Wcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
