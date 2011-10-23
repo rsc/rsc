@@ -9,6 +9,7 @@ package qr
 
 import (
 	"image"
+	"image/color"
 	"os"
 
 	"rsc.googlecode.com/hg/qr/coding"
@@ -26,7 +27,7 @@ const (
 )
 
 // Encode returns an encoding of text at the given error correction level.
-func Encode(text string, level Level) (*Code, os.Error) {
+func Encode(text string, level Level) (*Code, error) {
 	// Pick data encoding, smallest first.
 	// We could split the string and use different encodings
 	// but that seems like overkill for now.
@@ -94,8 +95,8 @@ type codeImage struct {
 }
 
 var (
-	whiteColor image.Color = image.GrayColor{0xFF}
-	blackColor image.Color = image.GrayColor{0x00}
+	whiteColor color.Color = color.Gray{0xFF}
+	blackColor color.Color = color.Gray{0x00}
 )
 
 func (c *codeImage) Bounds() image.Rectangle {
@@ -103,13 +104,13 @@ func (c *codeImage) Bounds() image.Rectangle {
 	return image.Rect(0, 0, d, d)
 }
 
-func (c *codeImage) At(x, y int) image.Color {
+func (c *codeImage) At(x, y int) color.Color {
 	if c.Black(x, y) {
 		return blackColor
 	}
 	return whiteColor
 }
 
-func (c *codeImage) ColorModel() image.ColorModel {
-	return image.GrayColorModel
+func (c *codeImage) ColorModel() color.Model {
+	return color.GrayModel
 }

@@ -17,6 +17,7 @@ import "C"
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"os"
 	"unsafe"
 )
@@ -60,8 +61,8 @@ type Code struct {
 	Scale   int
 }
 
-func (*Code) ColorModel() image.ColorModel {
-	return image.RGBAColorModel
+func (*Code) ColorModel() color.Model {
+	return color.RGBAModel
 }
 
 func (c *Code) Bounds() image.Rectangle {
@@ -70,16 +71,16 @@ func (c *Code) Bounds() image.Rectangle {
 }
 
 var (
-	white  image.Color = image.RGBAColor{0xFF, 0xFF, 0xFF, 0xFF}
-	black  image.Color = image.RGBAColor{0x00, 0x00, 0x00, 0xFF}
-	blue   image.Color = image.RGBAColor{0x00, 0x00, 0x80, 0xFF}
-	red    image.Color = image.RGBAColor{0xFF, 0x40, 0x40, 0xFF}
-	yellow image.Color = image.RGBAColor{0xFF, 0xFF, 0x00, 0xFF}
-	gray   image.Color = image.RGBAColor{0x80, 0x80, 0x80, 0xFF}
-	green  image.Color = image.RGBAColor{0x22, 0x8B, 0x22, 0xFF}
+	white  color.Color = color.RGBA{0xFF, 0xFF, 0xFF, 0xFF}
+	black  color.Color = color.RGBA{0x00, 0x00, 0x00, 0xFF}
+	blue   color.Color = color.RGBA{0x00, 0x00, 0x80, 0xFF}
+	red    color.Color = color.RGBA{0xFF, 0x40, 0x40, 0xFF}
+	yellow color.Color = color.RGBA{0xFF, 0xFF, 0x00, 0xFF}
+	gray   color.Color = color.RGBA{0x80, 0x80, 0x80, 0xFF}
+	green  color.Color = color.RGBA{0x22, 0x8B, 0x22, 0xFF}
 )
 
-func (c *Code) At(x, y int) image.Color {
+func (c *Code) At(x, y int) color.Color {
 	x = x/c.Scale - 4
 	y = y/c.Scale - 4
 	if 0 <= x && x < c.Width && 0 <= y && y < c.Width {

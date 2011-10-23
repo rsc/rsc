@@ -7,6 +7,7 @@ package qr
 import (
 	"bytes"
 	"image"
+	"image/color"
 	"image/png"
 	"io/ioutil"
 	"testing"
@@ -36,7 +37,7 @@ func TestPNG(t *testing.T) {
 			if c.Black(x/scale-4, y/scale-4) {
 				v = 0
 			}
-			if gv := gm.At(x, y).(image.GrayColor).Y; gv != v {
+			if gv := gm.At(x, y).(color.Gray).Y; gv != v {
 				t.Errorf("%d,%d = %d, want %d", x, y, gv, v)
 				if nbad++; nbad >= 20 {
 					t.Fatalf("too many bad pixels")
