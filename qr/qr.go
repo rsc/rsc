@@ -27,7 +27,7 @@ const (
 )
 
 // Encode returns an encoding of text at the given error correction level.
-func Encode(text string, level Level) (*Code, error) {
+func Encode(text string, level Level) (*Code, os.Error) {
 	// Pick data encoding, smallest first.
 	// We could split the string and use different encodings
 	// but that seems like overkill for now.
