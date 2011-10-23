@@ -126,6 +126,7 @@ func (c *Client) reconnect() os.Error {
 	c.rw = rw
 	c.connected = true
 	c.capability = nil
+	c.box = nil
 	if Debug {
 		c.b = bufio.NewReader(&tee{rw, os.Stderr})
 	} else {
@@ -1058,4 +1059,48 @@ func (c *Client) deleteList(msgs []*Msg) os.Error {
 		err = c.cmd(b, "EXPUNGE")
 	}
 	return err
+}
+
+func (c *Client) copyList(dst, src *Box, msgs []*Msg) os.Error {
+	if len(msgs) == 0 {
+		return nil
+	}
+	c.io.mustBeLocked()
+
+	for _, m := range msgs {
+		if m.Box != src {
+			return fmt.Errorf("messages span boxes: %q and %q", src.Name, m.Box.Name)
+		}
+		if uint32(m.UID>>32) != src.validity {
+			return fmt.Errorf("stale message")
+		}
+	}
+
+	var name string
+	if dst == c.inbox {
+		name = "INBOX"
+	} else {
+		name = iquote(dst.Name)
+	}
+	return c.cmd(src, "UID COPY %s %s", uidList(msgs), name)
+}
+
+func (c *Client) muteList(src *Box, msgs []*Msg) os.Error {
+	if len(msgs) == 0 {
+		return nil
+	}
+	c.io.mustBeLocked()
+
+	for _, m := range msgs {
+		if m.Box != src {
+			return fmt.Errorf("messages span boxes: %q and %q", src.Name, m.Box.Name)
+		}
+		if uint32(m.UID>>32) != src.validity {
+			return fmt.Errorf("stale message")
+		}
+	}
+
+	// UGH: Gmail IMAP doesn't let you set the Muted bit.  So create a ToBeMuted label
+	// and process them once in a while via the web.
+	return c.cmd(src, "UID STORE %s +X-GM-LABELS (ToBeMuted)", uidList(msgs))
 }
