@@ -152,7 +152,7 @@ func decodeText(dat []byte, encoding, charset string, underscore bool) []byte {
 	return b.Bytes()
 }
 
-var convtab = map[string]*[256]int{
+var convtab = map[string]*[256]rune{
 	"iso-8859-1":   &tab_iso8859_1,
 	"iso-8859-2":   &tab_iso8859_2,
 	"iso-8859-3":   &tab_iso8859_3,
@@ -201,7 +201,7 @@ func unrfc2047(s string) string {
 	return buf.String()
 }
 
-func lwr(c int) int {
+func lwr(c rune) rune {
 	if 'A' <= c && c <= 'Z' {
 		return c + 'a' - 'A'
 	}

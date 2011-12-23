@@ -1,12 +1,11 @@
 package imap
 
 import (
-	"bytes"
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strings"
 	"time"
 )
@@ -28,7 +27,7 @@ type sx struct {
 	sx     []*sx
 }
 
-func rdsx(b *bufio.Reader) (*sx, os.Error) {
+func rdsx(b *bufio.Reader) (*sx, error) {
 	x := &sx{kind: sxList}
 	for {
 		xx, err := rdsx1(b)
@@ -43,7 +42,7 @@ func rdsx(b *bufio.Reader) (*sx, os.Error) {
 	return x, nil
 }
 
-func rdsx1(b *bufio.Reader) (*sx, os.Error) {
+func rdsx1(b *bufio.Reader) (*sx, error) {
 	c, err := b.ReadByte()
 	if c == ' ' {
 		c, err = b.ReadByte()
@@ -270,7 +269,7 @@ func (x *sx) isAtom(name string) bool {
 		name = name[:n-1]
 	}
 	for i := 0; i < len(name); i++ {
-		if i >= len(data) || lwr(int(data[i])) != lwr(int(name[i])) {
+		if i >= len(data) || lwr(rune(data[i])) != lwr(rune(name[i])) {
 			return false
 		}
 	}

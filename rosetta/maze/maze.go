@@ -14,9 +14,9 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"rand"
+	"math/rand"
 	"time"
-	
+
 	"rsc.googlecode.com/hg/rosetta/graph"
 )
 
@@ -38,7 +38,7 @@ type walls uint8
 
 const allWalls walls = 1<<North | 1<<East | 1<<South | 1<<West
 
-var dirs = []struct{
+var dirs = []struct {
 	δx, δy int
 }{
 	{0, -1},
@@ -50,8 +50,8 @@ var dirs = []struct{
 // move returns the cell in the direction dir from position r, c.
 // It returns ok==false if there is no cell in that direction.
 func (m *Maze) move(x, y int, dir Dir) (nx, ny int, ok bool) {
-	nx = x+dirs[dir].δx
-	ny = y+dirs[dir].δy
+	nx = x + dirs[dir].δx
+	ny = y + dirs[dir].δy
 	ok = 0 <= nx && nx < m.w && 0 <= ny && ny < m.h
 	return
 }
@@ -87,11 +87,11 @@ func NewMaze(w, h int) *Maze {
 func (m *Maze) generate(x, y int) {
 	i := rand.Intn(4)
 	for j := 0; j < 4; j++ {
-		dir := Dir(i+j)%4
+		dir := Dir(i+j) % 4
 		if nx, ny, ok := m.move(x, y, dir); ok && m.grid[ny][nx] == allWalls {
 			// break down wall
-			m.grid[y][x] &^= 1<<dir
-			m.grid[ny][nx] &^= 1<<(3-dir)
+			m.grid[y][x] &^= 1 << dir
+			m.grid[ny][nx] &^= 1 << (3 - dir)
 			m.generate(nx, ny)
 		}
 	}
@@ -169,7 +169,7 @@ func (m *Maze) Neighbors(v graph.Vertex) []graph.Vertex {
 }
 
 func (m *Maze) NumVertex() int {
-	return m.w*m.h
+	return m.w * m.h
 }
 
 func (m *Maze) VertexID(v graph.Vertex) int {
@@ -184,7 +184,7 @@ func (m *Maze) Vertex(x, y int) graph.Vertex {
 func main() {
 	const w, h = 30, 10
 	rand.Seed(time.Nanoseconds())
-	
+
 	m := NewMaze(w, h)
 	path := graph.ShortestPath(m, m.Vertex(0, 0), m.Vertex(w-1, h-1))
 	fmt.Println(m.PathString(path))

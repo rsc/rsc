@@ -9,7 +9,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"rsc.googlecode.com/hg/google"
 	"rsc.googlecode.com/hg/xmpp"
@@ -17,13 +16,13 @@ import (
 
 type chatClient struct {
 	email string
-	id string
-	xmpp *xmpp.Client
+	id    string
+	xmpp  *xmpp.Client
 }
 
 var chatClients = map[string]*chatClient{}
 
-func (*Server) chatClient(cid *google.ChatID) (*chatClient, os.Error) {
+func (*Server) chatClient(cid *google.ChatID) (*chatClient, error) {
 	id := cid.ID
 	cc := chatClients[cid.ID]
 	if cc == nil {
@@ -43,7 +42,7 @@ func (*Server) chatClient(cid *google.ChatID) (*chatClient, os.Error) {
 	return cc, nil
 }
 
-func (srv *Server) ChatRecv(cid *google.ChatID, msg *xmpp.Chat) os.Error {
+func (srv *Server) ChatRecv(cid *google.ChatID, msg *xmpp.Chat) error {
 	cc, err := srv.chatClient(cid)
 	if err != nil {
 		return err
@@ -56,7 +55,7 @@ func (srv *Server) ChatRecv(cid *google.ChatID, msg *xmpp.Chat) os.Error {
 	return nil
 }
 
-func (srv *Server) ChatStatus(cid *google.ChatID, _ *Empty) os.Error {
+func (srv *Server) ChatStatus(cid *google.ChatID, _ *Empty) error {
 	cc, err := srv.chatClient(cid)
 	if err != nil {
 		return err
@@ -64,7 +63,7 @@ func (srv *Server) ChatStatus(cid *google.ChatID, _ *Empty) os.Error {
 	return cc.xmpp.Status(cid.Status, cid.StatusMsg)
 }
 
-func (srv *Server) ChatSend(arg *google.ChatSend, _ *Empty) os.Error {
+func (srv *Server) ChatSend(arg *google.ChatSend, _ *Empty) error {
 	cc, err := srv.chatClient(arg.ID)
 	if err != nil {
 		return err
@@ -72,7 +71,7 @@ func (srv *Server) ChatSend(arg *google.ChatSend, _ *Empty) os.Error {
 	return cc.xmpp.Send(arg.Msg)
 }
 
-func (srv *Server) ChatRoster(cid *google.ChatID, _ *Empty) os.Error {
+func (srv *Server) ChatRoster(cid *google.ChatID, _ *Empty) error {
 	cc, err := srv.chatClient(cid)
 	if err != nil {
 		return err

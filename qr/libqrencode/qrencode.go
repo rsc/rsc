@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"os"
 	"unsafe"
 )
 
@@ -109,11 +108,11 @@ type Chunk struct {
 	Text string
 }
 
-func Encode(version Version, level Level, mode Mode, text string) (*Code, os.Error) {
+func Encode(version Version, level Level, mode Mode, text string) (*Code, error) {
 	return EncodeChunk(version, level, Chunk{mode, text})
 }
 
-func EncodeChunk(version Version, level Level, chunk ...Chunk) (*Code, os.Error) {
+func EncodeChunk(version Version, level Level, chunk ...Chunk) (*Code, error) {
 	qi, err := C.QRinput_new2(C.int(version), C.QRecLevel(level))
 	if qi == nil {
 		return nil, fmt.Errorf("QRinput_new2: %v", err)

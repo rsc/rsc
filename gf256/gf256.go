@@ -7,11 +7,13 @@ package gf256
 
 import "strconv"
 
+// A Field represents an instance of GF(256) defined by a specific polynomial.
 type Field struct {
 	log [256]byte // log[0] is unused
 	exp [510]byte
 }
 
+// NewField returns a new field corresponding to the given polynomial.
 func NewField(poly int) *Field {
 	if poly < 0x100 || poly >= 0x200 {
 		panic("gf256: invalid polynomial: " + strconv.Itoa(poly))

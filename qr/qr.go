@@ -8,9 +8,9 @@ Package qr encodes QR codes.
 package qr
 
 import (
+	"errors"
 	"image"
 	"image/color"
-	"os"
 
 	"rsc.googlecode.com/hg/qr/coding"
 )
@@ -27,7 +27,7 @@ const (
 )
 
 // Encode returns an encoding of text at the given error correction level.
-func Encode(text string, level Level) (*Code, os.Error) {
+func Encode(text string, level Level) (*Code, error) {
 	// Pick data encoding, smallest first.
 	// We could split the string and use different encodings
 	// but that seems like overkill for now.
@@ -46,7 +46,7 @@ func Encode(text string, level Level) (*Code, os.Error) {
 	var v coding.Version
 	for v = coding.MinVersion; ; v++ {
 		if v > coding.MaxVersion {
-			return nil, os.NewError("text too long to encode as QR")
+			return nil, errors.New("text too long to encode as QR")
 		}
 		if enc.Bits(v) <= v.DataBytes(l)*8 {
 			break

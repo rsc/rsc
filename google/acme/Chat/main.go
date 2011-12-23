@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	
+
 	"goplan9.googlecode.com/hg/plan9/acme"
 	"rsc.googlecode.com/hg/google"
 	"rsc.googlecode.com/hg/xmpp"
@@ -30,41 +30,41 @@ import (
 var acmeDebug = flag.Bool("acmedebug", false, "print acme debugging")
 
 type Window struct {
-	*acme.Win  // acme window
-	*acme.Event  // most recent event received
-	err os.Error  // error reading event
-	typ string  // kind of window "main", "chat"
-	name string  // acme window title
-	remote string  // for typ=="chat", remote address
-	dirty bool  // window is dirty
-	blinky bool  // window's dirty box is blinking
-	
+	*acme.Win          // acme window
+	*acme.Event        // most recent event received
+	err         error  // error reading event
+	typ         string // kind of window "main", "chat"
+	name        string // acme window title
+	remote      string // for typ=="chat", remote address
+	dirty       bool   // window is dirty
+	blinky      bool   // window's dirty box is blinking
+
 	lastTime int64
 }
 
 type Msg struct {
-	w *Window  // window where message belongs
-	*xmpp.Chat  // recently received chat
-	err os.Error  // error reading chat message
+	w          *Window // window where message belongs
+	*xmpp.Chat         // recently received chat
+	err        error   // error reading chat message
 }
 
 var (
-	client *xmpp.Client  // current xmpp client (can reconnect)
-	acct google.Account  // google acct info
-	statusCache = make(map[string][]*xmpp.Presence)
-	active = make(map[string]*Window)  // active windows
-	acmeChan = make(chan *Window)  // acme events
-	msgChan = make(chan *Msg)  // chat events
-	mainWin *Window
-	status = xmpp.Available
-	statusMsg = ""
+	client       *xmpp.Client   // current xmpp client (can reconnect)
+	acct         google.Account // google acct info
+	statusCache  = make(map[string][]*xmpp.Presence)
+	active       = make(map[string]*Window) // active windows
+	acmeChan     = make(chan *Window)       // acme events
+	msgChan      = make(chan *Msg)          // chat events
+	mainWin      *Window
+	status       = xmpp.Available
+	statusMsg    = ""
 	lastActivity int64
 )
 
 const (
-	minute = 60e9
-	awayTime = 10*minute
-	extendedAwayTime = 30*minute
+	minute           = 60e9
+	awayTime         = 10 * minute
+	extendedAwayTime = 30 * minute
 )
 
 func usage() {
@@ -91,11 +91,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	w := &Window{Win: aw, typ: "main", name: "Chat/" + acct.Nick + "/"}
 	data, err := ioutil.ReadFile(google.Dir() + "/chat." + acct.Nick)
 	if err != nil {
-log.Fatal(err)
+		log.Fatal(err)
 	}
 	if err == nil {
 		w.Write("body", data)
@@ -134,7 +134,7 @@ Loop:
 			}
 			if (w.C2 == 'x' || w.C2 == 'X') && string(w.Text) == "Del" {
 				// TODO: Hangup connection for w.typ == "acct"?
-				active[w.name] = nil, false
+				delete(active, w.name)
 				w.Del(true)
 				continue Loop
 			}
@@ -142,14 +142,14 @@ Loop:
 			switch w.typ {
 			case "main":
 				switch w.C2 {
-				case 'L':  // Button 3 in body: load chat window for contact.
+				case 'L': // Button 3 in body: load chat window for contact.
 					w.expand()
 					fallthrough
-				case 'l':  // Button 3 in tag
+				case 'l': // Button 3 in tag
 					arg := string(w.Text)
 					showContact(arg)
 					continue Loop
-				}					
+				}
 			case "chat":
 				if w.C1 == 'F' && w.C2 == 'I' {
 					continue Loop
@@ -172,7 +172,7 @@ Loop:
 				}
 			}
 			w.WriteEvent(w.Event)
-		
+
 		case msg := <-msgChan:
 			w := msg.w
 			if msg.err != nil {
@@ -211,11 +211,11 @@ Loop:
 		case t := <-tick:
 			switch status {
 			case xmpp.Available:
-				if t - lastActivity > awayTime {
+				if t-lastActivity > awayTime {
 					setStatus(xmpp.Away)
 				}
 			case xmpp.Away:
-				if t - lastActivity > extendedAwayTime {
+				if t-lastActivity > extendedAwayTime {
 					setStatus(xmpp.ExtendedAway)
 				}
 			}
@@ -257,7 +257,7 @@ func savePresence(pr *xmpp.Presence, you string) (pr1 *xmpp.Presence, new bool) 
 
 Best:
 	best := cachedPresence(you)
-	return best, old==nil || old.Status!=best.Status || old.StatusMsg != best.StatusMsg
+	return best, old == nil || old.Status != best.Status || old.StatusMsg != best.StatusMsg
 }
 
 func cachedPresence(you string) *xmpp.Presence {
@@ -307,19 +307,19 @@ func long(st xmpp.Status) string {
 }
 
 func (w *Window) time() string {
-/*
-Auto-date chat windows:
- 
- 	Show date and time on first message.
- 	Show time if minute is different from last message.
- 	Show date if day is different from last message.
- 	
- 	Oct 10 12:01 > hi
- 	12:03 hello there
- 	12:05 > what's up?
+	/*
+		Auto-date chat windows:
 
-	12:10 [Away]
-*/
+		 	Show date and time on first message.
+		 	Show time if minute is different from last message.
+		 	Show date if day is different from last message.
+
+		 	Oct 10 12:01 > hi
+		 	12:03 hello there
+		 	12:05 > what's up?
+
+			12:10 [Away]
+	*/
 	now := time.Seconds()
 	t2 := time.SecondsToLocalTime(now)
 	t1 := time.SecondsToLocalTime(w.lastTime)
@@ -329,7 +329,6 @@ Auto-date chat windows:
 	}
 	return t2.Format("15:04 ")
 }
-
 
 func (w *Window) status(pr *xmpp.Presence) {
 	msg := ""
@@ -347,31 +346,31 @@ func (w *Window) statusTag(status xmpp.Status, statusMsg string) {
 		log.Printf("read tag: %v", err)
 		return
 	}
-//log.Printf("tag1: %s\n", data)
+	//log.Printf("tag1: %s\n", data)
 	i := bytes.IndexByte(data, '|')
 	if i >= 0 {
 		data = data[i+1:]
 	} else {
 		data = nil
 	}
-//log.Printf("tag2: %s\n", data)
+	//log.Printf("tag2: %s\n", data)
 	j := bytes.IndexByte(data, '|')
 	if j >= 0 {
 		data = data[j+1:]
 	}
-//log.Printf("tag3: %s\n", data)
+	//log.Printf("tag3: %s\n", data)
 
 	msg := ""
 	if statusMsg != "" {
 		msg = " " + statusMsg
 	}
 	w.Ctl("cleartag\n")
-	w.Write("tag", []byte(" " + short(status) + msg + " |" + string(data)))
+	w.Write("tag", []byte(" "+short(status)+msg+" |"+string(data)))
 }
 
 func mainStatus(pr *xmpp.Presence, you string) {
 	w := mainWin
-	if err := w.Addr("#0/^(.[ \t]+)?"+regexp.QuoteMeta(you)+"([ \t]*|$)/"); err != nil {
+	if err := w.Addr("#0/^(.[ \t]+)?" + regexp.QuoteMeta(you) + "([ \t]*|$)/"); err != nil {
 		return
 	}
 	q0, q1, err := w.ReadAddr()
@@ -457,7 +456,7 @@ func (w *Window) message(format string, args ...interface{}) {
 		q0, q1, _ := w.ReadAddr()
 		log.Printf("inserting; addr=%d,%d", q0, q1)
 	}
-	w.Printf("data", nl + w.time() + format + "\n", args...)
+	w.Printf("data", nl+w.time()+format+"\n", args...)
 	if *acmeDebug {
 		q0, q1, _ := w.ReadAddr()
 		log.Printf("wrote; addr=%d,%d", q0, q1)
@@ -484,7 +483,7 @@ func (w *Window) sendMsg() {
 	trim := string(bytes.TrimSpace(line))
 	if len(trim) > 0 {
 		err := client.Send(xmpp.Chat{Remote: w.remote, Type: "chat", Text: trim})
-		
+
 		// Select blank line before input (if any) and input.
 		w.Addr("#%d-/\\n?\\n?/,#%d", q0, q1)
 		if *acmeDebug {
@@ -492,7 +491,7 @@ func (w *Window) sendMsg() {
 			log.Printf("selected text; addr=%d,%d", q0, q1)
 		}
 		q0, _, _ := w.ReadAddr()
-		
+
 		// Overwrite with \nmsg\n\n.
 		// Leaves addr after final \n, which is where we want it.
 		nl := ""
@@ -520,7 +519,7 @@ func (w *Window) readAcme() {
 			acmeChan <- w
 			break
 		}
-//fmt.Printf("%c%c %d,%d %d,%d %#x %#q %#q %#q\n", e.C1, e.C2, e.Q0, e.Q1, e.OrigQ0, e.OrigQ1, e.Flag, e.Text, e.Arg, e.Loc)
+		//fmt.Printf("%c%c %d,%d %d,%d %#x %#q %#q %#q\n", e.C1, e.C2, e.Q0, e.Q1, e.OrigQ0, e.OrigQ1, e.Flag, e.Text, e.Arg, e.Loc)
 		w.Event = e
 		acmeChan <- w
 		acmeChan <- nil
@@ -534,13 +533,13 @@ func (w *Window) readChat() {
 			msgChan <- &Msg{w: w, err: err}
 			break
 		}
-//fmt.Printf("%s\n", *msg)
+		//fmt.Printf("%s\n", *msg)
 		msgChan <- &Msg{w: w, Chat: &msg}
 	}
 }
 
 func lookContact(you string) *Window {
-	return active["Chat/" + acct.Nick + "/" + you]
+	return active["Chat/"+acct.Nick+"/"+you]
 }
 
 func showContact(you string) *Window {
@@ -549,12 +548,12 @@ func showContact(you string) *Window {
 		w.Ctl("show\n")
 		return w
 	}
-	
+
 	ww, err := acme.New()
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	name := "Chat/" + acct.Nick + "/" + you
 	ww.Name(name)
 	w = &Window{Win: ww, typ: "chat", name: name, remote: you}

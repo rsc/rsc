@@ -7,17 +7,17 @@
 package google
 
 import (
-//	"flag"
+	//	"flag"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"json"
 	"log"
-	"os"
-	"rpc"
 	"net"
-	"time"
-	"exec"
+	"net/rpc"
+	"os"
+	"os/exec"
 	"syscall"
+	"time"
 )
 
 func Dir() string {
@@ -41,8 +41,8 @@ func Dir() string {
 	return dir
 }
 
-func Dial() (*Client, os.Error) {
-	socket := Dir()+"/socket"
+func Dial() (*Client, error) {
+	socket := Dir() + "/socket"
 	c, err := net.Dial("unix", socket)
 	if err == nil {
 		return &Client{rpc.NewClient(c)}, nil
@@ -67,13 +67,13 @@ type Client struct {
 	client *rpc.Client
 }
 
-type Empty struct {}
+type Empty struct{}
 
-func (g *Client) Ping() os.Error {
+func (g *Client) Ping() error {
 	return g.client.Call("goog.Ping", &Empty{}, &Empty{})
 }
 
-func (g *Client) Accounts() ([]string, os.Error) {
+func (g *Client) Accounts() ([]string, error) {
 	var out []string
 	if err := g.client.Call("goog.Accounts", &Empty{}, &out); err != nil {
 		return nil, err
@@ -94,9 +94,9 @@ type Config struct {
 }
 
 type Account struct {
-	Email string
+	Email    string
 	Password string
-	Nick string
+	Nick     string
 }
 
 func (cfg *Config) AccountByEmail(email string) *Account {
@@ -111,7 +111,7 @@ func (cfg *Config) AccountByEmail(email string) *Account {
 var Cfg Config
 
 func ReadConfig() {
-	file := Dir()+"/config"
+	file := Dir() + "/config"
 	st, err := os.Stat(file)
 	if err != nil {
 		return
@@ -130,7 +130,7 @@ func ReadConfig() {
 }
 
 func WriteConfig() {
-	file := Dir()+"/config"
+	file := Dir() + "/config"
 	st, err := os.Stat(file)
 	if err != nil {
 		if err := ioutil.WriteFile(file, nil, 0600); err != nil {
@@ -144,7 +144,7 @@ func WriteConfig() {
 	if st.Mode&0077 != 0 {
 		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode&0777)
 	}
-	data, err := json.MarshalIndent(&Cfg, "", "\t");
+	data, err := json.MarshalIndent(&Cfg, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func Acct(name string) Account {
 		}
 		return *Cfg.Account[0]
 	}
-	
+
 	for _, a := range Cfg.Account {
 		if a.Email == name || a.Nick == name {
 			return *a

@@ -4,25 +4,21 @@
 
 package google
 
-import (
-	"os"
-
-	"rsc.googlecode.com/hg/xmpp"
-)
+import "rsc.googlecode.com/hg/xmpp"
 
 type ChatID struct {
-	ID string
-	Email string
-	Status xmpp.Status
+	ID        string
+	Email     string
+	Status    xmpp.Status
 	StatusMsg string
 }
 
 type ChatSend struct {
-	ID *ChatID
+	ID  *ChatID
 	Msg xmpp.Chat
 }
 
-func (g *Client) ChatRecv(cid *ChatID) (*xmpp.Chat, os.Error) {
+func (g *Client) ChatRecv(cid *ChatID) (*xmpp.Chat, error) {
 	var msg xmpp.Chat
 	if err := g.client.Call("goog.ChatRecv", cid, &msg); err != nil {
 		return nil, err
@@ -30,14 +26,14 @@ func (g *Client) ChatRecv(cid *ChatID) (*xmpp.Chat, os.Error) {
 	return &msg, nil
 }
 
-func (g *Client) ChatStatus(cid *ChatID) os.Error {
+func (g *Client) ChatStatus(cid *ChatID) error {
 	return g.client.Call("goog.ChatRecv", cid, &Empty{})
 }
 
-func (g *Client) ChatSend(cid *ChatID, msg *xmpp.Chat) os.Error {
+func (g *Client) ChatSend(cid *ChatID, msg *xmpp.Chat) error {
 	return g.client.Call("goog.ChatSend", &ChatSend{cid, *msg}, &Empty{})
 }
 
-func (g *Client) ChatRoster(cid *ChatID) os.Error {
+func (g *Client) ChatRoster(cid *ChatID) error {
 	return g.client.Call("goog.ChatRoster", cid, &Empty{})
 }

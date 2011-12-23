@@ -7,9 +7,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/smtp"
 	"os"
 	"regexp"
-	"smtp"
 	"strings"
 
 	"rsc.googlecode.com/hg/google"
@@ -21,7 +21,7 @@ func enc(s string) string {
 }
 
 type Addr struct {
-	Name string
+	Name  string
 	Email string
 }
 
@@ -55,7 +55,7 @@ func (a *Addrs) Set(s string) bool {
 	if strings.HasSuffix(s, ">") {
 		j := strings.LastIndex(s, "<")
 		if j >= 0 {
-			*a = append(*a, Addr{strings.TrimSpace(s[:j]), s[j+1:len(s)-1]})
+			*a = append(*a, Addr{strings.TrimSpace(s[:j]), s[j+1 : len(s)-1]})
 			return true
 		}
 	}
@@ -131,11 +131,11 @@ func main() {
 	input := bufio.NewReader(os.Stdin)
 	if *inputHeader {
 		holdmode()
-	Loop:	
+	Loop:
 		for {
 			s, err := input.ReadString('\n')
 			if err != nil {
-				if err == os.EOF {
+				if err == io.EOF {
 					break Loop
 				}
 				fmt.Fprintf(os.Stderr, "reading stdin: %s\n", err)
@@ -167,7 +167,7 @@ func main() {
 			}
 		}
 	}
-	
+
 	acct = google.Acct(*acctName)
 	from.fixDomain()
 	to.fixDomain()
@@ -196,7 +196,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	if len(to) + len(cc) + len(bcc) == 0 {
+	if len(to)+len(cc)+len(bcc) == 0 {
 		fmt.Fprintf(os.Stderr, "missing destinations\n")
 		os.Exit(2)
 	}
@@ -209,7 +209,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "reading stdin: %s\n", err)
 		os.Exit(2)
 	}
-	
+
 	if *appendFile != "" {
 		f, err := os.Open(*appendFile)
 		if err != nil {
@@ -282,7 +282,7 @@ func main() {
 		enc64 = enc64[72:]
 	}
 	fmt.Fprintf(&msg, "%s\n\n", enc64)
-	
+
 	auth := smtp.PlainAuth(
 		"",
 		acct.Email,
@@ -335,7 +335,7 @@ this email.
 
 */
 
-func sendMail(addr string, a smtp.Auth, from string, to []string, msg []byte) os.Error {
+func sendMail(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
 	c, err := smtp.Dial(addr)
 	if err != nil {
 		return err
@@ -368,4 +368,3 @@ func sendMail(addr string, a smtp.Auth, from string, to []string, msg []byte) os
 	}
 	return c.Quit()
 }
-

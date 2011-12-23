@@ -5,12 +5,12 @@ import (
 	"bytes"
 	"crypto/md5"
 	"crypto/tls"
-	"exec"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,7 +76,7 @@ type Client struct {
 	nextBox    *Box            // next box to select (do we need this?)
 }
 
-func NewClient(mode Mode, server, user, passwd string, root string) (*Client, os.Error) {
+func NewClient(mode Mode, server, user, passwd string, root string) (*Client, error) {
 	c := &Client{
 		server:    server,
 		user:      user,
@@ -95,7 +95,7 @@ func NewClient(mode Mode, server, user, passwd string, root string) (*Client, os
 	return c, nil
 }
 
-func (c *Client) Close() os.Error {
+func (c *Client) Close() error {
 	c.io.lock()
 	c.autoReconnect = false
 	c.connected = false
@@ -107,7 +107,7 @@ func (c *Client) Close() os.Error {
 	return nil
 }
 
-func (c *Client) reconnect() os.Error {
+func (c *Client) reconnect() error {
 	c.io.mustBeLocked()
 	c.autoReconnect = false
 	if c.rw != nil {
@@ -171,9 +171,9 @@ Error:
 	return err
 }
 
-var testDial func(string, Mode) (io.ReadWriteCloser, os.Error)
+var testDial func(string, Mode) (io.ReadWriteCloser, error)
 
-func dial(server string, mode Mode) (io.ReadWriteCloser, os.Error) {
+func dial(server string, mode Mode) (io.ReadWriteCloser, error) {
 	if testDial != nil {
 		return testDial(server, mode)
 	}
@@ -212,7 +212,7 @@ type pipe2 struct {
 	io.WriteCloser
 }
 
-func (p *pipe2) Close() os.Error {
+func (p *pipe2) Close() error {
 	p.ReadCloser.Close()
 	p.WriteCloser.Close()
 	return nil
@@ -223,7 +223,7 @@ type tee struct {
 	w io.Writer
 }
 
-func (t tee) Read(p []byte) (n int, err os.Error) {
+func (t tee) Read(p []byte) (n int, err error) {
 	n, err = t.r.Read(p)
 	if n > 0 {
 		t.w.Write(p[0:n])
@@ -231,24 +231,30 @@ func (t tee) Read(p []byte) (n int, err os.Error) {
 	return
 }
 
-func (c *Client) rdsx() (*sx, os.Error) {
+func (c *Client) rdsx() (*sx, error) {
 	c.io.mustBeLocked()
 	return rdsx(c.b)
 }
 
-func (c *Client) cmd(b *Box, format string, args ...interface{}) os.Error {
+type sxError struct {
+	x *sx
+}
+
+func (e *sxError) Error() string { return e.x.String() }
+
+func (c *Client) cmd(b *Box, format string, args ...interface{}) error {
 	x, err := c.cmdsx(b, format, args...)
 	if err != nil {
 		return err
 	}
 	if !x.ok() {
-		return x
+		return &sxError{x}
 	}
 	return nil
 }
 
 // cmdsx0 runs a single command and return the sx.  Does not redial.
-func (c *Client) cmdsx0(format string, args ...interface{}) (*sx, os.Error) {
+func (c *Client) cmdsx0(format string, args ...interface{}) (*sx, error) {
 	c.io.mustBeLocked()
 	if c.rw == nil || !c.connected {
 		return nil, fmt.Errorf("not connected")
@@ -266,7 +272,7 @@ func (c *Client) cmdsx0(format string, args ...interface{}) (*sx, os.Error) {
 }
 
 // cmdsx runs a command on box b.  It does redial.
-func (c *Client) cmdsx(b *Box, format string, args ...interface{}) (*sx, os.Error) {
+func (c *Client) cmdsx(b *Box, format string, args ...interface{}) (*sx, error) {
 	c.io.mustBeLocked()
 	c.nextBox = b
 
@@ -311,7 +317,7 @@ Trying:
 	panic("not reached")
 }
 
-func (c *Client) waitsx() (*sx, os.Error) {
+func (c *Client) waitsx() (*sx, error) {
 	c.io.mustBeLocked()
 	for {
 		x, err := c.rdsx()
@@ -360,7 +366,7 @@ Quote:
 	return b.String()
 }
 
-func (c *Client) login() os.Error {
+func (c *Client) login() error {
 	c.io.mustBeLocked()
 	x, err := c.cmdsx(nil, "LOGIN %s %s", iquote(c.user), iquote(c.passwd))
 	if err != nil {
@@ -372,7 +378,7 @@ func (c *Client) login() os.Error {
 	return nil
 }
 
-func (c *Client) getBoxes() os.Error {
+func (c *Client) getBoxes() error {
 	c.io.mustBeLocked()
 	for _, b := range c.allBox {
 		b.dead = true
@@ -394,7 +400,7 @@ func (c *Client) getBoxes() os.Error {
 	}
 	for _, b := range c.allBox {
 		if b.dead {
-			c.boxByName[b.Name] = nil, false
+			delete(c.boxByName, b.Name)
 		}
 		b.firstNum = 0
 	}
@@ -422,19 +428,19 @@ func (c *Client) setAutoReconnect(b bool) {
 	c.autoReconnect = b
 }
 
-func (c *Client) check(b *Box) os.Error {
+func (c *Client) check(b *Box) error {
 	c.io.mustBeLocked()
 	if b.dead {
 		return fmt.Errorf("box is gone")
 	}
 
 	b.load = true
-	
+
 	// Update exists count.
 	if err := c.cmd(b, "NOOP"); err != nil {
 		return err
 	}
-	
+
 	// Have to get through this in one session.
 	// Caller can call again if we get disconnected
 	// and return an error.
@@ -443,7 +449,7 @@ func (c *Client) check(b *Box) os.Error {
 
 	// First load after reconnect: figure out what changed.
 	if b.firstNum == 0 && len(b.msgByUID) > 0 {
-		var lo, hi uint32 = 1<<32-1, 0
+		var lo, hi uint32 = 1<<32 - 1, 0
 		for _, m := range b.msgByUID {
 			m.dead = true
 			uid := uint32(m.UID)
@@ -460,11 +466,11 @@ func (c *Client) check(b *Box) os.Error {
 		}
 		for _, m := range b.msgByUID {
 			if m.dead {
-				b.msgByUID[m.UID] = nil, false
+				delete(b.msgByUID, m.UID)
 			}
 		}
 	}
-	
+
 	// First-ever load.
 	if b.firstNum == 0 {
 		if b.exists <= maxFetch {
@@ -476,14 +482,14 @@ func (c *Client) check(b *Box) os.Error {
 		b.msgByNum = make([]*Msg, n)
 		return c.fetchBox(b, b.firstNum, 0)
 	}
-	
+
 	if b.exists <= b.maxSeen {
 		return nil
 	}
 	return c.fetchBox(b, b.maxSeen, 0)
 }
 
-func (c *Client) fetchBox(b *Box, lo int, hi int) os.Error {
+func (c *Client) fetchBox(b *Box, lo int, hi int) error {
 	c.io.mustBeLocked()
 	if b != c.box {
 		if err := c.cmd(b, "NOOP"); err != nil {
@@ -503,7 +509,7 @@ func (c *Client) fetchBox(b *Box, lo int, hi int) os.Error {
 }
 
 func (c *Client) IsGmail() bool {
-	return c.capability["X-GM-EXT-1"] 
+	return c.capability["X-GM-EXT-1"]
 }
 
 // Table-driven IMAP "unexpected response" parser.
@@ -626,7 +632,7 @@ func xexpunge(c *Client, x *sx) {
 		if bynum != nil {
 			if n < b.firstNum {
 				b.firstNum--
-			} else if n < b.firstNum + len(bynum) {
+			} else if n < b.firstNum+len(bynum) {
 				copy(bynum[n-b.firstNum:], bynum[n-b.firstNum+1:])
 				b.msgByNum = bynum[:len(bynum)-1]
 			} else {
@@ -1038,7 +1044,7 @@ func (l uidList) String() string {
 	return b.String()
 }
 
-func (c *Client) deleteList(msgs []*Msg) os.Error {
+func (c *Client) deleteList(msgs []*Msg) error {
 	if len(msgs) == 0 {
 		return nil
 	}
@@ -1061,7 +1067,7 @@ func (c *Client) deleteList(msgs []*Msg) os.Error {
 	return err
 }
 
-func (c *Client) copyList(dst, src *Box, msgs []*Msg) os.Error {
+func (c *Client) copyList(dst, src *Box, msgs []*Msg) error {
 	if len(msgs) == 0 {
 		return nil
 	}
@@ -1085,7 +1091,7 @@ func (c *Client) copyList(dst, src *Box, msgs []*Msg) os.Error {
 	return c.cmd(src, "UID COPY %s %s", uidList(msgs), name)
 }
 
-func (c *Client) muteList(src *Box, msgs []*Msg) os.Error {
+func (c *Client) muteList(src *Box, msgs []*Msg) error {
 	if len(msgs) == 0 {
 		return nil
 	}
@@ -1100,7 +1106,5 @@ func (c *Client) muteList(src *Box, msgs []*Msg) os.Error {
 		}
 	}
 
-	// UGH: Gmail IMAP doesn't let you set the Muted bit.  So create a ToBeMuted label
-	// and process them once in a while via the web.
-	return c.cmd(src, "UID STORE %s +X-GM-LABELS (ToBeMuted)", uidList(msgs))
+	return c.cmd(src, "UID STORE %s +X-GM-LABELS (\\Muted)", uidList(msgs))
 }

@@ -7,7 +7,6 @@ package coding
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -54,7 +53,7 @@ func (v Version) DataBytes(l Level) int {
 // the character set and the mapping from UTF-8 to code bits.
 // The more restrictive the mode, the fewer code bits are needed.
 type Encoding interface {
-	Check() os.Error
+	Check() error
 	Bits(v Version) int
 	Encode(b *Bits, v Version)
 }
@@ -118,7 +117,7 @@ func (s Num) String() string {
 	return fmt.Sprintf("Num(%#q)", string(s))
 }
 
-func (s Num) Check() os.Error {
+func (s Num) Check() error {
 	for _, c := range s {
 		if c < '0' || '9' < c {
 			return fmt.Errorf("non-numeric string %#q", string(s))
@@ -161,7 +160,7 @@ func (s Alpha) String() string {
 	return fmt.Sprintf("Alpha(%#q)", string(s))
 }
 
-func (s Alpha) Check() os.Error {
+func (s Alpha) Check() error {
 	for _, c := range s {
 		if strings.IndexRune(alphabet, c) < 0 {
 			return fmt.Errorf("non-alphanumeric string %#q", string(s))
@@ -199,7 +198,7 @@ func (s String) String() string {
 	return fmt.Sprintf("String(%#q)", string(s))
 }
 
-func (s String) Check() os.Error {
+func (s String) Check() error {
 	return nil
 }
 
@@ -360,7 +359,7 @@ type Plan struct {
 
 // NewPlan returns a Plan for a QR code with the given
 // version, level, and mask.
-func NewPlan(version Version, level Level, mask Mask) (*Plan, os.Error) {
+func NewPlan(version Version, level Level, mask Mask) (*Plan, error) {
 	p, err := vplan(version)
 	if err != nil {
 		return nil, err
@@ -429,7 +428,7 @@ func (b *Bits) AddCheckBytes(v Version, l Level) {
 	}
 }
 
-func (p *Plan) Encode(text ...Encoding) (*Code, os.Error) {
+func (p *Plan) Encode(text ...Encoding) (*Code, error) {
 	var b Bits
 	for _, t := range text {
 		if err := t.Check(); err != nil {
@@ -534,7 +533,7 @@ func grid(siz int) [][]Pixel {
 }
 
 // vplan creates a Plan for the given version.
-func vplan(v Version) (*Plan, os.Error) {
+func vplan(v Version) (*Plan, error) {
 	p := &Plan{Version: v}
 	if v < 1 || v > 40 {
 		return nil, fmt.Errorf("invalid QR version %d", int(v))
@@ -605,7 +604,7 @@ func vplan(v Version) (*Plan, os.Error) {
 }
 
 // fplan adds the format pixels
-func fplan(l Level, m Mask, p *Plan) os.Error {
+func fplan(l Level, m Mask, p *Plan) error {
 	// Format pixels.
 	fb := uint32(l^1) << 13 // level: L=01, M=00, Q=11, H=10
 	fb |= uint32(m) << 10   // mask
@@ -651,7 +650,7 @@ func fplan(l Level, m Mask, p *Plan) os.Error {
 
 // lplan edits a version-only Plan to add information
 // about the error correction levels.
-func lplan(v Version, l Level, p *Plan) os.Error {
+func lplan(v Version, l Level, p *Plan) error {
 	p.Level = l
 
 	nblock := vtab[v].level[l].nblock
@@ -752,7 +751,7 @@ func lplan(v Version, l Level, p *Plan) os.Error {
 }
 
 // mplan edits a version+level-only Plan to add the mask.
-func mplan(m Mask, p *Plan) os.Error {
+func mplan(m Mask, p *Plan) error {
 	p.Mask = m
 	for y, row := range p.Pixel {
 		for x, pix := range row {

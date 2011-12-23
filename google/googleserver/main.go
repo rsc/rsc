@@ -5,15 +5,15 @@
 package main
 
 import (
-//	"flag"
+	//	"flag"
+	"bufio"
 	"fmt"
 	"log"
-	"os"
-	"rpc"
 	"net"
-	"syscall"
-	"bufio"
+	"net/rpc"
+	"os"
 	"strings"
+	"syscall"
 
 	"rsc.googlecode.com/hg/google"
 	"rsc.googlecode.com/hg/xmpp"
@@ -75,7 +75,6 @@ func main() {
 	}
 }
 
-
 func chatRecv(c *google.Client, cid *google.ChatID) {
 	for {
 		msg, err := c.ChatRecv(cid)
@@ -98,7 +97,7 @@ func chatRecv(c *google.Client, cid *google.ChatID) {
 }
 
 func listen() net.Listener {
-	socket := google.Dir()+"/socket"
+	socket := google.Dir() + "/socket"
 	os.Remove(socket)
 	l, err := net.Listen("unix", socket)
 	if err != nil {
@@ -108,7 +107,7 @@ func listen() net.Listener {
 }
 
 func serve() {
-	f, err := os.OpenFile(google.Dir() + "/log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
+	f, err := os.OpenFile(google.Dir()+"/log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -122,15 +121,15 @@ func serve() {
 	log.Fatal("rpc.Accept finished: server exiting")
 }
 
-type Server struct {}
+type Server struct{}
 
 type Empty google.Empty
 
-func (*Server) Ping(*Empty, *Empty) os.Error {
+func (*Server) Ping(*Empty, *Empty) error {
 	return nil
 }
 
-func (*Server) Accounts(_ *Empty, out *[]string) os.Error {
+func (*Server) Accounts(_ *Empty, out *[]string) error {
 	var email []string
 	for _, a := range google.Cfg.Account {
 		email = append(email, a.Email)
@@ -138,4 +137,3 @@ func (*Server) Accounts(_ *Empty, out *[]string) os.Error {
 	*out = email
 	return nil
 }
-

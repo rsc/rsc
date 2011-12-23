@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -67,7 +66,7 @@ func TestImap(t *testing.T) {
 	c.Close()
 }
 
-func fakeDial(server string, mode Mode) (io.ReadWriteCloser, os.Error) {
+func fakeDial(server string, mode Mode) (io.ReadWriteCloser, error) {
 	r1, w1 := io.Pipe()
 	r2, w2 := io.Pipe()
 	go fakeServer(&pipe2{r1, w2})
