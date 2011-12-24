@@ -838,7 +838,7 @@ func parseEnvelope(v *sx) *MsgHdr {
 	fmt.Fprintf(h, "bcc: %s\n", hdr.BCC)
 	fmt.Fprintf(h, "inreplyto: %s\n", hdr.InReplyTo)
 	fmt.Fprintf(h, "messageid: %s\n", hdr.MessageID)
-	hdr.Digest = fmt.Sprintf("%x", h.Sum())
+	hdr.Digest = fmt.Sprintf("%x", h.Sum(nil))
 
 	return hdr
 }

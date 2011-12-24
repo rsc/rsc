@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 type Flags uint32
@@ -140,7 +141,7 @@ func (c *Client) newBox(name, sep string, inbox bool) *Box {
 // A Msg represents an IMAP message.
 type Msg struct {
 	Box         *Box    // box containing message
-	Date        int64   // date (seconds)
+	Date        time.Time   // date
 	Flags       Flags   // message flags
 	Bytes       int64   // size in bytes
 	Lines       int64   // number of lines

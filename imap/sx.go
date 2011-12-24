@@ -325,18 +325,17 @@ SX:
 	return f
 }
 
-func (x *sx) parseDate() int64 {
+func (x *sx) parseDate() time.Time {
 	if x.kind != sxString {
 		log.Printf("malformed date: %s", x)
-		return 0
+		return time.Time{}
 	}
 
 	t, err := time.Parse("02-Jan-2006 15:04:05 -0700", string(x.data))
 	if err != nil {
 		log.Printf("malformed date: %s (%s)", x, err)
-		return 0
 	}
-	return t.Seconds()
+	return t
 }
 
 func (x *sx) nstring() string {

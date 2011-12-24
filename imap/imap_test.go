@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"rsc.googlecode.com/hg/google"
+	"code.google.com/p/rsc/google"
 )
 
 // NOTE: web address is https://mail.google.com/mail/b/rsc@swtch.com/?shva=1#inbox/132e5fd3a6a3c17b
@@ -56,7 +56,7 @@ func TestImap(t *testing.T) {
 			fmt.Println("From:", m.Hdr.From)
 			fmt.Println("To:", m.Hdr.To)
 			fmt.Println("Subject:", m.Hdr.Subject)
-			fmt.Println("M-Date:", time.SecondsToLocalTime(m.Date))
+			fmt.Println("M-Date:", time.Unix(m.Date, 0))
 			fmt.Println("Date:", m.Hdr.Date)
 			fmt.Println()
 			fmt.Println(string(m.Root.Child[0].Text()))
