@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"rsc.googlecode.com/hg/gf256"
+	"code.google.com/p/rsc/gf256"
 )
 
 // Field is the field for QR error correction.
@@ -180,13 +180,13 @@ func (s Alpha) Encode(b *Bits, v Version) {
 	b.Write(uint(len(s)), alphaLen[v.sizeClass()])
 	var i int
 	for i = 0; i+2 <= len(s); i += 2 {
-		w := uint(strings.IndexRune(alphabet, int(s[i])))*45 +
-			uint(strings.IndexRune(alphabet, int(s[i+1])))
+		w := uint(strings.IndexRune(alphabet, rune(s[i])))*45 +
+			uint(strings.IndexRune(alphabet, rune(s[i+1])))
 		b.Write(w, 11)
 	}
 
 	if i < len(s) {
-		w := uint(strings.IndexRune(alphabet, int(s[i])))
+		w := uint(strings.IndexRune(alphabet, rune(s[i])))
 		b.Write(w, 6)
 	}
 }
@@ -248,7 +248,7 @@ func (p Pixel) String() string {
 	if p&Invert != 0 {
 		s += "+invert"
 	}
-	s += "+" + strconv.Uitoa(p.Offset())
+	s += "+" + strconv.FormatUint(uint64(p.Offset()), 10)
 	return s
 }
 
