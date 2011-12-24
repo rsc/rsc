@@ -17,7 +17,7 @@ import (
 	"math/rand"
 	"time"
 
-	"rsc.googlecode.com/hg/rosetta/graph"
+	"code.google.com/p/rsc/rosetta/graph"
 )
 
 type Maze struct {
@@ -183,7 +183,7 @@ func (m *Maze) Vertex(x, y int) graph.Vertex {
 
 func main() {
 	const w, h = 30, 10
-	rand.Seed(time.Nanoseconds())
+	rand.Seed(time.Now().UnixNano())
 
 	m := NewMaze(w, h)
 	path := graph.ShortestPath(m, m.Vertex(0, 0), m.Vertex(w-1, h-1))
