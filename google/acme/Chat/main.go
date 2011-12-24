@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"goplan9.googlecode.com/hg/plan9/acme"
-	"rsc.googlecode.com/hg/google"
-	"rsc.googlecode.com/hg/xmpp"
+	"code.google.com/p/goplan9/plan9/acme"
+	"code.google.com/p/rsc/google"
+	"code.google.com/p/rsc/xmpp"
 )
 
 var acmeDebug = flag.Bool("acmedebug", false, "print acme debugging")
@@ -39,7 +39,7 @@ type Window struct {
 	dirty       bool   // window is dirty
 	blinky      bool   // window's dirty box is blinking
 
-	lastTime int64
+	lastTime time.Time
 }
 
 type Msg struct {
@@ -58,13 +58,12 @@ var (
 	mainWin      *Window
 	status       = xmpp.Available
 	statusMsg    = ""
-	lastActivity int64
+	lastActivity time.Time
 )
 
 const (
-	minute           = 60e9
-	awayTime         = 10 * minute
-	extendedAwayTime = 30 * minute
+	awayTime         = 10 * time.Minute
+	extendedAwayTime = 30 * time.Minute
 )
 
 func usage() {
@@ -106,7 +105,7 @@ func main() {
 	client.Roster()
 	setStatus(status)
 	go w.readChat()
-	lastActivity = time.Nanoseconds()
+	lastActivity = time.Now()
 
 	tick := time.Tick(0.5e9)
 Loop:
@@ -127,7 +126,7 @@ Loop:
 				fmt.Fprintf(os.Stderr, "%s %c%c %d,%d %q\n", w.name, w.C1, w.C2, w.Q0, w.Q1, w.Text)
 			}
 			if w.C1 == 'M' || w.C1 == 'K' {
-				lastActivity = time.Nanoseconds()
+				lastActivity = time.Now()
 				if status != xmpp.Available {
 					setStatus(xmpp.Available)
 				}
@@ -211,11 +210,11 @@ Loop:
 		case t := <-tick:
 			switch status {
 			case xmpp.Available:
-				if t-lastActivity > awayTime {
+				if t.Sub(lastActivity) > awayTime {
 					setStatus(xmpp.Away)
 				}
 			case xmpp.Away:
-				if t-lastActivity > extendedAwayTime {
+				if t.Sub(lastActivity) > extendedAwayTime {
 					setStatus(xmpp.ExtendedAway)
 				}
 			}
@@ -320,14 +319,15 @@ func (w *Window) time() string {
 
 			12:10 [Away]
 	*/
-	now := time.Seconds()
-	t2 := time.SecondsToLocalTime(now)
-	t1 := time.SecondsToLocalTime(w.lastTime)
+	now := time.Now()
+	m1, d1, y1 := w.lastTime.Date()
+	m2, d2, y2 := now.Date()
 	w.lastTime = now
-	if t1.Month != t2.Month || t1.Day != t2.Day || t1.Year != t2.Year {
-		return t2.Format("Jan 2 15:04 ")
+
+	if m1 != m2 || d1 != d2 || y1 != y2 {
+		return now.Format("Jan 2 15:04 ")
 	}
-	return t2.Format("15:04 ")
+	return now.Format("15:04 ")
 }
 
 func (w *Window) status(pr *xmpp.Presence) {
@@ -571,5 +571,5 @@ func showContact(you string) *Window {
 }
 
 func randid() string {
-	return fmt.Sprint(time.Nanoseconds())
+	return fmt.Sprint(time.Now())
 }

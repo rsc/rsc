@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"rsc.googlecode.com/hg/google"
-	"rsc.googlecode.com/hg/imap"
+	"code.google.com/p/rsc/google"
+	"code.google.com/p/rsc/imap"
 )
 
 var cmdtab = []struct {
@@ -633,10 +633,10 @@ func from(h *imap.MsgHdr) string {
 
 func header(m *imap.Msg) string {
 	var t string
-	if m.Date >= time.Seconds()-86400*365 {
-		t = time.SecondsToLocalTime(m.Date).Format("01/02 15:04")
+	if time.Now().Sub(m.Date) > 365 * 24 * time.Hour {
+		t = m.Date.Format("01/02 15:04")
 	} else {
-		t = time.SecondsToLocalTime(m.Date).Format("01/02 2006 ")
+		t = m.Date.Format("01/02 2006 ")
 	}
 	ch := ' '
 	if len(m.Root.Child) > 1 || len(m.Root.Child) == 1 && len(m.Root.Child[0].Child) > 0 {
@@ -742,7 +742,7 @@ func wpcmd(w io.Writer, c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 		if len(h.From) > 0 {
 			fmt.Fprintf(w, "From: %s\n", addrlist(h.From))
 		}
-		fmt.Fprintf(w, "Date: %s\n", time.SecondsToLocalTime(dot.Msg.Date))
+		fmt.Fprintf(w, "Date: %s\n", dot.Msg.Date)
 		if len(h.From) > 0 {
 			fmt.Fprintf(w, "To: %s\n", addrlist(h.To))
 		}
@@ -819,7 +819,7 @@ func unixfrom(h *imap.MsgHdr) string {
 }
 
 func unixtime(m *imap.Msg) string {
-	return time.SecondsToLocalTime(dot.Msg.Date).Format("Mon Jan _2 15:04:05 MST 2006")
+	return dot.Msg.Date.Format("Mon Jan _2 15:04:05 MST 2006")
 }
 
 func Pcmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
@@ -921,7 +921,7 @@ func quotecmd(c *Cmd, dot *imap.MsgPart) *imap.MsgPart {
 		if name == "" {
 			name = a.Email
 		}
-		date := time.SecondsToLocalTime(m.Date).Format("Jan 2, 2006 at 15:04")
+		date := m.Date.Format("Jan 2, 2006 at 15:04")
 		fmt.Fprintf(bout, "On %s, %s wrote:\n", date, name)
 	}
 	printMIME(&quoter{true, bout}, dot, true)

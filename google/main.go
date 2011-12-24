@@ -32,11 +32,11 @@ func Dir() string {
 			log.Fatal(err)
 		}
 	}
-	if !st.IsDirectory() {
+	if !st.IsDir() {
 		log.Fatalf("%s exists but is not a directory", dir)
 	}
-	if st.Mode&0077 != 0 {
-		log.Fatalf("%s exists but allows group or other permissions: %#o", dir, st.Mode&0777)
+	if st.Mode()&0077 != 0 {
+		log.Fatalf("%s exists but allows group or other permissions: %#o", dir, st.Mode()&0777)
 	}
 	return dir
 }
@@ -116,8 +116,8 @@ func ReadConfig() {
 	if err != nil {
 		return
 	}
-	if st.Mode&0077 != 0 {
-		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode&0777)
+	if st.Mode()&0077 != 0 {
+		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode()&0777)
 	}
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -141,8 +141,8 @@ func WriteConfig() {
 			log.Fatal(err)
 		}
 	}
-	if st.Mode&0077 != 0 {
-		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode&0777)
+	if st.Mode()&0077 != 0 {
+		log.Fatalf("%s exists but allows group or other permissions: %#o", file, st.Mode()&0777)
 	}
 	data, err := json.MarshalIndent(&Cfg, "", "\t")
 	if err != nil {
@@ -155,8 +155,8 @@ func WriteConfig() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if st.Mode&0077 != 0 {
-		log.Fatalf("%s allows group or other permissions after writing: %#o", file, st.Mode&0777)
+	if st.Mode()&0077 != 0 {
+		log.Fatalf("%s allows group or other permissions after writing: %#o", file, st.Mode()&0777)
 	}
 }
 
