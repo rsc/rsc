@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	
-	"goprotobuf.googlecode.com/hg/proto"
-	"rsc.googlecode.com/hg/gtfs"
+
+	"code.google.com/p/goprotobuf/proto"
+	"code.google.com/p/rsc/gtfs"
 )
 
 func main() {
@@ -18,11 +18,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	var feed gtfs.FeedMessage
 	if err := proto.Unmarshal(pb, &feed); err != nil {
 		log.Fatal(err)
 	}
-	
+
 	proto.MarshalText(os.Stdout, &feed)
 }
