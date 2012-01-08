@@ -20,6 +20,8 @@ import (
 	"code.google.com/p/rsc/smugmug"
 )
 
+const apiKey = "Is6USeDVUAiQYkXXhKONszhHsQwXy0tv"
+
 var usageMessage = `usage: smugup [options] 'album title' [photo.jpg ...]
 
 Smugup creates a new album with the given title if one does not already exist.
@@ -65,7 +67,7 @@ func main() {
 		log.Fatal(err)
 	}
 	
-	smug, err := smugmug.Login(user, passwd)
+	smug, err := smugmug.Login(user, passwd, apiKey)
 	if err != nil {
 		log.Fatal(err)
 	}

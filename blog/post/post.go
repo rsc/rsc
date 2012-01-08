@@ -117,15 +117,14 @@ func serve(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	
-	if strings.HasSuffix(p, ".jpg") || strings.HasSuffix(p, ".png") {
+	if strings.Contains(p, ".") {
 		http.ServeFile(w, req, "img/"+p)
 		return
 	}
 
 	t := mainTemplate()	
 	meta, article := loadPost(p)
-	if draft != meta.IsDraft() {
+	if !draft && meta.IsDraft() {
 		http.Error(w, "No such page, sorry.", 404)
 		return
 	}

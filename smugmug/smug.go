@@ -22,7 +22,6 @@ const smugUploadHost = "upload.smugmug.com"
 const smugAPI = "1.2.2"
 const smugURL = "https://secure.smugmug.com/services/api/json/" + smugAPI + "/"
 const smugURLUnencrypted = "http://api.smugmug.com/services/api/json/" + smugAPI + "/"
-const smugAPIKey = "Is6USeDVUAiQYkXXhKONszhHsQwXy0tv"
 
 // A Conn represents an authenticated connection to the SmugMug server.
 type Conn struct {
@@ -57,7 +56,9 @@ type loginResult struct {
 }
 
 // Login logs into the SmugMug server with the given email address and password.
-func Login(email, passwd string) (*Conn, error) {
+// The apikey argument is the API Key for your application.
+// To obtain an API Key, see http://www.smugmug.com/hack/apikeys.
+func Login(email, passwd, apikey string) (*Conn, error) {
 	c := &Conn{}
 	var out loginResult
 	if err := c.do("smugmug.login.withPassword", &out, "EmailAddress", email, "Password", passwd); err != nil {
@@ -476,7 +477,7 @@ func (c *Conn) do(method string, dst interface{}, args ...string) (err error) {
 
 	form := url.Values{
 		"method": {method},
-		"APIKey": {smugAPIKey},
+		"APIKey": {c.apiKey},
 		"Pretty": {"1"},  // nice-looking JSON
 	}
 	if c.sessid != "" {
