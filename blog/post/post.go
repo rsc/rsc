@@ -8,14 +8,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"net/http"
-	"html/template"
 	"os"
-	"time"
-	"strings"
 	"path"
 	"sort"
+	"strings"
+	"time"
 )
 
 func init() {
@@ -24,7 +24,7 @@ func init() {
 }
 
 var funcMap = template.FuncMap{
-	"now": time.Now,
+	"now":  time.Now,
 	"date": timeFormat,
 }
 
@@ -45,27 +45,27 @@ var timeFormats = []string{
 func (t *blogTime) UnmarshalJSON(data []byte) (err error) {
 	str := string(data)
 	for _, f := range timeFormats {
-		tt, err := time.Parse(`"` + f + `"`, str)
+		tt, err := time.Parse(`"`+f+`"`, str)
 		if err == nil {
 			t.Time = tt
 			return nil
 		}
 	}
 	return fmt.Errorf("did not recognize time: %s", str)
-}		
+}
 
 type PostData struct {
-	Title string
-	Date blogTime
-	Name string
-	OldURL string
-	Summary string
+	Title    string
+	Date     blogTime
+	Name     string
+	OldURL   string
+	Summary  string
 	Favorite bool
 
-	PlusAuthor string  // Google+ ID of author
-	PlusPage string  // Google+ Post ID for comment post
+	PlusAuthor string // Google+ ID of author
+	PlusPage   string // Google+ Post ID for comment post
 	PlusAPIKey string // Google+ API key
-	PlusURL string
+	PlusURL    string
 }
 
 func (d *PostData) IsDraft() bool {
@@ -94,7 +94,7 @@ func serve(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, fmt.Sprint(err), 500)
 		}
 	}()
-	
+
 	p := path.Clean(req.URL.Path)
 	if p != req.URL.Path {
 		http.Redirect(w, req, p, http.StatusFound)
@@ -102,7 +102,7 @@ func serve(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if p == "" || p == "/" || p == "/draft" {
-		toc(w, req, p=="/draft")
+		toc(w, req, p == "/draft")
 		return
 	}
 
@@ -110,8 +110,8 @@ func serve(w http.ResponseWriter, req *http.Request) {
 	if strings.HasPrefix(p, "/draft/") {
 		draft = true
 		p = p[len("/draft"):]
-	}		
-	
+	}
+
 	if strings.Contains(p[1:], "/") {
 		http.Error(w, "No such page, sorry.", 404)
 		return
@@ -122,7 +122,7 @@ func serve(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	t := mainTemplate()	
+	t := mainTemplate()
 	meta, article := loadPost(p)
 	if !draft && meta.IsDraft() {
 		http.Error(w, "No such page, sorry.", 404)
@@ -154,8 +154,8 @@ func mainTemplate() *template.Template {
 
 func loadPost(name string) (meta *PostData, article string) {
 	meta = &PostData{
-		Name: name,
-		Title: "TITLE HERE",
+		Name:       name,
+		Title:      "TITLE HERE",
 		PlusAuthor: plusRsc,
 		PlusAPIKey: plusKey,
 	}
@@ -181,8 +181,8 @@ func loadPost(name string) (meta *PostData, article string) {
 
 type byTime []*PostData
 
-func (x byTime) Len() int { return len(x) }
-func (x byTime) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+func (x byTime) Len() int           { return len(x) }
+func (x byTime) Swap(i, j int)      { x[i], x[j] = x[j], x[i] }
 func (x byTime) Less(i, j int) bool { return x[i].Date.Time.After(x[j].Date.Time) }
 
 type TocData struct {
@@ -195,7 +195,7 @@ func toc(w http.ResponseWriter, req *http.Request, draft bool) {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	var all []*PostData
 	for _, d := range dir {
 		meta, _ := loadPost(d.Name())
@@ -204,9 +204,9 @@ func toc(w http.ResponseWriter, req *http.Request, draft bool) {
 		}
 		all = append(all, meta)
 	}
-	
+
 	sort.Sort(byTime(all))
-	
+
 	var buf bytes.Buffer
 	t := mainTemplate()
 	if err := t.Lookup("toc").Execute(&buf, &TocData{draft, all}); err != nil {

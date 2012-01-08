@@ -26,4 +26,3 @@ func UserPasswd(server, preferredUser string) (user, passwd string, err error) {
 	}
 	return
 }
-

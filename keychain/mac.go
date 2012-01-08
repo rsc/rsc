@@ -92,7 +92,7 @@ func userPasswd(server, user string) (user1, passwd string, err error) {
 	cUser := C.CString(user)
 	defer C.free(unsafe.Pointer(cServer))
 	defer C.free(unsafe.Pointer(cUser))
-	
+
 	var cPasswd, cError *C.char
 	C.keychain_getpasswd(cUser, cServer, &cUser, &cPasswd, &cError)
 	defer C.free(unsafe.Pointer(cUser))
@@ -102,6 +102,6 @@ func userPasswd(server, user string) (user1, passwd string, err error) {
 	if cError != nil {
 		return "", "", errors.New(C.GoString(cError))
 	}
-	
+
 	return C.GoString(cUser), C.GoString(cPasswd), nil
 }

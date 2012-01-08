@@ -2,7 +2,7 @@ package imap
 
 import "testing"
 
-var shortTextTests = []struct{
+var shortTextTests = []struct {
 	in, out string
 }{
 	{
@@ -127,7 +127,7 @@ On Tue, Oct 18, 2011 at 3:12 PM, <r@golang.org> wrote:
 >
 
 `,
-	out: `From: Brad Fitzpatrick <bradfitz@golang.org>
+		out: `From: Brad Fitzpatrick <bradfitz@golang.org>
 Date: Tue Oct 18 18:23:11 EDT 2011
 To: r@golang.org, golang-dev@googlegroups.com, reply@codereview.appspotmail.com
 Subject: Re: [golang-dev] code review 5307043: rpc: don't panic on write error. (issue 5307043)

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	
+
 	"code.google.com/p/rsc/keychain"
 	"launchpad.net/goamz/aws"
 	"launchpad.net/goamz/s3"
@@ -54,12 +54,12 @@ func main() {
 	default:
 		usage()
 	}
-	
+
 	access, secret, err := keychain.UserPasswd("s3.amazonaws.com", "")
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	auth := aws.Auth{access, secret}
 
 	b := s3.New(auth, aws.USEast).Bucket(buck)

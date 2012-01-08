@@ -8,14 +8,14 @@
 package main
 
 import (
+	"crypto/md5"
 	"flag"
 	"fmt"
-	"os"
 	"io/ioutil"
-	"crypto/md5"
 	"log"
+	"os"
 	"path/filepath"
-	
+
 	"code.google.com/p/rsc/keychain"
 	"code.google.com/p/rsc/smugmug"
 )
@@ -55,28 +55,28 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 	log.SetFlags(0)
-	
+
 	args := flag.Args()
 	if len(args) < 1 {
 		usage()
 	}
 	title, files := args[0], args[1:]
-	
+
 	user, passwd, err := keychain.UserPasswd("smugmug.com", *smugUser)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	smug, err := smugmug.Login(user, passwd, apiKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	albums, err := smug.Albums(smug.NickName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	var a *smugmug.Album
 	for _, a = range albums {
 		if a.Title == title {
@@ -114,7 +114,7 @@ HaveAlbum:
 			}(image)
 			n++
 		}
-		
+
 		for i := 0; i < n; i++ {
 			info := <-c
 			if info == nil {
@@ -148,7 +148,7 @@ HaveAlbum:
 			log.Print(err)
 		}
 	}
-	
+
 	info, err := smug.AlbumInfo(a)
 	if err != nil {
 		log.Fatal(err)

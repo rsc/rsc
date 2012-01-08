@@ -140,16 +140,16 @@ func (c *Client) newBox(name, sep string, inbox bool) *Box {
 
 // A Msg represents an IMAP message.
 type Msg struct {
-	Box         *Box    // box containing message
-	Date        time.Time   // date
-	Flags       Flags   // message flags
-	Bytes       int64   // size in bytes
-	Lines       int64   // number of lines
-	Hdr         *MsgHdr // MIME header
-	Root        MsgPart // top-level message part
-	GmailID     uint64  // Gmail message id
-	GmailThread uint64  // Gmail thread id
-	UID         uint64  // unique id for this message
+	Box         *Box      // box containing message
+	Date        time.Time // date
+	Flags       Flags     // message flags
+	Bytes       int64     // size in bytes
+	Lines       int64     // number of lines
+	Hdr         *MsgHdr   // MIME header
+	Root        MsgPart   // top-level message part
+	GmailID     uint64    // Gmail message id
+	GmailThread uint64    // Gmail thread id
+	UID         uint64    // unique id for this message
 
 	deleted bool
 	dead    bool

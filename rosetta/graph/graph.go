@@ -21,7 +21,7 @@ type Graph interface {
 
 	// Neighbors returns a slice of vertices that are adjacent
 	// to v in the graph.
-	Neighbors(v Vertex) []Vertex	
+	Neighbors(v Vertex) []Vertex
 }
 
 type Vertex interface {
@@ -45,14 +45,14 @@ func ShortestPath(g Graph, start, end Vertex) []Vertex {
 			d.visit(v, p.depth+1, p)
 		}
 	}
-	
+
 	p := d.pos(end)
 	if p.depth == 0 {
 		// unvisited - no path
 		return nil
 	}
 	path := make([]Vertex, p.depth)
-	for ; p != nil; p=p.parent {
+	for ; p != nil; p = p.parent {
 		path[p.depth-1] = p.v
 	}
 	return path
@@ -60,17 +60,17 @@ func ShortestPath(g Graph, start, end Vertex) []Vertex {
 
 // A dpos is a position in the Dijkstra traversal.
 type dpos struct {
-	depth int
+	depth     int
 	heapIndex int
-	v Vertex
-	parent *dpos
+	v         Vertex
+	parent    *dpos
 }
 
 // A dijkstra is the Dijkstra traversal's work state.
 // It contains the heap queue and per-vertex information.
 type dijkstra struct {
-	g Graph
-	q []*dpos
+	g    Graph
+	q    []*dpos
 	byID []dpos
 }
 

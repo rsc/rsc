@@ -35,19 +35,19 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
-	"log"
-	"sync"
-	"time"
 	"os/exec"
 	"path/filepath"
-	"bytes"
-	"encoding/json"
-	"io"
+	"sync"
+	"time"
 )
 
 func usage() {
@@ -74,7 +74,7 @@ func main() {
 		usage()
 	}
 	rootPackage = args[0]
-	
+
 	log.Fatal(http.ListenAndServe(*addr, http.HandlerFunc(relay)))
 }
 
@@ -91,7 +91,7 @@ func relay(w http.ResponseWriter, req *http.Request) {
 	}
 	defer c.Close()
 	_ = proxy
-	
+
 	outreq := new(http.Request)
 	*outreq = *req // includes shallow copies of maps, but okay
 
@@ -109,9 +109,9 @@ func relay(w http.ResponseWriter, req *http.Request) {
 		copyHeader(outreq.Header, req.Header)
 		outreq.Header.Del("Connection")
 	}
-	
+
 	outreq.Write(c)
-	
+
 	br := bufio.NewReader(c)
 	resp, err := http.ReadResponse(br, outreq)
 	if err != nil {
@@ -120,7 +120,7 @@ func relay(w http.ResponseWriter, req *http.Request) {
 
 	copyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
-	
+
 	if resp.Body != nil {
 		io.Copy(w, resp.Body)
 	}
@@ -135,7 +135,7 @@ func copyHeader(dst, src http.Header) {
 }
 
 type cmdProxy struct {
-	cmd *exec.Cmd
+	cmd  *exec.Cmd
 	addr string
 }
 
@@ -149,15 +149,15 @@ func (p *cmdProxy) kill() {
 
 var proxyInfo struct {
 	sync.Mutex
-	build time.Time
-	check time.Time
+	build  time.Time
+	check  time.Time
 	active *cmdProxy
-	err error
+	err    error
 }
 
 func buildProxy() (c net.Conn, proxy *cmdProxy, err error) {
 	p := &proxyInfo
-	
+
 	t := time.Now()
 	p.Lock()
 	defer p.Unlock()
@@ -180,7 +180,7 @@ func buildProxy() (c net.Conn, proxy *cmdProxy, err error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("load %s: %s", rootPackage, err)
 	}
-	
+
 	deps := pkgs[0].Deps
 	if len(deps) > 0 && deps[0] == "C" {
 		deps = deps[1:]
@@ -190,7 +190,7 @@ func buildProxy() (c net.Conn, proxy *cmdProxy, err error) {
 		return nil, nil, fmt.Errorf("load %v: %s", deps, err)
 	}
 	pkgs = append(pkgs, pkgs1...)
-	
+
 	var latest time.Time
 
 	for _, pkg := range pkgs {
@@ -200,7 +200,7 @@ func buildProxy() (c net.Conn, proxy *cmdProxy, err error) {
 		files = append(files, pkg.HFiles...)
 		files = append(files, pkg.SFiles...)
 		files = append(files, pkg.CgoFiles...)
-		
+
 		for _, file := range files {
 			if fi, err := os.Stat(filepath.Join(pkg.Dir, file)); err == nil && fi.ModTime().After(latest) {
 				latest = fi.ModTime()
@@ -233,7 +233,7 @@ func buildProxy() (c net.Conn, proxy *cmdProxy, err error) {
 	// Otherwise, start a new server.
 	p.active.kill()
 	p.active = nil
-	
+
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, nil, err
@@ -252,7 +252,7 @@ func buildProxy() (c net.Conn, proxy *cmdProxy, err error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	c, err = net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
 		return nil, nil, err
@@ -264,13 +264,13 @@ func buildProxy() (c net.Conn, proxy *cmdProxy, err error) {
 
 type Pkg struct {
 	ImportPath string
-	Dir string
-	GoFiles []string
-	CFiles []string
-	HFiles []string
-	SFiles []string
-	CgoFiles []string
-	Deps []string
+	Dir        string
+	GoFiles    []string
+	CFiles     []string
+	HFiles     []string
+	SFiles     []string
+	CgoFiles   []string
+	Deps       []string
 }
 
 func loadPackage(name ...string) ([]*Pkg, error) {
@@ -286,7 +286,7 @@ func loadPackage(name ...string) ([]*Pkg, error) {
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	
+
 	dec := json.NewDecoder(r)
 	var pkgs []*Pkg
 	for {
@@ -300,7 +300,7 @@ func loadPackage(name ...string) ([]*Pkg, error) {
 		}
 		pkgs = append(pkgs, p)
 	}
-	
+
 	err = cmd.Wait()
 	if b := stderr.Bytes(); len(b) > 0 {
 		return nil, fmt.Errorf("%s", b)

@@ -633,7 +633,7 @@ func from(h *imap.MsgHdr) string {
 
 func header(m *imap.Msg) string {
 	var t string
-	if time.Now().Sub(m.Date) > 365 * 24 * time.Hour {
+	if time.Now().Sub(m.Date) > 365*24*time.Hour {
 		t = m.Date.Format("01/02 15:04")
 	} else {
 		t = m.Date.Format("01/02 2006 ")

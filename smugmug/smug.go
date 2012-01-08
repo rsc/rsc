@@ -448,8 +448,8 @@ func (c *Conn) upload(name string, data []byte, idkind string, id int) (*Image, 
 			"X-Smug-SessionID":    {c.sessid},
 			"X-Smug-Version":      {smugAPI},
 			"X-Smug-ResponseType": {"JSON"},
-			"X-Smug-"+idkind:  {strconv.Itoa(id)},
-			"X-Smug-FileName": {name},
+			"X-Smug-" + idkind:    {strconv.Itoa(id)},
+			"X-Smug-FileName":     {name},
 		},
 		Body: ioutil.NopCloser(bytes.NewBuffer(data)),
 	}
@@ -478,7 +478,7 @@ func (c *Conn) do(method string, dst interface{}, args ...string) (err error) {
 	form := url.Values{
 		"method": {method},
 		"APIKey": {c.apiKey},
-		"Pretty": {"1"},  // nice-looking JSON
+		"Pretty": {"1"}, // nice-looking JSON
 	}
 	if c.sessid != "" {
 		form["SessionID"] = []string{c.sessid}
