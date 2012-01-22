@@ -79,7 +79,7 @@ type tree struct {
 	StBlocks      int64
 	StBlksize     uint32
 	AggrSize      uint64
-	WTF           [16]byte   // what is this?
+	Crtime unixTime
 	Nodes         []*nameNode `arq:"count32"`
 }
 
