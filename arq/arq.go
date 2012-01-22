@@ -8,10 +8,11 @@
 package arq
 
 import (
-//	"compress/gzip"
+	"bytes"
+	"compress/gzip"
 	"encoding/binary"
 	"fmt"
-//	"io"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -29,6 +30,7 @@ import (
 type Conn struct {
 	b *s3.Bucket
 	cache string
+	altCache string
 }
 
 // cachedir returns the canonical directory in which to cache data.
@@ -47,9 +49,12 @@ func Dial(auth aws.Auth) (*Conn, error) {
 		b: b,
 		cache: filepath.Join(cachedir(), buck),
 	}
-	
+	if runtime.GOOS == "darwin" {
+		c.altCache = filepath.Join(os.Getenv("HOME"), "Library/Arq/Cache.noindex/"+buck)
+	}
+
 	// Check that the bucket works by listing computers (relatively cheap).
-	if _, _, err := c.list("", "/", 10); err != nil {
+	if _, err := c.list("", "/", 10); err != nil {
 		return nil, err
 	}
 
@@ -58,35 +63,83 @@ func Dial(auth aws.Auth) (*Conn, error) {
 	return c, nil
 }
 
-func (c *Conn) list(prefix, delim string, max int) ([]s3.Object, []string, error) {
-	// TODO: Handle big lists.
-	return c.b.List(prefix, delim, "", max)
+func (c *Conn) list(prefix, delim string, max int) (*s3.ListResp, error) {
+	resp, err := c.b.List(prefix, delim, "", max)
+	if err != nil {
+		return nil, err
+	}
+	ret := resp
+	for max == 0 && resp.IsTruncated {
+		last := resp.Contents[len(resp.Contents)-1].Key
+		resp, err = c.b.List(prefix, delim, last, max)
+		if err != nil {
+			return ret, err
+		}
+		if len(resp.Contents) > 0 {
+			println(last, resp.Contents[0].Key)
+		}
+		ret.Contents = append(ret.Contents, resp.Contents...)
+		ret.CommonPrefixes = append(ret.CommonPrefixes, resp.CommonPrefixes...)
+	}
+	return ret, nil
 }
 
-func (c *Conn) bget(name string) (data []byte, err error) {
+func (c *Conn) altCachePath(name string) string {
+	if c.altCache == "" || !strings.Contains(name, "/packsets/") {
+		return ""
+	}
+	i := strings.Index(name, "-trees/")
+	if i < 0 {
+		i = strings.Index(name, "-blobs/")
+		if i < 0 {
+			return ""
+		}
+	}
+	i += len("-trees/")+2
+	if i >= len(name) {
+		return ""
+	}
+	return filepath.Join(c.altCache, name[:i] + "/" + name[i:])
+}
+
+func (c *Conn) cget(name string) (data []byte, err error) {
 	cache := filepath.Join(c.cache, name)
 	f, err := os.Open(cache)
 	if err == nil {
 		defer f.Close()
 		return ioutil.ReadAll(f)
 	}
-
-	for i := 0; ; {
-		data, err = c.b.Get(name)
-		if err != nil {
-			if i++; i >= 5 {
-				return nil, err
-			}
-			log.Print(err)
-			continue
+	if altCache := c.altCachePath(name); altCache != "" {
+		f, err := os.Open(altCache)
+		if err == nil {
+			defer f.Close()
+			return ioutil.ReadAll(f)
 		}
-		break
+	}
+			
+	data, err = c.bget(name)
+	if err != nil {
+		return nil, err
 	}
 
 	fmt.Printf("load %s\n", name)
 	dir, _ := filepath.Split(cache)
 	os.MkdirAll(dir, 0700)
 	ioutil.WriteFile(cache, data, 0600)
+	return data, nil
+}
+
+func (c *Conn) bget(name string) (data []byte, err error) {
+	for i := 0; ; {
+		data, err = c.b.Get(name)
+		if err == nil {
+			break
+		}
+		if i++; i >= 5 {
+			return nil, err
+		}
+		log.Print(err)
+	}
 	return data, nil
 }
 
@@ -97,12 +150,12 @@ func (c *Conn) DeleteCache() {
 // Computers returns a list of the computers with backups available on the S3 server.
 func (c *Conn) Computers() ([]*Computer, error) {
 	// Each backup is a top-level directory with a computerinfo file in it.
-	_, prefix, err := c.list("", "/", 0)
+	list, err := c.list("", "/", 0)
 	if err != nil {
 		return nil, err
 	}
 	var out []*Computer
-	for _, p := range prefix {
+	for _, p := range list.CommonPrefixes {
 		data, err := c.bget(p+"computerinfo")
 		if err != nil {
 			continue
@@ -120,7 +173,7 @@ func (c *Conn) Computers() ([]*Computer, error) {
 			index: map[score]ientry{},
 		}
 
-		salt, err := c.bget(p + "salt")
+		salt, err := c.cget(p + "salt")
 		if err != nil {
 			return nil, err
 		}
@@ -144,12 +197,12 @@ type Computer struct {
 // Folders returns a list of the folders that have been backed up on the computer.
 func (c *Computer) Folders() ([]*Folder, error) {
 	// Each folder is a file under computer/buckets/.
-	objs, _, err := c.conn.list(c.UUID + "/buckets/", "", 0)
+	list, err := c.conn.list(c.UUID + "/buckets/", "", 0)
 	if err != nil {
 		return nil, err
 	}
 	var out []*Folder
-	for _, obj := range objs {
+	for _, obj := range list.Contents {
 		data, err := c.conn.bget(obj.Key)
 		if err != nil {
 			return nil, err
@@ -184,7 +237,7 @@ func (c *Computer) scget(sc score) ([]byte, error) {
 	var err error
 	ie, ok := c.index[sc]
 	if ok {
-		data, err = c.conn.bget(ie.File)
+		data, err = c.conn.cget(ie.File)
 		if err != nil {
 			return nil, err
 		}
@@ -231,7 +284,7 @@ func (c *Computer) scget(sc score) ([]byte, error) {
 
 		data = data[8 : 8+n]
 	} else {
-		data, err = c.conn.bget(c.UUID+"/objects/"+sc.String())
+		data, err = c.conn.cget(c.UUID+"/objects/"+sc.String())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -261,16 +314,16 @@ func (f *Folder) Load() error {
 }
 
 func (c *Computer) loadPack(fold, suf string) error {
-	objs, _, err := c.conn.list(c.UUID+"/packsets/"+fold+suf+"/", "", 0)
+	list, err := c.conn.list(c.UUID+"/packsets/"+fold+suf+"/", "", 0)
 	if err != nil {
 		return err
 	}
 
-	for _, obj := range objs {
+	for _, obj := range list.Contents {
 		if !strings.HasSuffix(obj.Key, ".index") {
 			continue
 		}
-		data, err := c.conn.bget(obj.Key)
+		data, err := c.conn.cget(obj.Key)
 		if err != nil {
 			return err
 		}
@@ -323,14 +376,66 @@ func (c *Computer) saveIndex(file string, data []byte) error {
 // Note that different trees from the same Folder might have different Paths
 // if the folder was "relocated" using the Arq interface.
 func (f *Folder) Trees() ([]*Tree, error) {
-	objs, _, err := f.conn.list(f.comp.UUID+"/bucketdata/" + f.uuid + "/refs/logs/master/", "", 0)
+	data, err := f.conn.bget(f.comp.UUID+"/bucketdata/"+f.uuid+"/refs/heads/master")
+	if err != nil {
+		return nil, err
+	}
+	sc := hexScore(string(data))
 	if err != nil {
 		return nil, err
 	}
 	
 	var out []*Tree
-	for _, obj := range objs {
-		data, err := f.conn.bget(obj.Key)
+	for {
+		data, err = f.comp.scget(sc)
+		if err != nil {
+			return nil, err
+		}
+		
+		var com commit
+		if err := unpack(data, &com); err != nil {
+			return nil, err
+		}
+		
+		var info folderInfo
+		if err := plist.Unmarshal(com.BucketXML, &info); err != nil {
+			return nil, err
+		}
+		
+		t := &Tree{
+			Time: com.CreateTime,
+			Path: info.LocalPath,
+			Score: com.Tree.Score,
+
+			commit: com,
+			comp: f.comp,
+			folder: f,
+			info: info,
+		}
+		out = append(out, t)
+		
+		if len(com.ParentCommits) == 0 {
+			break
+		}
+
+		sc = com.ParentCommits[0].Score
+	}
+	
+	for i, n := 0, len(out)-1; i < n-i; i++ {
+		out[i], out[n-i] = out[n-i], out[i]
+	}		
+	return out, nil
+}
+
+func (f *Folder) Trees2() ([]*Tree, error) {
+	list, err := f.conn.list(f.comp.UUID+"/bucketdata/" + f.uuid + "/refs/logs/master/", "", 0)
+	if err != nil {
+		return nil, err
+	}
+	
+	var out []*Tree
+	for _, obj := range list.Contents {
+		data, err := f.conn.cget(obj.Key)
 		if err != nil {
 			return nil, err
 		}
@@ -362,6 +467,7 @@ func (f *Folder) Trees() ([]*Tree, error) {
 		t := &Tree{
 			Time: com.CreateTime,
 			Path: info.LocalPath,
+			Score: com.Tree.Score,
 
 			commit: com,
 			comp: f.comp,
@@ -370,25 +476,192 @@ func (f *Folder) Trees() ([]*Tree, error) {
 		}
 		out = append(out, t)
 	}
-	return out, nil		
+	return out, nil	
 }
 
 // A Tree represents a single backed-up file tree snapshot.
 type Tree struct {
 	Time time.Time // time back-up completed
 	Path string  // root of backed-up tree
+	Score [20]byte
 	
 	comp *Computer
 	folder *Folder
 	commit commit
 	info folderInfo
+	
+	raw tree
+	haveRaw bool
 }
 
-// A Dir represents a directory in a tree.
-type Dir struct {
+// Root returns the File for the tree's root directory.
+func (t *Tree) Root() (*File, error) {
+	if !t.haveRaw {
+		data, err := t.comp.scget(t.Score)
+		if err != nil {
+			return nil, err
+		}
+		if err := unpack(data, &t.raw); err != nil {
+			return nil, err
+		}
+		t.haveRaw = true
+	}
+	
+	dir := &File{
+		t: t,
+		dir: &t.raw,
+		n: &nameNode{"/", node{IsTree: true}},
+	}
+	return dir, nil
 }
 
-// A File represents a single non-directory file.
+// A File represents a file or directory in a tree.
 type File struct {
+	t *Tree
+	n *nameNode
+	dir *tree
+	byName map[string]*nameNode
 }
 
+func (f *File) loadDir() error {
+	if f.dir == nil {
+		data, err := f.t.comp.scget(f.n.Node.Blob[0].Score)
+		if err != nil {
+			return err
+		}
+		var dir tree
+		if err := unpack(data, &dir); err != nil {
+			return err
+		}
+		f.dir = &dir
+	}
+	return nil
+}
+
+func (f *File) Lookup(name string) (*File, error) {
+	if !f.n.Node.IsTree {
+		return nil, fmt.Errorf("lookup in non-directory")
+	}
+	if f.byName == nil {
+		if err := f.loadDir(); err != nil {
+			return nil, err
+		}
+		f.byName = map[string]*nameNode{}
+		for _, n := range f.dir.Nodes {
+			f.byName[n.Name] = n
+		}
+	}
+	n := f.byName[name]
+	if n == nil {
+		return nil, fmt.Errorf("no entry %q", name)
+	}
+	return &File{t: f.t, n: n}, nil
+}
+
+func (f *File) Stat() *Dirent {
+	if f.n.Node.IsTree {
+		if err := f.loadDir(); err == nil {
+			return &Dirent{
+				Name: f.n.Name,
+				ModTime: f.dir.Mtime.Time(),
+				Mode: fileMode(f.dir.Mode),
+				Size: 0,
+			}
+		}
+	}
+	return &Dirent{
+		Name: f.n.Name,
+		ModTime: f.n.Node.Mtime.Time(),
+		Mode: fileMode(f.n.Node.Mode),
+		Size: int64(f.n.Node.UncompressedSize),
+	}
+}
+
+type Dirent struct {
+	Name string
+	ModTime time.Time
+	Mode os.FileMode
+	Size int64
+}
+
+func (f *File) ReadDir() ([]Dirent, error) {
+	if !f.n.Node.IsTree {
+		return nil, fmt.Errorf("ReadDir in non-directory")
+	}
+	if err := f.loadDir(); err != nil {
+		return nil, err
+	}
+	var out []Dirent
+	for _, n := range f.dir.Nodes {
+		out = append(out, Dirent{
+			Name: n.Name,
+			ModTime: n.Node.Mtime.Time(),
+			Mode: fileMode(n.Node.Mode),
+		})
+	}
+	return out, nil
+}
+
+func (f *File) Open() (io.ReadCloser, error) {
+	return &fileReader{t: f.t, blob: f.n.Node.Blob, n: &f.n.Node}, nil
+}
+
+type fileReader struct {
+	t *Tree
+	n *node
+	blob []sscore
+	cur io.Reader
+	close []io.Closer
+}
+
+func (f *fileReader) Read(b []byte) (int, error) {
+	for {
+		if f.cur != nil {
+			n, err := f.cur.Read(b)
+			if n > 0 || err != nil && err != io.EOF {
+				return n, err
+			}
+			for _, cl := range f.close {
+				cl.Close()
+			}
+			f.close = f.close[:0]
+			f.cur = nil
+		}
+
+		if len(f.blob) == 0 {
+			break
+		}
+
+		// TODO: Get a direct reader, not a []byte.
+		data, err := f.t.comp.scget(f.blob[0].Score)
+		if err != nil {
+			return 0, err
+		}
+		rc := ioutil.NopCloser(bytes.NewBuffer(data))
+
+		if f.n.CompressData {
+			gz, err := gzip.NewReader(rc)
+			if err != nil {
+				rc.Close()
+				return 0, err
+			}
+			f.close = append(f.close, gz)
+			f.cur = gz
+		} else {
+			f.cur = rc
+		}
+		f.close = append(f.close, rc)
+		f.blob = f.blob[1:]
+	}
+
+	return 0, io.EOF
+}
+
+func (f *fileReader) Close() error {
+	for _, cl := range f.close {
+		cl.Close()
+	}
+	f.close = f.close[:0]
+	f.cur = nil
+	return nil
+}

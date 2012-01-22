@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// On-disk data structures
+// On-cloud data structures
 
 package arq
 
 import (
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -79,7 +80,7 @@ type tree struct {
 	StBlksize     uint32
 	AggrSize      uint64
 	WTF           [16]byte   // what is this?
-	Nodes         []nameNode `arq:"count32"`
+	Nodes         []*nameNode `arq:"count32"`
 }
 
 type nameNode struct {
@@ -119,9 +120,59 @@ type node struct {
 	StBlksize         uint32
 }
 
+func fileMode(m int32) os.FileMode {
+	const (
+		// Darwin file mode.
+ 		S_IFBLK                     = 0x6000
+ 		S_IFCHR                     = 0x2000
+ 		S_IFDIR                     = 0x4000
+ 		S_IFIFO                     = 0x1000
+ 		S_IFLNK                     = 0xa000
+ 		S_IFMT                      = 0xf000
+ 		S_IFREG                     = 0x8000
+ 		S_IFSOCK                    = 0xc000
+ 		S_IFWHT                     = 0xe000
+ 		S_ISGID                     = 0x400
+ 		S_ISTXT                     = 0x200
+ 		S_ISUID                     = 0x800
+ 		S_ISVTX                     = 0x200
+	)
+	mode := os.FileMode(m & 0777)
+	switch m & S_IFMT {
+	case S_IFBLK, S_IFWHT:
+		mode |= os.ModeDevice
+	case S_IFCHR:
+		mode |= os.ModeDevice | os.ModeCharDevice
+	case S_IFDIR:
+		mode |= os.ModeDir
+	case S_IFIFO:
+		mode |= os.ModeNamedPipe
+	case S_IFLNK:
+		mode |= os.ModeSymlink
+	case S_IFREG:
+		// nothing to do
+	case S_IFSOCK:
+		mode |= os.ModeSocket
+	}
+	if m&S_ISGID != 0 {
+		mode |= os.ModeSetgid
+	}
+	if m&S_ISUID != 0 {
+		mode |= os.ModeSetuid
+	}
+	if m&S_ISVTX != 0 {
+		mode |= os.ModeSticky
+	}
+	return mode
+}
+
 type unixTime struct {
 	Sec  int64
 	Nsec int64
+}
+
+func (t *unixTime) Time() time.Time {
+	return time.Unix(t.Sec, t.Nsec)
 }
 
 type failed struct {

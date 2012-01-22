@@ -108,6 +108,10 @@ func unpackValue(data []byte, v reflect.Value, tag string) ([]byte, error) {
 		data = data[8:]
 		return data, nil
 
+	case reflect.Ptr:
+		v.Set(reflect.New(v.Type().Elem()))
+		return unpackValue(data, v.Elem(), tag)
+
 	case reflect.Slice:
 		var n int
 		if tag == "count32" {
