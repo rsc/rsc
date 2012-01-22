@@ -5,8 +5,8 @@
 package plist
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
 
 var thePlist = `<plist version="1.0">
@@ -45,16 +45,16 @@ var thePlist = `<plist version="1.0">
 `
 
 var plistTests = []struct {
-	in string
+	in  string
 	out interface{}
 }{
 	{
 		thePlist,
 		&MyStruct{
-			BucketUUID: "C218A47D-DAFB-4476-9C67-597E556D7D8A",
-			BucketName: "rsc",
-			ComputerUUID: "E7859547-BB9C-41C0-871E-858A0526BAE7",
-			LocalPath: "/Users/rsc",
+			BucketUUID:      "C218A47D-DAFB-4476-9C67-597E556D7D8A",
+			BucketName:      "rsc",
+			ComputerUUID:    "E7859547-BB9C-41C0-871E-858A0526BAE7",
+			LocalPath:       "/Users/rsc",
 			LocalMountPoint: "/Users",
 			IgnoredRelativePaths: []string{
 				"/.Trash",
@@ -65,7 +65,7 @@ var plistTests = []struct {
 			Excludes: Exclude1{
 				Excludes: []Exclude2{
 					{Type: 2,
-					Text: ".unison.",
+						Text: ".unison.",
 					},
 				},
 			},
@@ -75,17 +75,16 @@ var plistTests = []struct {
 		thePlist,
 		&struct{}{},
 	},
-
 }
 
 type MyStruct struct {
-	BucketUUID string
-	BucketName string
-	ComputerUUID string
-	LocalPath string
-	LocalMountPoint string
+	BucketUUID           string
+	BucketName           string
+	ComputerUUID         string
+	LocalPath            string
+	LocalMountPoint      string
 	IgnoredRelativePaths []string
-	Excludes Exclude1
+	Excludes             Exclude1
 }
 
 type Exclude1 struct {
@@ -93,7 +92,7 @@ type Exclude1 struct {
 }
 
 type Exclude2 struct {
-	Type int `plist:"type"`
+	Type int    `plist:"type"`
 	Text string `plist:"text"`
 }
 

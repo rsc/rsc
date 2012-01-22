@@ -21,7 +21,7 @@ func next(data []byte) (skip, tag, rest []byte) {
 	if j < 0 {
 		return data, nil, nil
 	}
-	j += i+1
+	j += i + 1
 	return data[:i], data[i:j], data[j:]
 }
 
@@ -30,7 +30,7 @@ func Unmarshal(data []byte, v interface{}) error {
 	if !bytes.HasPrefix(tag, []byte("<plist")) {
 		return fmt.Errorf("not a plist")
 	}
-	
+
 	data, err := unmarshalValue(data, reflect.ValueOf(v))
 	if err != nil {
 		return err
@@ -131,7 +131,7 @@ func unmarshalValue(data []byte, v reflect.Value) (rest []byte, err error) {
 		if string(etag) != "</string>" {
 			return nil, fmt.Errorf("expected </string> but got %s", etag)
 		}
-		v.SetString(string(body))  // TODO: unescape
+		v.SetString(string(body)) // TODO: unescape
 		return data, nil
 
 	case "<integer>":
