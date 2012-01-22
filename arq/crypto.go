@@ -10,13 +10,13 @@ import (
 	"crypto/sha1"
 	"hash"
 	"log"
-	
+
 	"bitbucket.org/taruti/pbkdf2.go" // TODO: Pull in copy
 )
 
 type cryptoState struct {
-	c *aes.Cipher
-	iv []byte
+	c    *aes.Cipher
+	iv   []byte
 	salt []byte
 }
 

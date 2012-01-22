@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	comps, err := conn.Computers()
 	if err != nil {
 		log.Fatal(err)
@@ -42,12 +42,12 @@ func main() {
 			log.Fatal(err)
 		}
 		c.Unlock(pw)
-		
+
 		folders, err := c.Folders()
 		if err != nil {
 			log.Fatal(err)
 		}
-	
+
 		lastDate := ""
 		n := 0
 		for _, f := range folders {
@@ -74,12 +74,12 @@ func main() {
 					log.Print(err)
 				}
 				// TODO: Pass times to fs.Add.
-				fmt.Printf("%v %s %x\n", t.Time, c.Name + "/" + date + suffix + "/" + t.Path, t.Score)
-				fs.Add(c.Name + "/" + date + suffix + "/" + t.Path, &fuseNode{f})
+				fmt.Printf("%v %s %x\n", t.Time, c.Name+"/"+date+suffix+"/"+t.Path, t.Score)
+				fs.Add(c.Name+"/"+date+suffix+"/"+t.Path, &fuseNode{f})
 			}
 		}
 	}
-	
+
 	c, err := fuse.Mount("/mnt/arq")
 	if err != nil {
 		log.Fatal(err)
@@ -94,13 +94,13 @@ type fuseNode struct {
 	arq *arq.File
 }
 
-func (f *fuseNode) Attr() fuse.Attr{
+func (f *fuseNode) Attr() fuse.Attr {
 	de := f.arq.Stat()
 	return fuse.Attr{
-		Mode: de.Mode,
+		Mode:  de.Mode,
 		Mtime: de.ModTime,
-		Size: uint64(de.Size),
-	}	
+		Size:  uint64(de.Size),
+	}
 }
 
 func (f *fuseNode) Lookup(name string, intr fuse.Intr) (fuse.Node, fuse.Error) {
@@ -108,7 +108,7 @@ func (f *fuseNode) Lookup(name string, intr fuse.Intr) (fuse.Node, fuse.Error) {
 	if err != nil {
 		return nil, fuse.ENOENT
 	}
-	return &fuseNode{ff}, nil	
+	return &fuseNode{ff}, nil
 }
 
 func (f *fuseNode) ReadDir(intr fuse.Intr) ([]fuse.Dirent, fuse.Error) {

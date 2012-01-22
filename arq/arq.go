@@ -28,8 +28,8 @@ import (
 
 // A Conn represents a connection to an S3 server holding Arq backups.
 type Conn struct {
-	b *s3.Bucket
-	cache string
+	b        *s3.Bucket
+	cache    string
 	altCache string
 }
 
@@ -46,7 +46,7 @@ func Dial(auth aws.Auth) (*Conn, error) {
 	buck := fmt.Sprintf("%s-com-haystacksoftware-arq", strings.ToLower(auth.AccessKey))
 	b := s3.New(auth, aws.USEast).Bucket(buck)
 	c := &Conn{
-		b: b,
+		b:     b,
 		cache: filepath.Join(cachedir(), buck),
 	}
 	if runtime.GOOS == "darwin" {
@@ -95,11 +95,11 @@ func (c *Conn) altCachePath(name string) string {
 			return ""
 		}
 	}
-	i += len("-trees/")+2
+	i += len("-trees/") + 2
 	if i >= len(name) {
 		return ""
 	}
-	return filepath.Join(c.altCache, name[:i] + "/" + name[i:])
+	return filepath.Join(c.altCache, name[:i]+"/"+name[i:])
 }
 
 func (c *Conn) cget(name string) (data []byte, err error) {
@@ -116,7 +116,7 @@ func (c *Conn) cget(name string) (data []byte, err error) {
 			return ioutil.ReadAll(f)
 		}
 	}
-			
+
 	data, err = c.bget(name)
 	if err != nil {
 		return nil, err
@@ -156,7 +156,7 @@ func (c *Conn) Computers() ([]*Computer, error) {
 	}
 	var out []*Computer
 	for _, p := range list.CommonPrefixes {
-		data, err := c.bget(p+"computerinfo")
+		data, err := c.bget(p + "computerinfo")
 		if err != nil {
 			continue
 		}
@@ -164,12 +164,12 @@ func (c *Conn) Computers() ([]*Computer, error) {
 		if err := plist.Unmarshal(data, &info); err != nil {
 			return nil, err
 		}
-		
+
 		comp := &Computer{
-			Name: info.ComputerName,
-			User: info.UserName,
-			UUID: p[:len(p)-1],
-			conn: c,
+			Name:  info.ComputerName,
+			User:  info.UserName,
+			UUID:  p[:len(p)-1],
+			conn:  c,
 			index: map[score]ientry{},
 		}
 
@@ -178,26 +178,26 @@ func (c *Conn) Computers() ([]*Computer, error) {
 			return nil, err
 		}
 		comp.crypto.salt = salt
-		
+
 		out = append(out, comp)
 	}
-	return out, nil		
+	return out, nil
 }
 
 // A Computer represents a computer with backups (Folders).
 type Computer struct {
-	Name string // name of computer
-	User string // name of user
-	UUID string
-	conn *Conn
+	Name   string // name of computer
+	User   string // name of user
+	UUID   string
+	conn   *Conn
 	crypto cryptoState
-	index map[score]ientry
+	index  map[score]ientry
 }
 
 // Folders returns a list of the folders that have been backed up on the computer.
 func (c *Computer) Folders() ([]*Folder, error) {
 	// Each folder is a file under computer/buckets/.
-	list, err := c.conn.list(c.UUID + "/buckets/", "", 0)
+	list, err := c.conn.list(c.UUID+"/buckets/", "", 0)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (c *Computer) Folders() ([]*Folder, error) {
 			conn: c.conn,
 		})
 	}
-	return out, nil		
+	return out, nil
 }
 
 // Unlock records the password to use when decrypting
@@ -232,7 +232,7 @@ func (c *Computer) scget(sc score) ([]byte, error) {
 	if c.crypto.c == nil {
 		return nil, fmt.Errorf("computer not yet unlocked")
 	}
-	
+
 	var data []byte
 	var err error
 	ie, ok := c.index[sc]
@@ -284,7 +284,7 @@ func (c *Computer) scget(sc score) ([]byte, error) {
 
 		data = data[8 : 8+n]
 	} else {
-		data, err = c.conn.cget(c.UUID+"/objects/"+sc.String())
+		data, err = c.conn.cget(c.UUID + "/objects/" + sc.String())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -296,10 +296,10 @@ func (c *Computer) scget(sc score) ([]byte, error) {
 
 // A Folder represents a backed-up tree on a computer.
 type Folder struct {
-	Path string  // root of tree of last backup
+	Path string // root of tree of last backup
 	uuid string
 	comp *Computer
-	conn *Conn	
+	conn *Conn
 }
 
 // Load loads xxx
@@ -376,7 +376,7 @@ func (c *Computer) saveIndex(file string, data []byte) error {
 // Note that different trees from the same Folder might have different Paths
 // if the folder was "relocated" using the Arq interface.
 func (f *Folder) Trees() ([]*Tree, error) {
-	data, err := f.conn.bget(f.comp.UUID+"/bucketdata/"+f.uuid+"/refs/heads/master")
+	data, err := f.conn.bget(f.comp.UUID + "/bucketdata/" + f.uuid + "/refs/heads/master")
 	if err != nil {
 		return nil, err
 	}
@@ -384,55 +384,55 @@ func (f *Folder) Trees() ([]*Tree, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var out []*Tree
 	for {
 		data, err = f.comp.scget(sc)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		var com commit
 		if err := unpack(data, &com); err != nil {
 			return nil, err
 		}
-		
+
 		var info folderInfo
 		if err := plist.Unmarshal(com.BucketXML, &info); err != nil {
 			return nil, err
 		}
-		
+
 		t := &Tree{
-			Time: com.CreateTime,
-			Path: info.LocalPath,
+			Time:  com.CreateTime,
+			Path:  info.LocalPath,
 			Score: com.Tree.Score,
 
 			commit: com,
-			comp: f.comp,
+			comp:   f.comp,
 			folder: f,
-			info: info,
+			info:   info,
 		}
 		out = append(out, t)
-		
+
 		if len(com.ParentCommits) == 0 {
 			break
 		}
 
 		sc = com.ParentCommits[0].Score
 	}
-	
+
 	for i, n := 0, len(out)-1; i < n-i; i++ {
 		out[i], out[n-i] = out[n-i], out[i]
-	}		
+	}
 	return out, nil
 }
 
 func (f *Folder) Trees2() ([]*Tree, error) {
-	list, err := f.conn.list(f.comp.UUID+"/bucketdata/" + f.uuid + "/refs/logs/master/", "", 0)
+	list, err := f.conn.list(f.comp.UUID+"/bucketdata/"+f.uuid+"/refs/logs/master/", "", 0)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var out []*Tree
 	for _, obj := range list.Contents {
 		data, err := f.conn.cget(obj.Key)
@@ -443,54 +443,54 @@ func (f *Folder) Trees2() ([]*Tree, error) {
 		if err := plist.Unmarshal(data, &l); err != nil {
 			return nil, err
 		}
-		
+
 		sc := hexScore(l.NewHeadSHA1)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		data, err = f.comp.scget(sc)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		var com commit
 		if err := unpack(data, &com); err != nil {
 			return nil, err
 		}
-		
+
 		var info folderInfo
 		if err := plist.Unmarshal(com.BucketXML, &info); err != nil {
 			return nil, err
 		}
-		
+
 		t := &Tree{
-			Time: com.CreateTime,
-			Path: info.LocalPath,
+			Time:  com.CreateTime,
+			Path:  info.LocalPath,
 			Score: com.Tree.Score,
 
 			commit: com,
-			comp: f.comp,
+			comp:   f.comp,
 			folder: f,
-			info: info,
+			info:   info,
 		}
 		out = append(out, t)
 	}
-	return out, nil	
+	return out, nil
 }
 
 // A Tree represents a single backed-up file tree snapshot.
 type Tree struct {
-	Time time.Time // time back-up completed
-	Path string  // root of backed-up tree
+	Time  time.Time // time back-up completed
+	Path  string    // root of backed-up tree
 	Score [20]byte
-	
-	comp *Computer
+
+	comp   *Computer
 	folder *Folder
 	commit commit
-	info folderInfo
-	
-	raw tree
+	info   folderInfo
+
+	raw     tree
 	haveRaw bool
 }
 
@@ -506,20 +506,20 @@ func (t *Tree) Root() (*File, error) {
 		}
 		t.haveRaw = true
 	}
-	
+
 	dir := &File{
-		t: t,
+		t:   t,
 		dir: &t.raw,
-		n: &nameNode{"/", node{IsTree: true}},
+		n:   &nameNode{"/", node{IsTree: true}},
 	}
 	return dir, nil
 }
 
 // A File represents a file or directory in a tree.
 type File struct {
-	t *Tree
-	n *nameNode
-	dir *tree
+	t      *Tree
+	n      *nameNode
+	dir    *tree
 	byName map[string]*nameNode
 }
 
@@ -562,26 +562,26 @@ func (f *File) Stat() *Dirent {
 	if f.n.Node.IsTree {
 		if err := f.loadDir(); err == nil {
 			return &Dirent{
-				Name: f.n.Name,
+				Name:    f.n.Name,
 				ModTime: f.dir.Mtime.Time(),
-				Mode: fileMode(f.dir.Mode),
-				Size: 0,
+				Mode:    fileMode(f.dir.Mode),
+				Size:    0,
 			}
 		}
 	}
 	return &Dirent{
-		Name: f.n.Name,
+		Name:    f.n.Name,
 		ModTime: f.n.Node.Mtime.Time(),
-		Mode: fileMode(f.n.Node.Mode),
-		Size: int64(f.n.Node.UncompressedSize),
+		Mode:    fileMode(f.n.Node.Mode),
+		Size:    int64(f.n.Node.UncompressedSize),
 	}
 }
 
 type Dirent struct {
-	Name string
+	Name    string
 	ModTime time.Time
-	Mode os.FileMode
-	Size int64
+	Mode    os.FileMode
+	Size    int64
 }
 
 func (f *File) ReadDir() ([]Dirent, error) {
@@ -594,9 +594,9 @@ func (f *File) ReadDir() ([]Dirent, error) {
 	var out []Dirent
 	for _, n := range f.dir.Nodes {
 		out = append(out, Dirent{
-			Name: n.Name,
+			Name:    n.Name,
 			ModTime: n.Node.Mtime.Time(),
-			Mode: fileMode(n.Node.Mode),
+			Mode:    fileMode(n.Node.Mode),
 		})
 	}
 	return out, nil
@@ -607,10 +607,10 @@ func (f *File) Open() (io.ReadCloser, error) {
 }
 
 type fileReader struct {
-	t *Tree
-	n *node
-	blob []sscore
-	cur io.Reader
+	t     *Tree
+	n     *node
+	blob  []sscore
+	cur   io.Reader
 	close []io.Closer
 }
 

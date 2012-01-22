@@ -225,4 +225,3 @@ func unpackValue(data []byte, v reflect.Value, tag string) ([]byte, error) {
 
 	panic("arqfs: unexpected type in unpackValue: " + v.Type().String())
 }
-
