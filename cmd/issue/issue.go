@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"net/url"
@@ -34,6 +35,12 @@ type Entry struct {
 	Published time.Time `xml:"published"`
 	Content   string    `xml:"content"`
 	Updates   []Update  `xml:"updates"`
+	Author struct {
+		Name string `xml:"name"`
+	} `xml:"author"`
+	Owner string `xml:"owner"`
+	Status string `xml:"status"`
+	Label []string `xml:"label"`
 }
 
 type Update struct {
@@ -102,6 +109,19 @@ func main() {
 		}
 		fmt.Printf("%s\t%s\n", id, e.Title)
 		if full {
+			fmt.Printf("Reported by %s (%s)\n", e.Author.Name, e.Published.Format("2006-01-02 15:04:05"))
+			if e.Owner != "" {
+				fmt.Printf("\tOwner: %s\n", e.Owner)
+			}
+			if e.Status != "" {
+				fmt.Printf("\tStatus: %s\n", e.Status)
+			}
+			for _, l := range e.Label {
+				fmt.Printf("\tLabel: %s\n", l)
+			}
+			if e.Content != "" {
+				fmt.Printf("\n\t%s\n", wrap(html.UnescapeString(e.Content), "\t"))
+			}
 			u := "https://code.google.com/feeds/issues/p/" + *project + "/issues/" + id + "/comments/full"
 			if *v {
 				log.Print(u)
@@ -120,19 +140,21 @@ func main() {
 			for _, e := range feed.Entry {
 				fmt.Printf("\n%s (%s)\n", e.Title, e.Published.Format("2006-01-02 15:04:05"))
 				for _, up := range e.Updates {
-					switch {
-					case up.Summary != "":
+					if up.Summary != "" {
 						fmt.Printf("\tSummary: %s\n", up.Summary)
-					case up.Owner != "":
+					}
+					if up.Owner != "" {
 						fmt.Printf("\tOwner: %s\n", up.Owner)
-					case up.Status != "":
+					}
+					if up.Status != "" {
 						fmt.Printf("\tStatus: %s\n", up.Status)
-					case up.Label != "":
+					}
+					if up.Label != "" {
 						fmt.Printf("\tLabel: %s\n", up.Label)
 					}
 				}
 				if e.Content != "" {
-					fmt.Printf("\n\t%s\n", wrap(e.Content, "\t"))
+					fmt.Printf("\n\t%s\n", wrap(html.UnescapeString(e.Content), "\t"))
 				}
 			}
 		}
