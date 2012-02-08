@@ -5,9 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,6 +21,7 @@ If query is a single number, prints the full history for the issue.
 Otherwise, prints a table of matching results.
 The special query 'go1' is shorthand for 'Priority-Go1'.
 `)
+	os.Exit(2)
 }
 
 type Feed struct {
@@ -28,24 +29,24 @@ type Feed struct {
 }
 
 type Entry struct {
-	ID string `xml:"id"`
-	Title string `xml:"title"`
+	ID        string    `xml:"id"`
+	Title     string    `xml:"title"`
 	Published time.Time `xml:"published"`
-	Content string `xml:"content"`
-	Updates []Update `xml:"updates"`
+	Content   string    `xml:"content"`
+	Updates   []Update  `xml:"updates"`
 }
 
 type Update struct {
 	Summary string `xml:"summary"`
-	Owner string `xml:"ownerUpdate"`
-	Label string `xml:"label"`
-	Status string `xml:"status"`
+	Owner   string `xml:"ownerUpdate"`
+	Label   string `xml:"label"`
+	Status  string `xml:"status"`
 }
 
 type Entries []Entry
 
-func (e Entries) Len() int { return len(e) }
-func (e Entries) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
+func (e Entries) Len() int           { return len(e) }
+func (e Entries) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
 func (e Entries) Less(i, j int) bool { return e[i].Title < e[j].Title }
 
 var project = flag.String("p", "go", "code.google.com project identifier")
@@ -57,12 +58,12 @@ func main() {
 	if flag.NArg() != 1 {
 		usage()
 	}
-	
+
 	full := false
 	q := flag.Arg(0)
 	n, _ := strconv.Atoi(q)
 	if n != 0 {
-		q = "id:"+q
+		q = "id:" + q
 		full = true
 	}
 	if q == "go1" {
@@ -72,13 +73,13 @@ func main() {
 	log.SetFlags(0)
 
 	query := url.Values{
-		"q": {q},
+		"q":           {q},
 		"max-results": {"400"},
 	}
 	if !full {
 		query["can"] = []string{"open"}
 	}
-	u := "https://code.google.com/feeds/issues/p/"+*project+"/issues/full?" + query.Encode()
+	u := "https://code.google.com/feeds/issues/p/" + *project + "/issues/full?" + query.Encode()
 	if *v {
 		log.Print(u)
 	}
@@ -92,7 +93,7 @@ func main() {
 		log.Fatal(err)
 	}
 	r.Body.Close()
-	
+
 	sort.Sort(feed.Entry)
 	for _, e := range feed.Entry {
 		id := e.ID
@@ -101,18 +102,21 @@ func main() {
 		}
 		fmt.Printf("%s\t%s\n", id, e.Title)
 		if full {
-			u := "https://code.google.com/feeds/issues/p/"+*project+"/issues/"+id+"/comments/full"
+			u := "https://code.google.com/feeds/issues/p/" + *project + "/issues/" + id + "/comments/full"
+			if *v {
+				log.Print(u)
+			}
 			r, err := http.Get(u)
 			if err != nil {
 				log.Fatal(err)
 			}
-			
+
 			var feed Feed
 			if err := xml.NewDecoder(r.Body).Decode(&feed); err != nil {
 				log.Fatal(err)
 			}
 			r.Body.Close()
-			
+
 			for _, e := range feed.Entry {
 				fmt.Printf("\n%s (%s)\n", e.Title, e.Published.Format("2006-01-02 15:04:05"))
 				for _, up := range e.Updates {
@@ -137,15 +141,23 @@ func main() {
 
 func wrap(t string, prefix string) string {
 	out := ""
-	s := t
-	for len(s) > 70 {
-		i := strings.LastIndex(s[:70], " ")
-		if i < 0 {
-			i = 69
+	t = strings.Replace(t, "\r\n", "\n", -1)
+	lines := strings.Split(t, "\n")
+	for i, line := range lines {
+		if i > 0 {
+			out += "\n" + prefix
 		}
-		i++
-		out += s[:i] + "\n" + prefix
-		s = s[i:]
+		s := line
+		for len(s) > 70 {
+			i := strings.LastIndex(s[:70], " ")
+			if i < 0 {
+				i = 69
+			}
+			i++
+			out += s[:i] + "\n" + prefix
+			s = s[i:]
+		}
+		out += s
 	}
-	return out + s
+	return out
 }
