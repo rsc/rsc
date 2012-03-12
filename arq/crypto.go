@@ -15,7 +15,7 @@ import (
 )
 
 type cryptoState struct {
-	c    *aes.Cipher
+	c    cipher.Block
 	iv   []byte
 	salt []byte
 }

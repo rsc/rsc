@@ -75,9 +75,6 @@ func (c *Conn) list(prefix, delim string, max int) (*s3.ListResp, error) {
 		if err != nil {
 			return ret, err
 		}
-		if len(resp.Contents) > 0 {
-			println(last, resp.Contents[0].Key)
-		}
 		ret.Contents = append(ret.Contents, resp.Contents...)
 		ret.CommonPrefixes = append(ret.CommonPrefixes, resp.CommonPrefixes...)
 	}
@@ -122,7 +119,6 @@ func (c *Conn) cget(name string) (data []byte, err error) {
 		return nil, err
 	}
 
-	fmt.Printf("load %s\n", name)
 	dir, _ := filepath.Split(cache)
 	os.MkdirAll(dir, 0700)
 	ioutil.WriteFile(cache, data, 0600)
