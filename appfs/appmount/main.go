@@ -6,12 +6,16 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 	"sync"
 	"runtime"
@@ -22,20 +26,28 @@ import (
 	"code.google.com/p/rsc/keychain"
 )
 
-var usageMessage = `usage: appmount [-h host] /mnt
+var usageMessage = `usage: appmount [-h host] [-u user] [-p password] /mnt
 
 Appmount mounts the appfs file system on the named mount point.
 
 The default host is localhost:8080.
 `
 
-var cl client.Client
+// Shared between master and slave.
+var z struct {
+	Client client.Client
+	Debug *bool
+	Mtpt string
+}
+
 var fc *fuse.Conn
+var cl = &z.Client
 
 func init() {
 	flag.StringVar(&cl.Host, "h", "localhost:8080", "app serving host")
 	flag.StringVar(&cl.User, "u", "", "user name")
 	flag.StringVar(&cl.Password, "p", "", "password")
+	z.Debug = flag.Bool("debug", false, "")
 }
 
 func usage() {
@@ -45,13 +57,19 @@ func usage() {
 
 func main() {
 	log.SetFlags(0)
+	
+	if len(os.Args) == 2 && os.Args[1] == "MOUNTSLAVE" {
+		mountslave()
+		return
+	}
+		
 	flag.Usage = usage
 	flag.Parse()
 	args := flag.Args()
 	if len(args) == 0 {
 		usage()
 	}
-	mtpt := args[0]
+	z.Mtpt = args[0]
 
 	if cl.Password == "" {
 		var err error
@@ -65,19 +83,57 @@ func main() {
 	if _, err := cl.Stat("/"); err != nil {
 		log.Fatal(err)
 	}
-
-	fc, err := fuse.Mount(mtpt)
+	
+	// Run in child so that we can exit once child is running.
+	r, w, err := os.Pipe()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fuse.Debugf = log.Printf
-	fmt.Fprintf(os.Stderr, "serving %s\n", mtpt)
-	err = fc.Serve(FS{})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "serve: %v\n", err)
-		os.Exit(2)
+	
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	enc.Encode(&z)
+	
+	cmd := exec.Command(os.Args[0], "MOUNTSLAVE")
+	cmd.Stdin = &buf
+	cmd.Stdout = w
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		log.Fatal("mount process: %v", err)
 	}
+	w.Close()
+	
+	ok := make([]byte, 10)
+	n, _ := r.Read(ok)
+	if n != 2 || string(ok[0:2]) != "OK" {
+		os.Exit(1)
+	}
+	
+	fmt.Fprintf(os.Stderr, "mounted on %s\n", z.Mtpt)	
+}
+
+func mountslave() {
+	stdout, _ := syscall.Dup(1)
+	syscall.Dup2(2, 1)
+
+	r := gob.NewDecoder(os.Stdin)
+	if err := r.Decode(&z); err != nil {
+		log.Fatalf("gob decode: %v", err)
+	}
+
+	fc, err := fuse.Mount(z.Mtpt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer exec.Command("umount", z.Mtpt).Run()
+
+	if *z.Debug {
+		fuse.Debugf = log.Printf
+	}
+
+	syscall.Write(stdout, []byte("OK"))
+	syscall.Close(stdout)
+	fc.Serve(FS{})
 }
 
 type FS struct{}
@@ -112,7 +168,6 @@ func stat(name string) (*proto.FileInfo, error) {
 	e, ok := statCache.m[name]
 	statCache.mu.Unlock()
 	if ok && time.Since(e.t) < 2*time.Minute {
-println("usestat", name)
 		return e.fi, e.err
 	}
 	fi, err := cl.Stat(name)
@@ -121,11 +176,13 @@ println("usestat", name)
 }
 
 func saveStat(name string, fi *proto.FileInfo, err error) {
+	if *z.Debug {
 if fi != nil {
 	fmt.Fprintf(os.Stderr, "savestat %s %+v\n", name, *fi)
 } else {
 	fmt.Fprintf(os.Stderr, "savestat %s %v\n", name, err)
-}	
+}
+	}	
 	statCache.mu.Lock()
 	if statCache.m == nil {
 		statCache.m = make(map[string]statEntry)
@@ -135,7 +192,6 @@ if fi != nil {
 }
 
 func delStat(name string) {
-println("delStat", name)
 	statCache.mu.Lock()
 	if statCache.m != nil {
 		delete(statCache.m, name)
@@ -149,7 +205,9 @@ func file(name string) (fuse.Node, fuse.Error) {
 		if strings.Contains(err.Error(), "no such entity") {
 			return nil, fuse.ENOENT
 		}
-		log.Printf("stat %s: %v", name, err)
+		if *z.Debug {
+			log.Printf("stat %s: %v", name, err)
+		}
 		return nil, fuse.EIO
 	}
 	return &File{name, fi, nil}, nil
