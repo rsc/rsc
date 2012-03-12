@@ -16,8 +16,6 @@ import (
 	"hash"
 	"log"
 	"regexp/syntax"
-
-	"code.google.com/p/codesearch/sparse"
 )
 
 // A matcher holds the state for running regular expression search.
@@ -41,7 +39,7 @@ type matcher struct {
 
 // An nstate corresponds to an NFA state.
 type nstate struct {
-	q       sparse.Set // queue of program instructions
+	q       Set // queue of program instructions
 	flag    flags      // flags (TODO)
 	needFlag syntax.EmptyOp
 }
@@ -152,7 +150,7 @@ func (m *matcher) init(prog *syntax.Prog, n int) error {
 }
 
 // stepEmpty steps runq to nextq expanding according to flag.
-func (m *matcher) stepEmpty(runq, nextq *sparse.Set, flag syntax.EmptyOp) {
+func (m *matcher) stepEmpty(runq, nextq *Set, flag syntax.EmptyOp) {
 	nextq.Reset()
 	for _, id := range runq.Dense() {
 		m.addq(nextq, id, flag)
@@ -162,7 +160,7 @@ func (m *matcher) stepEmpty(runq, nextq *sparse.Set, flag syntax.EmptyOp) {
 // stepByte steps runq to nextq consuming c and then expanding according to flag.
 // It returns true if a match ends immediately before c.
 // c is either an input byte or endText.
-func (m *matcher) stepByte(runq, nextq *sparse.Set, c int, flag syntax.EmptyOp) (match bool) {
+func (m *matcher) stepByte(runq, nextq *Set, c int, flag syntax.EmptyOp) (match bool) {
 	nextq.Reset()
 	m.addq(nextq, uint32(m.prog.Start), flag)
 	
@@ -193,7 +191,7 @@ func (m *matcher) stepByte(runq, nextq *sparse.Set, c int, flag syntax.EmptyOp) 
 }
 
 // addq adds id to the queue, expanding according to flag.
-func (m *matcher) addq(q *sparse.Set, id uint32, flag syntax.EmptyOp) {
+func (m *matcher) addq(q *Set, id uint32, flag syntax.EmptyOp) {
 	if q.Has(id, 0) {
 		return
 	}
@@ -279,7 +277,7 @@ func (m *matcher) computeNext(this, next *nstate, d *dstate, c int) bool {
 	return false
 }
 
-func (m *matcher) queueFlag(runq *sparse.Set) syntax.EmptyOp {
+func (m *matcher) queueFlag(runq *Set) syntax.EmptyOp {
 	var e uint32
 	for _, id := range runq.Dense() {
 		i := &m.prog.Inst[id]
