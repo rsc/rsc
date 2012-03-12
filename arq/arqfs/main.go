@@ -126,7 +126,7 @@ func (f *fuseNode) ReadDir(intr fuse.Intr) ([]fuse.Dirent, fuse.Error) {
 }
 
 // TODO: Implement Read+Release, not ReadAll, to avoid giant buffer.
-func (f *fuseNode) ReadAll() ([]byte, fuse.Error) {
+func (f *fuseNode) ReadAll(intr fuse.Intr) ([]byte, fuse.Error) {
 	rc, err := f.arq.Open()
 	if err != nil {
 		return nil, fuse.EIO
