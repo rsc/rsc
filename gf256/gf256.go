@@ -81,11 +81,12 @@ func (f *Field) Mul(x, y byte) byte {
 type RSEncoder struct {
 	f    *Field
 	c    int
+	gen []byte
 	lgen []byte
 	p    []byte
 }
 
-func (f *Field) lgen(e int) []byte {
+func (f *Field) gen(e int) (gen, lgen []byte) {
 	// p = 1
 	p := make([]byte, e+1)
 	p[e] = 1
@@ -100,28 +101,31 @@ func (f *Field) lgen(e int) []byte {
 		p[e] = f.Mul(p[e], c)
 	}
 
-	// replace p with log p.
+	// lp = log p.
+	lp := make([]byte, e+1)
 	for i, c := range p {
 		if c == 0 {
-			p[i] = 255
+			lp[i] = 255
 		} else {
-			p[i] = byte(f.Log(c))
+			lp[i] = byte(f.Log(c))
 		}
 	}
-	return p
+
+	return p, lp
 }
 
 // NewRSEncoder returns a new Reed-Solomon encoder
 // over the given field and number of error correction bytes.
 func NewRSEncoder(f *Field, c int) *RSEncoder {
-	return &RSEncoder{f: f, c: c, lgen: f.lgen(c)}
+	gen, lgen := f.gen(c)
+	return &RSEncoder{f: f, c: c, gen: gen, lgen: lgen}
 }
 
 // ECC writes to check the error correcting code bytes
 // for data using the given Reed-Solomon parameters.
 func (rs *RSEncoder) ECC(data []byte, check []byte) {
 	if len(check) < rs.c {
-		panic("gf256.RSEncoder: invalid check byte length")
+		panic("gf256: invalid check byte length")
 	}
 	if rs.c == 0 {
 		return
