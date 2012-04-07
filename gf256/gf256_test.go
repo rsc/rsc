@@ -144,3 +144,36 @@ func TestGen(t *testing.T) {
 		}
 	}
 }
+
+func TestReducible(t *testing.T) {
+	var count = []int{1, 2, 3, 6, 9, 18, 30, 56, 99, 186}  // oeis.org/A1037
+	for i, want := range count {
+		n := 0
+		for p := 1<<uint(i+2); p < 1<<uint(i+3); p++ {
+			if !reducible(p) {
+				n++
+			}
+		}
+		if n != want {
+			t.Errorf("#reducible(%d-bit) = %d, want %d", i+2, n, want)
+		}
+	}
+}
+
+func TestExhaustive(t *testing.T) {
+	for poly := 0x100; poly < 0x200; poly++ {
+		if reducible(poly) {
+			continue
+		}
+		f := NewField(poly)
+		for p := 0; p < 256; p++ {
+			for q := 0; q < 256; q++ {
+				fm := int(f.Mul(byte(p), byte(q)))
+				pm := polyDiv(polyMul(p, q), poly)
+				if fm != pm {	
+					t.Errorf("NewField(%#x).Mul(%#x, %#x) = %#x, want %#x", poly, p, q, fm, pm)
+				}
+			}
+		}
+	}
+}

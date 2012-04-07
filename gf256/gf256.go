@@ -14,26 +14,79 @@ type Field struct {
 }
 
 // NewField returns a new field corresponding to the given polynomial.
+// Two common polynomials are 0x11b (used in AES) and 0x11d (used
+// by the Reed-Solomon encoding in QR codes).
 func NewField(poly int) *Field {
-	if poly < 0x100 || poly >= 0x200 {
+	if poly < 0x100 || poly >= 0x200 || reducible(poly) {
 		panic("gf256: invalid polynomial: " + strconv.Itoa(poly))
 	}
+	
+	// We don't know what the generator is, but we do know
+	// that the polynomial is reducible, so half of our choices
+	// are generators.  Just try them in order until we find one.
 	var f Field
-	x := 1
-	for i := 0; i < 255; i++ {
-		if x == 1 && i != 0 {
-			panic("gf256: reducible polynomial: " + strconv.Itoa(poly))
+Search:
+	for gen := 2;; gen++ {
+		x := 1
+		for i := 0; i < 255; i++ {
+			if x == 1 && i != 0 {
+				continue Search
+			}
+			f.exp[i] = byte(x)
+			f.exp[i+255] = byte(x)
+			f.log[x] = byte(i)
+			x = polyDiv(polyMul(x, gen), poly)
 		}
-		f.exp[i] = byte(x)
-		f.exp[i+255] = byte(x)
-		f.log[x] = byte(i)
-		x *= 2
-		if x >= 0x100 {
-			x ^= poly
-		}
+		break
 	}
 	f.log[0] = 255
 	return &f
+}
+
+// nbit returns the number of significant in p.
+func nbit(p int) uint {
+	n := uint(0)
+	for ; p > 0; p >>= 1 {
+		n++
+	}
+	return n
+}
+
+// polyDiv divides the polynomial p by q and returns the remainder.
+func polyDiv(p, q int) int {
+	np := nbit(p)
+	nq := nbit(q)
+	for ; np >= nq; np-- {
+		if p&(1<<(np-1)) != 0 {
+			p ^= q<<(np-nq)
+		}
+	}
+	return p
+}
+
+// polyMul returns the result of multiplying polynomial p by q.
+func polyMul(p, q int) int {
+	prod := 0
+	for i := uint(0); 1<<i <= p; i++ {
+		if p&(1<<i) != 0 {
+			prod ^= q<<i
+		}
+	}
+	return prod
+}
+
+// reducible reports whether p is reducible.
+func reducible(p int) bool {
+	// Multiplying n-bit * n-bit produces (2n-1)-bit,
+	// so if p is reducible, one of its factors must be
+	// of np/2+1 bits or fewer.
+	np := nbit(p)
+	for q := 2; q < 1<<(np/2+1); q++ {
+		if polyDiv(p, q) == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // Add returns the sum of x and y in the field.
