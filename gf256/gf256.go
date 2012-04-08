@@ -21,9 +21,6 @@ func NewField(poly, α int) *Field {
 		panic("gf256: invalid polynomial: " + strconv.Itoa(poly))
 	}
 
-	// We don't know what the generator is, but we do know
-	// that the polynomial is reducible, so half of our choices
-	// are generators.  Just try them in order until we find one.
 	var f Field
 	x := 1
 	for i := 0; i < 255; i++ {
