@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-var f = NewField(0x11d) // x^8 + x^4 + x^3 + x^2 + 1
+var f = NewField(0x11d, 2) // x^8 + x^4 + x^3 + x^2 + 1
 
 func TestBasic(t *testing.T) {
 	if f.Exp(0) != 1 || f.Exp(1) != 2 || f.Exp(255) != 1 {
@@ -146,10 +146,10 @@ func TestGen(t *testing.T) {
 }
 
 func TestReducible(t *testing.T) {
-	var count = []int{1, 2, 3, 6, 9, 18, 30, 56, 99, 186}  // oeis.org/A1037
+	var count = []int{1, 2, 3, 6, 9, 18, 30, 56, 99, 186} // oeis.org/A1037
 	for i, want := range count {
 		n := 0
-		for p := 1<<uint(i+2); p < 1<<uint(i+3); p++ {
+		for p := 1 << uint(i+2); p < 1<<uint(i+3); p++ {
 			if !reducible(p) {
 				n++
 			}
@@ -165,15 +165,30 @@ func TestExhaustive(t *testing.T) {
 		if reducible(poly) {
 			continue
 		}
-		f := NewField(poly)
+		α := 2
+		for !generates(α, poly) {
+			α++
+		}
+		f := NewField(poly, α)
 		for p := 0; p < 256; p++ {
 			for q := 0; q < 256; q++ {
 				fm := int(f.Mul(byte(p), byte(q)))
-				pm := polyDiv(polyMul(p, q), poly)
-				if fm != pm {	
+				pm := mul(p, q, poly)
+				if fm != pm {
 					t.Errorf("NewField(%#x).Mul(%#x, %#x) = %#x, want %#x", poly, p, q, fm, pm)
 				}
 			}
 		}
 	}
+}
+
+func generates(α, poly int) bool {
+	x := α
+	for i := 0; i < 254; i++ {
+		if x == 1 {
+			return false
+		}
+		x = mul(x, α, poly)
+	}
+	return true
 }

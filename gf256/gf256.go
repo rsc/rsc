@@ -13,33 +13,44 @@ type Field struct {
 	exp [510]byte
 }
 
-// NewField returns a new field corresponding to the given polynomial.
-// Two common polynomials are 0x11b (used in AES) and 0x11d (used
-// by the Reed-Solomon encoding in QR codes).
-func NewField(poly int) *Field {
+// NewField returns a new field corresponding to the polynomial poly
+// and generator α.  The Reed-Solomon encoding in QR codes uses
+// polynomial 0x11d with generator 2.
+func NewField(poly, α int) *Field {
 	if poly < 0x100 || poly >= 0x200 || reducible(poly) {
 		panic("gf256: invalid polynomial: " + strconv.Itoa(poly))
 	}
-	
+
 	// We don't know what the generator is, but we do know
 	// that the polynomial is reducible, so half of our choices
 	// are generators.  Just try them in order until we find one.
 	var f Field
-Search:
-	for gen := 2;; gen++ {
-		x := 1
-		for i := 0; i < 255; i++ {
-			if x == 1 && i != 0 {
-				continue Search
-			}
-			f.exp[i] = byte(x)
-			f.exp[i+255] = byte(x)
-			f.log[x] = byte(i)
-			x = polyDiv(polyMul(x, gen), poly)
+	x := 1
+	for i := 0; i < 255; i++ {
+		if x == 1 && i != 0 {
+			panic("gf256: invalid generator " + strconv.Itoa(α) +
+				" for polynomial " + strconv.Itoa(poly))
 		}
-		break
+		f.exp[i] = byte(x)
+		f.exp[i+255] = byte(x)
+		f.log[x] = byte(i)
+		x = mul(x, α, poly)
 	}
 	f.log[0] = 255
+	for i := 0; i < 255; i++ {
+		if f.log[f.exp[i]] != byte(i) {
+			panic("bad log")
+		}
+		if f.log[f.exp[i+255]] != byte(i) {
+			panic("bad log")
+		}
+	}
+	for i := 1; i < 256; i++ {
+		if f.exp[f.log[i]] != byte(i) {
+			panic("bad log")
+		}
+	}
+
 	return &f
 }
 
@@ -58,21 +69,26 @@ func polyDiv(p, q int) int {
 	nq := nbit(q)
 	for ; np >= nq; np-- {
 		if p&(1<<(np-1)) != 0 {
-			p ^= q<<(np-nq)
+			p ^= q << (np - nq)
 		}
 	}
 	return p
 }
 
-// polyMul returns the result of multiplying polynomial p by q.
-func polyMul(p, q int) int {
-	prod := 0
-	for i := uint(0); 1<<i <= p; i++ {
-		if p&(1<<i) != 0 {
-			prod ^= q<<i
+// mul returns the product x*y mod poly, a GF(256) multiplication.
+func mul(x, y, poly int) int {
+	z := 0
+	for x > 0 {
+		if x&1 != 0 {
+			z ^= y
+		}
+		x >>= 1
+		y <<= 1
+		if y&0x100 != 0 {
+			y ^= poly
 		}
 	}
-	return prod
+	return z
 }
 
 // reducible reports whether p is reducible.
@@ -134,7 +150,7 @@ func (f *Field) Mul(x, y byte) byte {
 type RSEncoder struct {
 	f    *Field
 	c    int
-	gen []byte
+	gen  []byte
 	lgen []byte
 	p    []byte
 }
