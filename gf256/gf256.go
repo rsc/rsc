@@ -16,6 +16,8 @@ type Field struct {
 // NewField returns a new field corresponding to the polynomial poly
 // and generator α.  The Reed-Solomon encoding in QR codes uses
 // polynomial 0x11d with generator 2.
+//
+// The choice of generator α only affects the Exp and Log operations.
 func NewField(poly, α int) *Field {
 	if poly < 0x100 || poly >= 0x200 || reducible(poly) {
 		panic("gf256: invalid polynomial: " + strconv.Itoa(poly))
@@ -107,7 +109,7 @@ func (f *Field) Add(x, y byte) byte {
 	return x ^ y
 }
 
-// Exp returns the base 2 exponential of e in the field.
+// Exp returns the the base-α exponential of e in the field.
 // If e < 0, Exp returns 0.
 func (f *Field) Exp(e int) byte {
 	if e < 0 {
@@ -116,7 +118,7 @@ func (f *Field) Exp(e int) byte {
 	return f.exp[e%255]
 }
 
-// Log returns the base 2 logarithm of x in the field.
+// Log returns the base-α logarithm of x in the field.
 // If x == 0, Log returns -1.
 func (f *Field) Log(x byte) int {
 	if x == 0 {
