@@ -579,7 +579,7 @@ func create(c appengine.Context, name string, isDir bool, data []byte) (*FileInf
 		Qid:     rfi.Seq,
 		Seq:     rfi.Seq,
 		ModTime: time.Now(),
-		Size:    0,
+		Size:    int64(len(data)),
 		IsDir:   isDir,
 	}
 	if _, err := datastore.Put(c, key, fi1); err != nil {
@@ -613,7 +613,11 @@ func (ae) NewContext(req *http.Request) interface{} {
 
 func (ae) User(ctxt interface{}) string {
 	c := ctxt.(appengine.Context)
-	return user.Current(c).String()
+	u := user.Current(c)
+	if u == nil {
+		return "?"
+	}
+	return u.String()
 }
 
 type cacheKey struct {
@@ -872,12 +876,10 @@ func cacheRead(c appengine.Context, kind, name, path string) (mtime int64, data 
 		if item != nil {
 			data = item.Value
 		}
-		if true || chatty {
-			if err != nil {
-				c.Infof("memcache miss %q %v", key, err)
-			} else {
-				c.Infof("memcache hit %q (%d bytes)", key, len(data))
-			}
+		if err != nil {
+			c.Infof("memcache miss %q %v", key, err)
+		} else if chatty {
+			c.Infof("memcache hit %q (%d bytes)", key, len(data))
 		}
 		if kind != "data" {
 			// Not a file; whatever memcache says is all we have.
@@ -890,12 +892,12 @@ func cacheRead(c appengine.Context, kind, name, path string) (mtime int64, data 
 		_, err = memcache.JSON.Get(c, statkey, &st)
 		if err == nil {
 			if st.Error != "" {
-				if true || chatty {
+				if chatty {
 					c.Infof("memcache hit stat error %q %q", statkey, st.Error)
 				}
 				err = errors.New(st.Error)
 			} else {
-				if true || chatty {
+				if chatty {
 					c.Infof("memcache hit stat %q", statkey)
 				}
 			}
