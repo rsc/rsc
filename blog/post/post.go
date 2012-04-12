@@ -19,11 +19,12 @@ import (
 	"time"
 
 	"code.google.com/p/rsc/appfs/fs"
+	"code.google.com/p/rsc/appfs/proto"
 	"code.google.com/p/rsc/blog/atom"
 )
 
 func init() {
-	fs.Root = os.Getenv("HOME") + "/"
+	fs.Root = os.Getenv("HOME") + "/app/"
 	http.HandleFunc("/", serve)
 	http.Handle("/feeds/posts/default", http.RedirectHandler("/feed.atom", http.StatusFound))
 }
@@ -60,12 +61,17 @@ func (t *blogTime) UnmarshalJSON(data []byte) (err error) {
 }
 
 type PostData struct {
+	FileModTime time.Time
+	FileSize int64
+
 	Title    string
 	Date     blogTime
 	Name     string
 	OldURL   string
 	Summary  string
 	Favorite bool
+	
+	Reader []string
 
 	PlusAuthor string // Google+ ID of author
 	PlusPage   string // Google+ Post ID for comment post
@@ -75,6 +81,15 @@ type PostData struct {
 	Comments bool
 	
 	article string
+}
+
+func (d *PostData) canRead(user string) bool {
+	for _, r := range d.Reader {
+		if r == user {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *PostData) IsDraft() bool {
@@ -112,6 +127,8 @@ var replacer = strings.NewReplacer(
 	"₇", "<sub>7</sub>",
 	"₈", "<sub>8</sub>",
 	"₉", "<sub>9</sub>",
+	"``", "&ldquo;",
+	"''", "&rdquo;",
 )
 
 func serve(w http.ResponseWriter, req *http.Request) {
@@ -149,23 +166,21 @@ func serve(w http.ResponseWriter, req *http.Request) {
 		oldRedirect(ctxt, w, req, p)
 	}
 
+	user := ctxt.User()
+	isOwner := ctxt.User() == owner || len(os.Args) >= 2 && os.Args[1] == "LISTEN_STDIN"
 	if p == "" || p == "/" || p == "/draft" {
-		if p == "/draft" {
-			user := ctxt.User()
-			if user != owner {
-				ctxt.Criticalf("/draft loaded by %s", user)
-				notfound(ctxt, w, req)
-				return
-			}
+		if p == "/draft" && user == "?" {
+			ctxt.Criticalf("/draft loaded by %s", user)
+			notfound(ctxt, w, req)
+			return
 		}
-		toc(w, req, p == "/draft")
+		toc(w, req, p == "/draft", isOwner, user)
 		return
 	}
 
 	draft := false
 	if strings.HasPrefix(p, "/draft/") {
-		user := ctxt.User()
-		if user != owner {
+		if user == "?" {
 			ctxt.Criticalf("/draft loaded by %s", user)
 			notfound(ctxt, w, req)
 			return
@@ -190,9 +205,14 @@ func serve(w http.ResponseWriter, req *http.Request) {
 	// Use just 'blog' as the cache path so that if we change
 	// templates, all the cached HTML gets invalidated.
 	var data []byte
-	if key, ok := ctxt.CacheLoad("bloghtml:"+p, "blog", &data); !ok {
+	pp := "bloghtml:"+p
+	if draft && !isOwner {
+		pp += ",user="+user
+	}
+	if key, ok := ctxt.CacheLoad(pp, "blog", &data); !ok {
 		meta, article, err := loadPost(ctxt, p, req)
-		if err != nil || !draft && meta.IsDraft() {
+		if err != nil || meta.IsDraft() != draft || (draft && !isOwner && !meta.canRead(user)) {
+			ctxt.Criticalf("no %s for %s", p, user)
 			notfound(ctxt, w, req)
 			return
 		}
@@ -250,7 +270,7 @@ func loadPost(c *fs.Context, name string, req *http.Request) (meta *PostData, ar
 		HostURL: hostURL(req),
 	}
 
-	art, _, err := c.Read("blog/post/" + name)
+	art, fi, err := c.Read("blog/post/" + name)
 	if err != nil {
 		return nil, "", err
 	}
@@ -265,6 +285,8 @@ func loadPost(c *fs.Context, name string, req *http.Request) (meta *PostData, ar
 		}
 		art = rest
 	}
+	meta.FileModTime = fi.ModTime
+	meta.FileSize = fi.Size
 
 	return meta, replacer.Replace(string(art)), nil
 }
@@ -281,7 +303,7 @@ type TocData struct {
 	Posts []*PostData
 }
 
-func toc(w http.ResponseWriter, req *http.Request, draft bool) {
+func toc(w http.ResponseWriter, req *http.Request, draft bool, isOwner bool, user string) {
 	c := fs.NewContext(req)
 
 	var data []byte
@@ -289,6 +311,10 @@ func toc(w http.ResponseWriter, req *http.Request, draft bool) {
 	if req.FormValue("readdir") != "" {
 		keystr += ",readdir=" + req.FormValue("readdir")
 	}
+	if draft {
+		keystr += ",user="+user
+	}
+
 	if key, ok := c.CacheLoad(keystr, "blog", &data); !ok {
 		c := fs.NewContext(req)
 		dir, err := c.ReadDir("blog/post")
@@ -300,21 +326,58 @@ func toc(w http.ResponseWriter, req *http.Request, draft bool) {
 			fmt.Fprintf(w, "%d dir entries\n", len(dir))
 			return
 		}
-		
-		var all []*PostData
-		for _, d := range dir {
-			meta, _, err := loadPost(c, d.Name, req)
-			if err != nil {
-				// Should not happen: we just listed the directory.
-				panic(err)
+
+		postCache := map[string]*PostData{}
+		if data, _, err := c.Read("blogcache"); err == nil {
+			if err := json.Unmarshal(data, &postCache); err != nil {
+				c.Criticalf("unmarshal blogcache: %v", err)
 			}
-			if meta.IsDraft() != draft {
+		}
+		
+		ch := make(chan *PostData, len(dir))
+		const par = 20
+		var limit = make(chan bool, par)
+		for i := 0; i < par; i++ {
+			limit <- true
+		}
+		for _, d := range dir {
+			if meta := postCache[d.Name]; meta != nil && meta.FileModTime.Equal(d.ModTime) && meta.FileSize == d.Size {
+				ch <- meta
 				continue
 			}
-			all = append(all, meta)
+
+			<-limit
+			go func(d proto.FileInfo) {
+				defer func() { limit <- true }() 
+				meta, _, err := loadPost(c, d.Name, req)
+				if err != nil {
+					// Should not happen: we just listed the directory.
+					c.Criticalf("loadPost %s: %v", d.Name, err)
+					return
+				}
+				ch <- meta
+			}(d)
+		}
+		for i := 0; i < par; i++ {
+			<-limit
+		}
+		close(ch)
+		postCache = map[string]*PostData{}
+		var all []*PostData
+		for meta := range ch {
+			postCache[meta.Name] = meta
+			if meta.IsDraft() == draft && (!draft || isOwner || meta.canRead(user)) {
+				all = append(all, meta)
+			}
 		}
 		sort.Sort(byTime(all))
-	
+		
+		if data, err := json.Marshal(postCache); err != nil {
+			c.Criticalf("marshal blogcache: %v", err)
+		} else if err := c.Write("blogcache", data); err != nil {
+			c.Criticalf("write blogcache: %v", err)
+		}
+
 		var buf bytes.Buffer
 		t := mainTemplate(c)
 		if err := t.Lookup("toc").Execute(&buf, &TocData{draft, hostURL(req), all}); err != nil {
