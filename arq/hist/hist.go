@@ -152,7 +152,7 @@ func list(dates []string, file string) {
 			}
 			cmd.Wait()
 		}
-		fmt.Printf("%s %s %d\n", fi.ModTime().Format(timeFormat), file, fi.Size())
+		fmt.Printf("%s %s %d\n", fi.ModTime().Format(timeFormat), p, fi.Size())
 		last = fi
 		lastPath = p
 	}
