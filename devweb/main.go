@@ -242,6 +242,8 @@ func buildProxy() (c net.Conn, proxy *cmdProxy, err error) {
 
 	cmd := exec.Command("prox.exe", "LISTEN_STDIN")
 	cmd.Stdin, err = l.(*net.TCPListener).File()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err != nil {
 		l.Close()
 		return nil, nil, err
