@@ -3,3 +3,4 @@ _*
 [568].out
 core
 *.cgo*.o
+app/tmp
