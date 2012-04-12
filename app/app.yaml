@@ -14,9 +14,6 @@ handlers:
 - url: /draft(/.*)?
   script: _go_app
   login: required
-- url: /qr/draw
-  script: _go_app
-  login: admin
 - url: /admin(/.*)?
   script: _go_app
   login: admin
