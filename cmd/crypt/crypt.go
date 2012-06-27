@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	
+
 	"code.google.com/p/rsc/crypt"
 )
 
@@ -38,7 +38,7 @@ func main() {
 		os.Exit(2)
 	}
 	password := args[0]
-	
+
 	data, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "reading stdin: %v\n", err)
