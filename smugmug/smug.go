@@ -61,7 +61,7 @@ type loginResult struct {
 func Login(email, passwd, apikey string) (*Conn, error) {
 	c := &Conn{}
 	var out loginResult
-	if err := c.do("smugmug.login.withPassword", &out, "EmailAddress", email, "Password", passwd); err != nil {
+	if err := c.do("smugmug.login.withPassword", &out, "APIKey", apikey, "EmailAddress", email, "Password", passwd); err != nil {
 		return nil, err
 	}
 
