@@ -20,7 +20,7 @@ import (
 	"code.google.com/p/rsc/smugmug"
 )
 
-const apiKey = "Is6USeDVUAiQYkXXhKONszhHsQwXy0tv"
+const apiKey = "8qH4UgiunBKpsYpvcBXftbCYNEreAZ0m"
 
 var usageMessage = `usage: smugup [options] 'album title' [photo.jpg ...]
 
