@@ -158,12 +158,12 @@ Loop:
 				}
 				if w.blinky {
 					w.blinky = false
-					w.Printf("ctl", "dirty\n")
+					w.Fprintf("ctl", "dirty\n")
 				}
 				switch w.C2 {
 				case 'X', 'x':
 					if string(w.Text) == "Ack" {
-						w.Printf("ctl", "clean\n")
+						w.Fprintf("ctl", "clean\n")
 					}
 				case 'I':
 					w.sendMsg()
@@ -175,7 +175,7 @@ Loop:
 		case msg := <-msgChan:
 			w := msg.w
 			if msg.err != nil {
-				w.Printf("body", "ERROR: %s\n", msg.err)
+				w.Fprintf("body", "ERROR: %s\n", msg.err)
 				continue Loop
 			}
 			you := msg.Remote
@@ -222,9 +222,9 @@ Loop:
 				if w.blinky {
 					w.dirty = !w.dirty
 					if w.dirty {
-						w.Printf("ctl", "dirty\n")
+						w.Fprintf("ctl", "dirty\n")
 					} else {
-						w.Printf("ctl", "clean\n")
+						w.Fprintf("ctl", "clean\n")
 					}
 				}
 			}
@@ -394,7 +394,7 @@ func mainStatus(pr *xmpp.Presence, you string) {
 	if err := w.Addr("#%d/.*/", q1); err != nil {
 		log.Printf("Addr3: %s\n", err)
 	}
-	w.Printf("data", "%s%s", space, pr.StatusMsg)
+	w.Fprintf("data", "%s%s", space, pr.StatusMsg)
 
 	space = ""
 	if q0 == q2 {
@@ -403,12 +403,12 @@ func mainStatus(pr *xmpp.Presence, you string) {
 	} else {
 		w.Addr("#%d,#%d", q0, q0+1)
 	}
-	w.Printf("data", "%s%s", short(pr.Status), space)
+	w.Fprintf("data", "%s%s", short(pr.Status), space)
 }
 
 func (w *Window) expand() {
 	// Use selection if any.
-	w.Printf("ctl", "addr=dot\n")
+	w.Fprintf("ctl", "addr=dot\n")
 	q0, q1, err := w.ReadAddr()
 	if err == nil && q0 <= w.Q0 && w.Q0 <= q1 {
 		goto Read
@@ -456,7 +456,7 @@ func (w *Window) message(format string, args ...interface{}) {
 		q0, q1, _ := w.ReadAddr()
 		log.Printf("inserting; addr=%d,%d", q0, q1)
 	}
-	w.Printf("data", nl+w.time()+format+"\n", args...)
+	w.Fprintf("data", nl+w.time()+format+"\n", args...)
 	if *acmeDebug {
 		q0, q1, _ := w.ReadAddr()
 		log.Printf("wrote; addr=%d,%d", q0, q1)
@@ -502,12 +502,12 @@ func (w *Window) sendMsg() {
 		if err != nil {
 			errstr = fmt.Sprintf("\n%s", errstr)
 		}
-		w.Printf("data", "%s%s%s%s\n\n", nl, w.time(), trim, errstr)
+		w.Fprintf("data", "%s%s%s%s\n\n", nl, w.time(), trim, errstr)
 		if *acmeDebug {
 			q0, q1, _ := w.ReadAddr()
 			log.Printf("wrote; addr=%d,%d", q0, q1)
 		}
-		w.Printf("ctl", "clean\n")
+		w.Fprintf("ctl", "clean\n")
 	}
 }
 
@@ -557,11 +557,11 @@ func showContact(you string) *Window {
 	name := "Chat/" + acct.Nick + "/" + you
 	ww.Name(name)
 	w = &Window{Win: ww, typ: "chat", name: name, remote: you}
-	w.Printf("body", "\n")
+	w.Fprintf("body", "\n")
 	w.Addr("#1")
 	w.OpenEvent()
-	w.Printf("ctl", "cleartag\n")
-	w.Printf("tag", " Ack")
+	w.Fprintf("ctl", "cleartag\n")
+	w.Fprintf("tag", " Ack")
 	if p := cachedPresence(you); p != nil {
 		w.status(p)
 	}
