@@ -103,7 +103,7 @@ func main() {
 	cmd.Stdout = w
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
-		log.Fatal("mount process: %v", err)
+		log.Fatalf("mount process: %v", err)
 	}
 	w.Close()
 	
@@ -124,7 +124,7 @@ func mountslave() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	auth := aws.Auth{access, secret}
+	auth := aws.Auth{AccessKey: access, SecretKey: secret}
 
 	conn, err := arq.Dial(auth)
 	if err != nil {

@@ -498,7 +498,7 @@ func Encode(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 	
-	c := &qr.Code{cc.Bitmap, cc.Size, cc.Stride, 8}
+	c := &qr.Code{Bitmap: cc.Bitmap, Size: cc.Size, Stride: cc.Stride, Scale: 8}
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.Write(c.PNG())
