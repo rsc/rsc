@@ -60,7 +60,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	auth := aws.Auth{access, secret}
+	auth := aws.Auth{AccessKey: access, SecretKey: secret}
 
 	b := s3.New(auth, aws.USEast).Bucket(buck)
 	if *list {

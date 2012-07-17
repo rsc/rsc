@@ -66,7 +66,7 @@ type dstate struct {
 }
 
 func (z *nstate) String() string {
-	return fmt.Sprintf("%v/%#x+%#x", z.q.Dense(), z.flag)
+	return fmt.Sprintf("%v/%#x+%#x", z.q.Dense(), z.flag, z.needFlag)
 }
 
 // enc encodes z as a string.

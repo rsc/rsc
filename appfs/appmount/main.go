@@ -99,7 +99,7 @@ func main() {
 	cmd.Stdout = w
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
-		log.Fatal("mount process: %v", err)
+		log.Fatalf("mount process: %v", err)
 	}
 	w.Close()
 	

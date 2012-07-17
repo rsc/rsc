@@ -846,7 +846,7 @@ Again:
 		}
 	}
 
-	m.Code = &qr.Code{cc.Bitmap, cc.Size, cc.Stride, m.Scale}
+	m.Code = &qr.Code{Bitmap: cc.Bitmap, Size: cc.Size, Stride: cc.Stride, Scale: m.Scale}
 
 	if m.SaveControl {
 		m.Control = pngEncode(makeImage(req, "", "", 0, cc.Size, 4, m.Scale, func(x, y int) (rgba uint32) {
