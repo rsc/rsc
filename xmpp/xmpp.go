@@ -120,7 +120,7 @@ func (c *Client) Close() error {
 
 func (c *Client) init(user, passwd string) error {
 	// For debugging: the following causes the plaintext of the connection to be duplicated to stdout.
-	//	c.p = xml.NewParser(tee{c.tls, os.Stdout});
+	//	c.p = xml.NewDecoder(tee{c.tls, os.Stdout});
 	c.p = xml.NewDecoder(c.tls)
 
 	a := strings.SplitN(user, "@", 2)
@@ -366,12 +366,12 @@ type tlsFailure struct {
 
 type saslMechanisms struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:xmpp-sasl mechanisms"`
-	Mechanism []string
+	Mechanism []string `xml:"mechanism"`
 }
 
 type saslAuth struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:xmpp-sasl auth"`
-	Mechanism string   `xml:"attr"`
+	Mechanism string `xml:",attr"`
 }
 
 type saslChallenge string
@@ -403,43 +403,43 @@ type bindBind struct {
 
 type clientMessage struct {
 	XMLName xml.Name `xml:"jabber:client message"`
-	From    string   `xml:"attr"`
-	Id      string   `xml:"attr"`
-	To      string   `xml:"attr"`
-	Type    string   `xml:"attr"` // chat, error, groupchat, headline, or normal
+	From    string   `xml:"from,attr"`
+	Id      string   `xml:"id,attr"`
+	To      string   `xml:"to,attr"`
+	Type    string   `xml:"type,attr"` // chat, error, groupchat, headline, or normal
 
 	// These should technically be []clientText,
 	// but string is much more convenient.
-	Subject string
-	Body    string
-	Thread  string
+	Subject string `xml:"subject"`
+	Body    string `xml:"body"`
+	Thread  string `xml:"thread"`
 }
 
 type clientText struct {
-	Lang string `xml:"attr"`
+	Lang string `xml:",attr"`
 	Body string `xml:"chardata"`
 }
 
 type clientPresence struct {
 	XMLName xml.Name `xml:"jabber:client presence"`
-	From    string   `xml:"attr"`
-	Id      string   `xml:"attr"`
-	To      string   `xml:"attr"`
-	Type    string   `xml:"attr"` // error, probe, subscribe, subscribed, unavailable, unsubscribe, unsubscribed
-	Lang    string   `xml:"attr"`
+	From    string   `xml:"from,attr"`
+	Id      string   `xml:"id,attr"`
+	To      string   `xml:"to,attr"`
+	Type    string   `xml:"type,attr"` // error, probe, subscribe, subscribed, unavailable, unsubscribe, unsubscribed
+	Lang    string   `xml:"lang,attr"`
 
-	Show     string // away, chat, dnd, xa
-	Status   string // sb []clientText
-	Priority string
+	Show     string `xml:"show,attr"`// away, chat, dnd, xa
+	Status   string `xml:"status,attr"`// sb []clientText
+	Priority string `xml:"priority,attr"`
 	Error    *clientError
 }
 
 type clientIQ struct { // info/query
 	XMLName xml.Name `xml:"jabber:client iq"`
-	From    string   `xml:"attr"`
-	Id      string   `xml:"attr"`
-	To      string   `xml:"attr"`
-	Type    string   `xml:"attr"` // error, get, result, set
+	From    string   `xml:",attr"`
+	Id      string   `xml:",attr"`
+	To      string   `xml:",attr"`
+	Type    string   `xml:",attr"` // error, get, result, set
 	Error   clientError
 	Bind    bindBind
 	Query   clientQuery
@@ -447,8 +447,8 @@ type clientIQ struct { // info/query
 
 type clientError struct {
 	XMLName xml.Name `xml:"jabber:client error"`
-	Code    string   `xml:"attr"`
-	Type    string   `xml:"attr"`
+	Code    string   `xml:",attr"`
+	Type    string   `xml:",attr"`
 	Any     xml.Name
 	Text    string
 }
@@ -459,9 +459,9 @@ type clientQuery struct {
 
 type rosterItem struct {
 	XMLName      xml.Name `xml:"jabber:iq:roster item"`
-	Jid          string   `xml:"attr"`
-	Name         string   `xml:"attr"`
-	Subscription string   `xml:"attr"`
+	Jid          string   `xml:",attr"`
+	Name         string   `xml:",attr"`
+	Subscription string   `xml:",attr"`
 	Group        []string
 }
 
