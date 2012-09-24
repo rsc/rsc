@@ -24,7 +24,9 @@ var (
 	warnCall = flag.Bool("warncall", false, "warn about CALLs")
 	fixOffset = flag.Bool("fixoffset", false, "fix offsets")
 	fixNames = flag.Bool("fixnames", false, "fix variable names")
-	
+	useInt64 = flag.Bool("int64", false, "assume 64-bit int on amd64")
+	fixInt64 = flag.Bool("fixint64", false, "assume converting to 64-bit int on amd64")
+
 	diffMode = flag.Bool("d", false, "diff")
 	verbose = flag.Bool("v", false, "verbose")
 
@@ -34,6 +36,8 @@ var (
 	intSize = 4
 	ptrKind = "L"
 	ptrSize = 4
+	
+	newIntSize = intSize
 )
 
 func init() {
@@ -45,6 +49,15 @@ func main() {
 	if build.Default.GOARCH == "amd64" {
 		ptrKind = "Q"
 		ptrSize = 8
+		if *useInt64 {
+			intSize = 8
+			newIntSize = intSize
+			intKind = "Q"
+		}
+		if *fixInt64 {
+			newIntSize = 8
+			*fixOffset = true
+		}
 	}
 	args := flag.Args()
 	if len(args) == 0 {
@@ -76,15 +89,17 @@ type varInfo struct {
 type funcInfo struct {
 	vars map[string]*varInfo
 	varByOffset map[int]*varInfo
+	size int
 }
 
 var funcByName map[string]*funcInfo
 
 var (
 	call = regexp.MustCompile(`\b(CALL|BL)\b`)
-	text = regexp.MustCompile(`\bTEXT\b.*·([^\(]+)\(SB\)`)
+	text = regexp.MustCompile(`\bTEXT\b.*·([^\(]+)\(SB\)(?:\s*,\s*([0-9]+))?(?:\s*,\s*\$([0-9]+)(?:-([0-9]+))?)?`)
 	globl = regexp.MustCompile(`\b(DATA|GLOBL)\b`)
-	fp = regexp.MustCompile(`([a-zA-Z0-9_\xFF-\x{10FFFF}]+)(?:\+(\d+))\(FP\)`)
+	fp = regexp.MustCompile(`([a-zA-Z0-9_\xFF-\x{10FFFF}]+)(?:\+([0-9]+))\(FP\)`)
+	fp2 = regexp.MustCompile(`[^+\-0-9]](([0-9]+)\(FP\))`)
 	inst = regexp.MustCompile(`^\s*(?:[A-Z0-9a-z_]+:)?\s*([A-Z]+)\s*([^,]*)(?:,\s*(.*))?`)
 )
 
@@ -145,6 +160,12 @@ func check(p *build.Package) {
 			}
 			if m := text.FindStringSubmatch(line); m != nil {
 				curFunc = funcByName[m[1]]
+				if curFunc != nil && m[2] != "7" {
+					size, _ := strconv.Atoi(m[4])
+					if size != curFunc.size {
+						fmt.Printf("%s:%d: wrong argument size %d - should be %d\n", path, i+1, size, curFunc.size)
+					}
+				}
 				buf.WriteString(line)
 				continue
 			}
@@ -158,6 +179,10 @@ func check(p *build.Package) {
 				continue
 			}
 			origLine := line
+			for _, m := range fp2.FindAllStringSubmatch(line, -1) {
+				fmt.Printf("%s:%d: use of unnamed argument %s\n", path, i+1, m[1])
+				continue
+			}
 			for _, m := range fp.FindAllStringSubmatch(line, -1) {
 				name := m[1]
 				off := 0
@@ -230,6 +255,7 @@ func check(p *build.Package) {
 				} else {
 					instKind = instSrc
 				}
+				newExtra := 0
 				switch v.kind {
 				case "B", "W", "L", "Q":
 					halfMove := build.Default.GOARCH != "amd64" && instKind == "L" && v.kind == "Q"
@@ -267,12 +293,21 @@ func check(p *build.Package) {
 					case ptrSize+intSize:
 						if instKind != intKind {
 							fmt.Printf("%s:%d: invalid %s of %s (slice cap)\n", path, i+1, instm[1], m[0])
-						}	
+						}
+						newExtra += newIntSize - intSize
 					}
 				}
-				if *fixOffset && v.newOff != v.off {
-					off += v.newOff - v.off
-					line = regexp.MustCompile(`\b`+regexp.QuoteMeta(m[0])+`\b`).ReplaceAllString(line, fmt.Sprintf("%s+%d(FP)", v.name, off))
+				if *verbose {
+					fmt.Printf("%s:%d: checked %s; newoff=%d\n", path, i+1, m[0], v.newOff+newExtra)
+				}
+				if *fixOffset && v.newOff+newExtra != v.off {
+					off += v.newOff+newExtra - v.off
+					newArg := fmt.Sprintf("%s+%d(FP)", v.name, off)
+					re := `\b`+regexp.QuoteMeta(m[0])
+					line = regexp.MustCompile(re).ReplaceAllString(line, newArg)
+					if *verbose {
+						fmt.Printf("%s:%d: %s -> %s\n", path, i+1, m[0], newArg)
+					}
 				}					
 			}
 			buf.WriteString(line)
@@ -309,10 +344,11 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 	}
 	
 	off := 0
+	newOff := 0
 	doparams := func(list []*ast.Field) {
 		for i, f := range list {
 			names := f.Names
-			var align, size int
+			var align, size, newAlign, newSize int
 			var kind string
 			typ := gofmt(f.Type)
 			switch t := f.Type.(type) {
@@ -344,6 +380,8 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 					kind = intKind
 					size = intSize
 					align = intSize
+					newSize = newIntSize
+					newAlign = newIntSize
 				case "uintptr", "Word", "Errno", "unsafe.Pointer":
 					kind = ptrKind
 					size = ptrSize
@@ -362,6 +400,7 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 					kind = "slice"
 					align = ptrSize
 					size = ptrSize + 2*intSize
+					newSize = ptrSize + 2*newIntSize
 					break
 				}
 				log.Fatalf("%s: %s: array type not supported", file, decl.Name.Name)
@@ -372,8 +411,15 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 			if align == 0 {
 				log.Fatalf("%s: %s: 0 alignment for %s", file, decl.Name.Name, typ)
 			}
+			if newAlign == 0 {
+				newAlign = align
+			}
+			if newSize == 0 {
+				newSize = size
+			}
 
 			off += -off&(align-1)
+			newOff += -newOff&(newAlign-1)
 			if len(names) == 0 {
 				name := "_"
 				if decl.Type.Results != nil && len(decl.Type.Results.List) > 0 && &list[0] == &decl.Type.Results.List[0] && i == 0 {
@@ -388,13 +434,14 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 					kind: kind,
 					typ: typ,
 					off: off,
-					newOff: off,
+					newOff: newOff,
 				}
 				funci.vars[name] = v
 				for j := 0; j < size; j++ {
 					funci.varByOffset[v.off+j] = v
 				}
 				off += size
+				newOff += newSize
 			}
 		}
 	}
@@ -402,8 +449,10 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 	doparams(decl.Type.Params.List)
 	if decl.Type.Results != nil && len(decl.Type.Results.List) > 0 {
 		off += -off&(ptrSize-1)
+		newOff += -newOff&(ptrSize-1)
 		doparams(decl.Type.Results.List)
 	}
+	funci.size = off
 	
 	return funci
 }
