@@ -140,7 +140,7 @@ func main() {
 			continue
 		}
 
-		err := upload(path.Base(dir), f)
+		err = upload(path.Base(dir), f)
 		os.Remove(f.Name())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "upload %s: %s\n", dir, err)
