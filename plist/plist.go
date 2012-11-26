@@ -171,6 +171,8 @@ func skipValue(data []byte) (rest []byte, err error) {
 			if n == 0 {
 				break
 			}
+		} else if tag[len(tag)-2] == '/' {
+			// self-closing tag - ignore
 		} else {
 			n++
 		}

@@ -28,6 +28,8 @@ var thePlist = `<plist version="1.0">
             <string>/go1/pkg</string>
             <string>/Library/Caches</string>
         </array>
+        <key>Dead</key>
+        <string>foo<br/>baz</string>
         <key>Excludes</key>
         <dict>
             <key>excludes</key>
