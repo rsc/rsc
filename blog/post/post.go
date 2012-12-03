@@ -164,6 +164,7 @@ func serve(w http.ResponseWriter, req *http.Request) {
 	if strings.HasPrefix(p, "/20") && strings.Contains(p[1:], "/") {
 		// Assume this is an old-style URL.
 		oldRedirect(ctxt, w, req, p)
+		return
 	}
 
 	user := ctxt.User()
