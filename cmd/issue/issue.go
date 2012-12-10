@@ -449,9 +449,9 @@ var go11template = `<html>
         rehide();
       }
       function start() {
-        if (window.location.hash == "s") {
+        if (window.location.hash == "s" || window.location.hash == "#s") {
           dosuggest();
-        } else if (window.location.hash == "m") {
+        } else if (window.location.hash == "m" || window.location.hash == "#m") {
           dogo11maybe();
         } else {
           dogo11();
