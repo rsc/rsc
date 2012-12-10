@@ -365,6 +365,15 @@ func go11() {
 }
 
 func labeledGroup(g []Entry, s string) string {
+	if strings.HasPrefix(s, "-") {
+		for _, e := range g {
+			if t := e.Labeled(s[1:]); t != "" {
+				return ""
+			}
+		}
+		return "ok"
+	}
+		
 	for _, e := range g {
 		if t := e.Labeled(s); t != "" {
 			return t
@@ -494,7 +503,7 @@ var go11template = `<html>
     <br><br>
     <table>
     {{range .Issue}}
-      <tr class="{{if labeledGroup . "Go1.1Maybe"}}maybex{{else}}nomaybe{{end}} {{if labeledGroup . "Suggested"}}suggest{{else}}nosuggest{{end}}"><td class="dir" colspan="4">{{(index . 0).Dir}}
+      <tr class="{{if labeledGroup . "-Go1.1Maybe"}}maybex{{else}}nomaybe{{end}} {{if labeledGroup . "Suggested"}}suggest{{else}}nosuggest{{end}}"><td class="dir" colspan="4">{{(index . 0).Dir}}
       {{range .}}
         <tr class="{{if .Labeled "Go1.1Maybe"}}maybe{{else}}nomaybe{{end}} {{if .Labeled "Suggested"}}suggest{{else}}nosuggest{{end}}">
           <td class="suggest">{{if .Labeled "Suggested"}}&#x261e;{{end}}
