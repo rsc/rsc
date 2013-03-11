@@ -6,17 +6,17 @@
 // which carries this notice:
 //
 // The files in this directory are subject to the following license.
-// 
+//
 // The author of this software is Russ Cox.
-// 
+//
 //         Copyright (c) 2006 Russ Cox
-// 
+//
 // Permission to use, copy, modify, and distribute this software for any
 // purpose without fee is hereby granted, provided that this entire notice
 // is included in all copies of any software which is or includes a copy
 // or modification of this software and in all copies of the supporting
 // documentation for such software.
-// 
+//
 // THIS SOFTWARE IS BEING PROVIDED "AS IS", WITHOUT ANY EXPRESS OR IMPLIED
 // WARRANTY.  IN PARTICULAR, THE AUTHOR MAKES NO REPRESENTATION OR WARRANTY
 // OF ANY KIND CONCERNING THE MERCHANTABILITY OF THIS SOFTWARE OR ITS
@@ -78,7 +78,7 @@
 // Mount Options
 //
 // XXX
-// 
+//
 package fuse
 
 // BUG(rsc): The mount code for FreeBSD has not been written yet.
@@ -708,7 +708,14 @@ func (c *Conn) ReadRequest() (Request, error) {
 		}
 
 	case opInterrupt:
-		panic("opInterrupt")
+		in := (*interruptIn)(m.data())
+		if m.len() < unsafe.Sizeof(*in) {
+			goto corrupt
+		}
+		req = &InterruptRequest{
+			Header: m.Header(),
+			Unique: in.Unique,
+		}
 	case opBmap:
 		panic("opBmap")
 
@@ -784,6 +791,12 @@ type InitResponse struct {
 
 func (r *InitResponse) String() string {
 	return fmt.Sprintf("Init %+v", *r)
+}
+
+// An InterruptRequest asks for the request with the given unique ID to be canceled.
+type InterruptRequest struct {
+	Header
+	Unique uint64
 }
 
 // Respond replies to the request with the given response.
