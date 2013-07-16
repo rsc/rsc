@@ -138,7 +138,8 @@ func (d *jobDesc) Job() *Job {
 	}
 }
 
-// An Auth is an authentication token
+// An Auth is an authentication token that can be used to act as a
+// print server or print client.
 type Auth struct {
 	// ClientID and ClientSecret identify the client using this code.
 	// They are obtained from the Google APIs Console
