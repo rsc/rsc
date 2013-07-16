@@ -174,8 +174,10 @@ func RandomID() (string, error) {
 	return fmt.Sprintf("%x", buf), nil
 }
 
-// AuthFromWeb xxx.
+// AuthUser launches a web browser to ask the user to authenticate
+// and records the resulting token.
 func AuthUser(auth Auth) (Auth, error) {
+	// TODO: Stop using package log, package httptest.
 	config := &oauth.Config{
 		ClientId:     auth.APIClientID,
 		ClientSecret: auth.APIClientSecret,
