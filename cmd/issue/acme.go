@@ -171,6 +171,7 @@ func (w *awin) newIssue(title string, id int) {
 	w.Ctl("cleartag")
 	w.Fprintf("tag", " Get Put Look ")
 	go w.load()
+	go w.loop()
 }
 
 func (w *awin) newSearch(title, query string) {
@@ -181,6 +182,7 @@ func (w *awin) newSearch(title, query string) {
 	w.Fprintf("tag", " Search ")
 	w.Write("body", []byte("Loading..."))
 	go w.load()
+	go w.loop()
 }
 
 func (w *awin) clear() {
@@ -224,8 +226,6 @@ func (w *awin) load() {
 	w.Addr("0")
 	w.Ctl("dot=addr")
 	w.Ctl("show")
-
-	go w.loop()
 }
 
 func (w *awin) err(s string) {
