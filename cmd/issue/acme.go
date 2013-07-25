@@ -24,7 +24,9 @@ func acmeMode() {
 	dummy.prefix = "/issue/" + *project + "/"
 	if flag.NArg() > 0 {
 		for _, arg := range flag.Args() {
-			dummy.look(arg)
+			if !dummy.look(arg) {
+				dummy.newSearch("search", arg)
+			}
 		}
 	} else {
 		dummy.look("all")
