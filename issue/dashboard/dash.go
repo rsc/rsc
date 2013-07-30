@@ -26,9 +26,11 @@ type Point struct {
 }
 
 func (p Point) JSDate() template.JS {
-	yy, mm, dd := p.Time.Date()
-	h, m, s := p.Time.Clock()
-	return template.JS(fmt.Sprintf("new Date(%d, %d, %d, %d, %d, %d)", yy, mm-1, dd, h, m, s))
+	// Use Unix time because Date(yy,mm,dd...) constructor assumes
+	// the arguments are local time, and we don't know what time zone
+	// the eventual viewer of the web page is in. Using Unix time gives
+	// the correct instant and then displays in the local time zone.
+	return template.JS(fmt.Sprintf("new Date(%d)", p.Time.UnixNano()/1e6))
 }
 
 func Update(ctxt *fs.Context, client *http.Client, version string) error {
@@ -197,59 +199,52 @@ var dashTemplate = `<html>
     </script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
     <script>
-      var onlySuggest = false;
-      var hideMaybe = true;
+      var mode = "all";
       function rehide() {
+        window.location.hash = mode;
         $("tr").show();
-        if(onlySuggest) {
+        if(mode == "feature") {
+          $("tr.nofeature").hide();
+          $("#feature").html("feature-sized issues only");
+        } else {
+          $("#feature").html("<a href='javascript:dofeature()'>show feature-sized issues only</a>");
+        }
+        if(mode == "suggest") {
           $("tr.nosuggest").hide();
-        }
-        if(hideMaybe) {
-          $("tr.maybe").hide();
-        }
-        
-        if(onlySuggest && !hideMaybe) {
           $("#suggest").html("suggested issues only");
         } else {
           $("#suggest").html("<a href='javascript:dosuggest()'>show suggested issues only</a>");
         }
-        if(!onlySuggest && hideMaybe) {
+        if(mode == "yes") {
+          $("tr.maybe").hide();
           $("#yes").html("{{.Version}} issues only");
         } else {
           $("#yes").html("<a href='javascript:doyes()'>show {{.Version}} issues only</a>");
         }
-        if(!onlySuggest && !hideMaybe) {
-          $("#maybe").html("all issues");
+        if(mode == "all") {
+          $("#all").html("all issues");
         } else {
-          $("#maybe").html("<a href='javascript:domaybe()'>show all issues</a>");
+          $("#all").html("<a href='javascript:doall()'>show all issues</a>");
         }
       }
       function dosuggest() {
-        onlySuggest = true;
-        hideMaybe = false;
-        window.location.hash = "s";
+        mode = "suggest";
         rehide();
       }
       function doyes() {
-        onlySuggest = false;
-        hideMaybe = true;
-        window.location.hash = "";
+        mode = "yes";
         rehide();
       }
-      function domaybe() {
-        onlySuggest = false;
-        hideMaybe = false;
-        window.location.hash = "m";
+      function doall() {
+        mode = "all";
+        rehide();
+      }
+      function dofeature() {
+        mode = "feature";
         rehide();
       }
       function start() {
-        if (window.location.hash == "s" || window.location.hash == "#s") {
-          dosuggest();
-        } else if (window.location.hash == "m" || window.location.hash == "#m") {
-          domaybe();
-        } else {
-          doyes();
-        }
+        rehide();
       }
     </script>
     
@@ -279,19 +274,20 @@ var dashTemplate = `<html>
     <tr><td class="suggest"><td class="size">L</td><td>large change: less than 8 hours
     <tr><td class="suggest"><td class="size">XL</td><td>extra large change: more than one day
     <tr><td class="suggest"><td>&#x261e;</td><td>suggested for people looking for work
+    <tr><td class="suggest"><td>&#x2605;</td><td>must be done before feature freeze
     </table>
     </div>
     <br><br>
     
-    <span id="suggest"></span> | <span id="yes"></span> | <span id="maybe"></span>
+    <span id="all"></span> | <span id="yes"></span> | <span id="feature"></span> | <span id="suggest"></span>
 
     <br><br>
     <table>
     {{range $dir, $list := .Issues}}
-      <tr class="{{if hasLabel $list $.Label}}yes{{else}}maybe{{end}} {{if hasLabel $list "Suggested"}}suggest{{else}}nosuggest{{end}}"><td class="dir" colspan="4">{{$dir}}
+      <tr class="{{if hasLabel $list $.Label}}yes{{else}}maybe{{end}} {{if hasLabel $list "Suggested"}}suggest{{else}}nosuggest{{end}} {{if hasLabel $list "Feature"}}feature{{else}}nofeature{{end}}"><td class="dir" colspan="4">{{$dir}}
       {{range $list}}
-        <tr class="{{if hasLabel . $.Label}}yes{{else}}maybe{{end}} {{if hasLabel . "Suggested"}}suggest{{else}}nosuggest{{end}}">
-          <td class="suggest">{{if hasLabel . "Suggested"}}&#x261e;{{end}}
+        <tr class="{{if hasLabel . $.Label}}yes{{else}}maybe{{end}} {{if hasLabel . "Suggested"}}suggest{{else}}nosuggest{{end}} {{if hasLabel . "Feature"}}feature{{else}}nofeature{{end}}">
+          <td class="suggest">{{if hasLabel . "Feature"}}&#x2605;{{end}} {{if hasLabel . "Suggested"}}&#x261e;{{end}}
           <td class="size">{{hasLabel . "Size-"}}
           <td class="num">{{.ID}}
           <td class="title"><a href="http://golang.org/issue/{{.ID}}">{{.Summary}}</a>
