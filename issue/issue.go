@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -126,7 +127,7 @@ func Search(project, can, query string, detail bool, client *http.Client) ([]*Is
 		p := &Issue{
 			ID: n,
 			Meta: Meta{
-				Summary:   e.Title,
+				Summary:   strings.Replace(e.Title, "\n", " ", -1),
 				Status:    e.Status,
 				Duplicate: dup,
 				Owner:     e.Owner,
@@ -186,6 +187,7 @@ func Search(project, can, query string, detail bool, client *http.Client) ([]*Is
 		}
 	}
 
+	sort.Sort(BySummary(issues))
 	return issues, nil
 }
 

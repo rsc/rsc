@@ -274,7 +274,7 @@ var dashTemplate = `<html>
     <tr><td class="suggest"><td class="size">L</td><td>large change: less than 8 hours
     <tr><td class="suggest"><td class="size">XL</td><td>extra large change: more than one day
     <tr><td class="suggest"><td>&#x261e;</td><td>suggested for people looking for work
-    <tr><td class="suggest"><td>&#x2605;</td><td>must be done before feature freeze
+    <tr><td class="suggest"><td>&#x2605;</td><td>must be done before feature freeze (if at all)
     </table>
     </div>
     <br><br>
