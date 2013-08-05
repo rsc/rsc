@@ -1,0 +1,27 @@
+#!/bin/bash
+
+awk '
+/callq.*task_vtimer_(set|clear)/ {
+	fn = $NF
+	gsub(/[<>]/, "", fn)
+	print "// " $0
+	print "\tcall _" fn
+	skip = 1
+	next
+}
+
+/\$0x[1ab]/ { saw1a = 1 }
+
+saw1a && /callq.*/ {
+	print "// " $0
+	print "\tcall _psignal_internal"
+	skip = 1
+	saw1a = 0
+	next
+}
+
+skip { skip--; next }
+
+/^0x/ { print "// " $0; next }
+/^	/ { printf("\t"); for (i=1; i<=NF; i++) printf(".byte 0x%s;", $i); printf("\n"); }
+'
