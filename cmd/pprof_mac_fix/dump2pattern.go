@@ -20,7 +20,7 @@ import (
 	"strconv"
 )
 
-var dumpRE = regexp.MustCompile(`(?ms)^version: ([^0-9\n]+([0-9.]+)[^\n]+)\n.*\n\(gdb\)[^\n]*current_thread:(.*?)^\(gdb\).*^\(gdb\)[^\n]*bsd_ast:(.*?)^\(gdb\)`)
+var dumpRE = regexp.MustCompile(`(?ms)^version: ([^0-9\n]+([0-9][^:\n]+)[^\n]+)\n.*\n\(gdb\)[^\n]*current_thread:(.*?)^\(gdb\).*^\(gdb\)[^\n]*bsd_ast:(.*?)^\(gdb\)`)
 
 var (
 	testAsm *os.File
@@ -28,7 +28,7 @@ var (
 
 func main() {
 	log.SetFlags(0)
-	data, err := ioutil.ReadFile("z")
+	data, err := ioutil.ReadFile("dump")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,7 +67,7 @@ var extraFuncs = []string{
 var (
 	instRE = regexp.MustCompile(`(?-s)^0x[0-9a-f]+\s+<(\w+)\+([0-9]+)>:\s+(.*)$`)
 	hexRE = regexp.MustCompile(`(?-s)^\s+([0-9a-f]{2}( [0-9a-f]{2})*)\s*$`)
-	callRE = regexp.MustCompile(`callq\s+0x[0-9a-f]+\s+<(\w+(?:\+[0-9]+)?)>`)
+	callRE = regexp.MustCompile(`callq?\s+0x[0-9a-f]+\s+<(\w+(?:\+[0-9]+)?)>`)
 )
 
 func dodis(name string, dis string) {
@@ -138,7 +138,6 @@ func dodis(name string, dis string) {
 		if inst != "call psignal_internal" {
 			continue
 		}
-		nfound++
 		
 		// Found end. Work backward.
 		state := 0
@@ -153,6 +152,10 @@ func dodis(name string, dis string) {
 				state = -1
 			case state >= 2 && strings.HasPrefix(insts[j], "cmp"):
 				state++
+			case state < 2 && strings.HasPrefix(insts[j], "mov") && strings.HasPrefix(insts[j+1], "test"):
+				state = -1
+			case state >= 2 && strings.HasPrefix(insts[j], "mov") && strings.HasPrefix(insts[j+1], "test"):
+				state++			
 			}
 			if state == 4 {
 				break
@@ -161,6 +164,7 @@ func dodis(name string, dis string) {
 		if j < 0 {
 			continue
 		}
+		nfound++
 		
 		// We think insts[j:i+1] and hexes[j:i+1] are worth pursuing.
 		fmt.Printf("Starting at %s\n", lines[2*j])
