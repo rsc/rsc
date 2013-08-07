@@ -15,6 +15,7 @@ import (
 
 var tests = []string{
 	"testdata/mach_kernel_10_8_0",
+	"testdata/mach_kernel_11_4_2",
 	"testdata/mach_kernel_12_4_0",
 }
 
@@ -32,8 +33,13 @@ func TestAll(t *testing.T) {
 		k1 := loadKernel(tt + "_fix")
 		if !bytes.Equal(k.bsd_ast, k1.bsd_ast) {
 			t.Errorf("%s: rewrite is incorrect\n", tt)
+			n := 0
 			for i := range k.bsd_ast {
 				if k.bsd_ast[i] != k1.bsd_ast[i] {
+					if n++; n > 20 {
+						t.Logf("...")
+						break
+					}
 					t.Logf("bsd_ast+%d: -%#02x +%#02x\n", i, k.bsd_ast[i], k1.bsd_ast[i])
 				}
 			}
