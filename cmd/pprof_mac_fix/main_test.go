@@ -15,6 +15,7 @@ import (
 
 var tests = []string{
 	"testdata/mach_kernel_10_8_0",
+	"testdata/mach_kernel_10_8_0_i386",
 	"testdata/mach_kernel_11_4_2",
 	"testdata/mach_kernel_12_4_0",
 }

@@ -5,9 +5,101 @@
 // pprof_mac_fix applies a binary patch to the OS X kernel in order to make
 // pprof profiling report accurate values.
 //
-// NOTE: This program is not ready for use by others.
-// If you apply this program to your kernel, your system may never boot again.
+// Warning Warning Warning
+//
+// This program is meant to modify the operating system kernel, the program
+// that runs your computer and makes it safe for all the other programs to run.
+// If you damage the kernel, your computer will not be able to boot.
+// Actually, that's the best outcome. When you're not lucky, the damage allows
+// the kernel to boot but then causes it to scribble all over your disk.
+//
+// Before using this program, ensure you can boot into ``recovery mode.''
+// Many recent Macs make this possible by holding down Alt/Option when you
+// hear the boot chime and selecting the ``Recovery HD.'' Otherwise, you can boot
+// to the opening screen of an install DVD or thumb drive.
+//
+// It doesn't hurt to have a recent backup of your computer, in case things
+// go very wrong and you lose the entire disk.
+//
 // You have been warned.
+//
+// Compatibility
+//
+// This program has been used successfully on the following systems:
+//
+//	OS X 10.6 Snow Leopard   / Darwin 10.8 / i386 only
+//	OS X 10.7 Lion           / Darwin 11.4 / x86_64 only
+//	OS X 10.8 Mountain Lion  / Darwin 12.4 / x86_64 only
+//
+// Snow Leopard x86_64 may work too but is untried.
+//
+// Installation
+//
+// First, read the warning above.
+//
+// Next, install this program and run it to create a modified kernel in /tmp:
+//
+//	go get code.google.com/p/rsc/cmd/pprof_mac_fix
+//	pprof_mac_fix /mach_kernel /tmp/kernel
+//
+// Next, as root (sudo sh), make a backup of the standard kernel and then
+// install the new one.
+//
+//	cp /mach_kernel /mach_kernel0 # only the first time!
+//	cat /tmp/kernel >/mach_kernel
+//
+// Using cat instead of cp to install the kernel preserves the extended
+// attributes of the original kernel, on the off chance that they matter.
+//
+// Finally, cross your fingers and reboot.
+//
+// If all goes well, running ``uname -a'' will report the time at which you
+// ran pprof_mac_fix as the kernel build time.
+//
+// If you have a Go tree built at tip,
+//	go test -v runtime/pprof
+// should now say that the CPU profiling tests pass, whereas before they
+// printed failure messages and were marked as skipped.
+//
+// Recovery
+//
+// If something goes wrong, you will need to restore the original kernel.
+// To do this, boot into recovery mode.
+// If you are using FileVault whole-disk encryption, start Disk Utility, unlock the disk,
+// and then quit disk utility.
+// (Disk Utility may be an option shown on the recovery mode screen or you may have to
+// select it from the Utilities menu in the top-of-screen menu bar.)
+// Start Terminal and then run these commands:
+//
+//	cd /Volumes/Mac*HD*
+//	cp mach_kernel0 mach_kernel
+//	bless /Volumes/Mac*HD*/System/Library/CoreServices
+//
+// I am not sure whether the bless command is strictly necessary.
+//
+// Reboot. You should be back to the original, unmodified kernel.
+// Either way, you need to be able to
+// start Terminal and, if you are using FileVault whole-disk encryption, Disk Utility.
+//
+// For details on creating a bootable recovery disk or bootable installation disk,
+// see http://support.apple.com/kb/HT4848 and http://lifehacker.com/5928780/.
+//
+// Theory of Operation
+//
+// The program rewrites the kernel code that delivers the profiling signals
+// SIGPROF and SIGVTALRM in response to setitimer(2) calls.
+// Instead of delivering the signal to the process as a whole,
+// the new code delivers the signal to the thread whose execution
+// triggered the signal; that is, it delivers the signal to the thread
+// that is actually running and should be profiled.
+//
+// The rewrite only edits code in the function named bsd_ast, which is
+// in charge of little more than delivering these signals.
+// It is therefore unlikely to cause problems in programs not using the
+// signals, nor is it likely to cause the kernel to scribble all over
+// your disk. Of course, there are no safety nets when changing an operating
+// system kernel; caution is warranted.
+//
 package main
 
 import (
@@ -30,11 +122,24 @@ import (
 var _ time.Time
 
 var dumpFlag = flag.Bool("dump", false, "kernel dump")
+var arch = flag.String("arch", getArch(), "arch to modify")
+
+func getArch() string {
+	out, _ := exec.Command("uname", "-m").CombinedOutput()
+	switch s := strings.TrimSpace(string(out)); s {
+	case "x86_64", "i386":
+		return s
+	}
+	return "x86_64"
+}
 
 func main() {
 	log.SetFlags(0)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s oldkernel newkernel\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s [-arch ARCH] oldkernel newkernel\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "The -arch flag controls which kernel in a fat binary is modified.\n")
+		fmt.Fprintf(os.Stderr, "The default setting is the architecture reported by `uname -m`,\n")
+		fmt.Fprintf(os.Stderr, "on this machine %s.\n", getArch())
 		os.Exit(2)
 	}
 	flag.Parse()
@@ -65,7 +170,7 @@ func main() {
 	}
 
 	// Update version string as displayed by uname -a.
-	copy(k.timestamp, []byte(time.Now().Format("Mon Jan  2 15:04:05 MST 2006")))
+	copy(k.timestamp, []byte(time.Now().Format(time.UnixDate)))
 	fmt.Printf("new: %s\n", string(k.version))
 
 	if err := ioutil.WriteFile(flag.Arg(1), k.data, 0666); err != nil {
@@ -146,13 +251,15 @@ func loadKernel(file string) *kernel {
 		}
 		for i := range fat.Entry[:n] {
 			e := &fat.Entry[i]
-			if e.CPUType == 0x01000007 && e.CPUSubType == 0x00000003 {
-				// x86-64 kernel
+			switch {
+			case *arch == "x86_64" && e.CPUType == 0x01000007 && e.CPUSubType == 0x00000003,
+				*arch == "i386" && e.CPUType == 0x00000007 && e.CPUSubType == 0x00000003:
+				fmt.Printf("%s(%s) is at offset %d, size %d\n", file, *arch, e.Offset, e.Size)
 				kdata = data[e.Offset : e.Offset+e.Size]
 				goto HaveKdata
-			}
+			}	
 		}
-		log.Fatal("cannot find x86-64 kernel in fat kernel binary")
+		log.Fatalf("cannot find %s kernel in fat kernel binary", *arch)
 	HaveKdata:
 	}
 
@@ -224,7 +331,7 @@ func dump(k *kernel) {
 var disasRE = regexp.MustCompile(`0x[0-9a-f]+\s+<\w+\+(\d+)>:`)
 
 func dumpDisas(k *kernel, code []byte, name string) {
-	cmd := exec.Command("gdb", k.file)
+	cmd := exec.Command("gdb", "-arch", *arch, k.file)
 	cmd.Stdin = strings.NewReader("disas " + name + "\n")
 	disas, err := cmd.CombinedOutput()
 	fmt.Printf("$ gdb %s # disas %s\n", k.file, name)
@@ -417,19 +524,35 @@ func (f *fix) apply(current_thread []byte, bsd_ast []byte) error {
 			new = append(new, old[m[3]:m[4]]...)
 			le.PutUint32(new[len(new)-4:], le.Uint32(new[len(new)-4:])-uint32(len(new)-m[4]))
 			// Set up arguments to psignal_internal.
-			new = append(new,
-				// xor %edi, %edi
-				0x31, 0xff,
-				// xor %esi, %esi
-				0x31, 0xf6,
-				// mov %gs:threadTLS, %rdx
-				0x65, 0x48, 0x8b, 0x14, 0x25,
-				byte(tlsOff), byte(tlsOff>>8), byte(tlsOff>>16), byte(tlsOff>>24),
-				// mov $4, %ecx
-				0xb9, 0x04, 0x00, 0x00, 0x00,
-				// mov $0x1a (or $0x1b), %r8d
-				0x41, 0xb8, old[m[5]], 0x00, 0x00, 0x00,
-			)
+			if strings.Contains(f.version, "i386") {
+				new = append(new,
+					// xor %eax, %eax
+					0x31, 0xc0,
+					// xor %edx, %edx
+					0x31, 0xd2,
+					// mov %gs:threadTLS, %ecx
+					0x65, 0x8b, 0x0d,
+					byte(tlsOff), byte(tlsOff>>8), byte(tlsOff>>16), byte(tlsOff>>24),
+					// mov $4, (%esp)
+					0xc7, 0x04, 0x24, 0x04, 0x00, 0x00, 0x00,
+					// mov $0x1a (or $0x1b), 4(%esp)
+					0xc7, 0x44, 0x24, 0x04, old[m[5]], 0x00, 0x00, 0x00,
+				)
+			} else { // x86_64
+				new = append(new,
+					// xor %edi, %edi
+					0x31, 0xff,
+					// xor %esi, %esi
+					0x31, 0xf6,
+					// mov %gs:threadTLS, %rdx
+					0x65, 0x48, 0x8b, 0x14, 0x25,
+					byte(tlsOff), byte(tlsOff>>8), byte(tlsOff>>16), byte(tlsOff>>24),
+					// mov $4, %ecx
+					0xb9, 0x04, 0x00, 0x00, 0x00,
+					// mov $0x1a (or $0x1b), %r8d
+					0x41, 0xb8, old[m[5]], 0x00, 0x00, 0x00,
+				)
+			}
 			for len(new) < m[6] {
 				new = append(new, 0x90) // nop
 			}
@@ -460,6 +583,15 @@ var current_thread_leave = mustCompile(`
     0x65 0x48 0x8b 0x04 0x25        //  4   mov %gs:0x8 %rax
     * 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00
     0xc9                            // 13   leaveq
+    0xc3                            // 14   retq
+`)
+
+var current_thread_leave_i386 = mustCompile(`
+    0x55                            //  0   push %rbp
+    0x89 0xe5                       //  1   mov %rsp, %rbp
+    0x65 0xa1                       //  3   mov %gs:0x8, %rax
+    * 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00
+    0xc9                            // 9   leaveq
     0xc3                            // 14   retq
 `)
 
@@ -505,10 +637,64 @@ var bsd_ast_10_8_0_b = mustCompile(`
     0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00       // 70 call psignal_internal
 `)
 
+var bsd_ast_10_8_0_i386_a = mustCompile(`
+    0x8b 0x8b 0xec 0x00 0x00 0x00                   //  0 mov    0xec(%ebx),%ecx
+    0x85 0xc9                                       //  6 test   %ecx,%ecx
+    0x75 0x0a                                       //  8 jne    +10
+    0x8b 0x93 0xf0 0x00 0x00 0x00                   // 10 mov    0xf0(%ebx),%edx
+    0x85 0xd2                                       // 16 test   %edx,%edx
+    0x74 0x15                                       // 18 je     +21
+    * 0x8b 0x43 0x0c                                // 20 mov    0xc(%ebx),%eax
+    0xc7 0x44 0x24 0x04 0x01 0x00 0x00 0x00         // 23 movl   $0x1,0x4(%esp)
+    0x89 0x04 0x24 *                                // 31 mov    %eax,(%esp)
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 34 call task_vtimer_set
+    0xeb 0x13                                       // 39 jmp    +19
+    * 0x8b 0x43 0x0c                                // 41 mov    0xc(%ebx),%eax
+    0xc7 0x44 0x24 0x04 0x01 0x00 0x00 0x00         // 44 movl   $0x1,0x4(%esp)
+    0x89 0x04 0x24 *                                // 52 mov    %eax,(%esp)
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 55 call task_vtimer_clear
+    * 0xc7 0x44 0x24 0x04 * 0x1a 0x00 0x00 0x00     // 60 movl   $0x1a,0x4(%esp)
+    0xc7 0x04 0x24 0x00 0x00 0x00 0x00              // 68 movl   $0x0,(%esp)
+    0x31 0xc9                                       // 75 xor    %ecx,%ecx
+    0x31 0xd2                                       // 77 xor    %edx,%edx
+    0x89 0xd8 *                                     // 79 mov    %ebx,%eax
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 81 call psignal_internal
+`)
+
+var bsd_ast_10_8_0_i386_b = mustCompile(`
+    0x8b 0x83 0xfc 0x00 0x00 0x00                   //  0 mov    0xfc(%ebx),%eax
+    0x85 0xc0                                       //  6 test   %eax,%eax
+    0x75 0x0a                                       //  8 jne    +10
+    0x8b 0x83 0x00 0x01 0x00 0x00                   // 10 mov    0x100(%ebx),%eax
+    0x85 0xc0                                       // 16 test   %eax,%eax
+    0x74 0x15                                       // 18 je     +21
+    * 0x8b 0x43 0x0c                                // 20 mov    0xc(%ebx),%eax
+    0xc7 0x44 0x24 0x04 0x02 0x00 0x00 0x00         // 23 movl   $0x2,0x4(%esp)
+    0x89 0x04 0x24 *                                // 31 mov    %eax,(%esp)
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 34 call task_vtimer_set
+    0xeb 0x13                                       // 39 jmp    +19
+    * 0x8b 0x43 0x0c                                // 41 mov    0xc(%ebx),%eax
+    0xc7 0x44 0x24 0x04 0x02 0x00 0x00 0x00         // 44 movl   $0x2,0x4(%esp)
+    0x89 0x04 0x24 *                                // 52 mov    %eax,(%esp)
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 55 call task_vtimer_clear
+    * 0xc7 0x44 0x24 0x04 * 0x1b 0x00 0x00 0x00     // 60 movl   $0x1b,0x4(%esp)
+    0xc7 0x04 0x24 0x00 0x00 0x00 0x00              // 68 movl   $0x0,(%esp)
+    0x31 0xc9                                       // 75 xor    %ecx,%ecx
+    0x31 0xd2                                       // 77 xor    %edx,%edx
+    0x89 0xd8 *                                     // 79 mov    %ebx,%eax
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 81 call psignal_internal
+`)
+
 var fix_10_8_0 = fix{
 	"10.8.0",
 	current_thread_leave,
 	[]*pattern{bsd_ast_10_8_0_a, bsd_ast_10_8_0_b},
+}
+
+var fix_10_8_0_i386 = fix{
+	"10.8.0 (i386)",
+	current_thread_leave_i386,
+	[]*pattern{bsd_ast_10_8_0_i386_a, bsd_ast_10_8_0_i386_b},
 }
 
 // Darwin 11.4.2 (Lion)
@@ -579,6 +765,7 @@ var bsd_ast_12_4_0 = mustCompile(`
 
 var fixes = []*fix{
 	&fix_10_8_0,
+	&fix_10_8_0_i386,
 	&fix_11_4_2,
 	&fix_12_4_0,
 }
