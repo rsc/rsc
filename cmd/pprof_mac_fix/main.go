@@ -57,7 +57,9 @@
 // ran pprof_mac_fix as the kernel build time.
 //
 // If you have a Go tree built at tip,
+//
 //	go test -v runtime/pprof
+//
 // should now say that the CPU profiling tests pass, whereas before they
 // printed failure messages and were marked as skipped.
 //
@@ -74,6 +76,10 @@
 //	cd /Volumes/Mac*HD*
 //	cp mach_kernel0 mach_kernel
 //	bless /Volumes/Mac*HD*/System/Library/CoreServices
+//
+// The Mac*HD* pattern matches "Macintosh HD" and "Macintosh HD " [sic].
+// If you have changed your disk's volume name you may need to use a
+// different pattern (run "mount" to see the mounted disks).
 //
 // I am not sure whether the bless command is strictly necessary.
 //
