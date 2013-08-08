@@ -10,16 +10,11 @@
 // This program is meant to modify the operating system kernel, the program
 // that runs your computer and makes it safe for all the other programs to run.
 // If you damage the kernel, your computer will not be able to boot.
-// Actually, that's the best outcome. When you're not lucky, the damage allows
-// the kernel to boot but then causes it to scribble all over your disk.
 //
 // Before using this program, ensure you can boot into ``recovery mode.''
 // Many recent Macs make this possible by holding down Alt/Option when you
 // hear the boot chime and selecting the ``Recovery HD.'' Otherwise, you can boot
 // to the opening screen of an install DVD or thumb drive.
-//
-// It doesn't hurt to have a recent backup of your computer, in case things
-// go very wrong and you lose the entire disk.
 //
 // You have been warned.
 //
@@ -102,8 +97,7 @@
 // The rewrite only edits code in the function named bsd_ast, which is
 // in charge of little more than delivering these signals.
 // It is therefore unlikely to cause problems in programs not using the
-// signals, nor is it likely to cause the kernel to scribble all over
-// your disk. Of course, there are no safety nets when changing an operating
+// signals. Of course, there are no safety nets when changing an operating
 // system kernel; caution is warranted.
 //
 package main
