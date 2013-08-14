@@ -12,12 +12,12 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
-	"regexp"
-	"os"
 	"io/ioutil"
-	"strings"
+	"log"
+	"os"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 var dumpRE = regexp.MustCompile(`(?ms)^version: ([^0-9\n]+([0-9][^:\n]+)[^\n]+)\n.*\n\(gdb\)[^\n]*current_thread:(.*?)^\(gdb\).*^\(gdb\)[^\n]*bsd_ast:(.*?)^\(gdb\)`)
@@ -32,14 +32,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	m := dumpRE.FindStringSubmatch(string(data))
 	if m == nil {
 		log.Fatal("cannot parse -dump output")
 	}
-	
+
 	vers := strings.Replace(m[2], ".", "_", -1)
-	
+
 	name := "testdata/mach_kernel_" + vers + ".s"
 	if _, err := os.Stat(name); err == nil {
 		log.Fatalf("%s already exists", name)
@@ -47,8 +47,8 @@ func main() {
 	testAsm, err = os.Create(name)
 	if err != nil {
 		log.Fatal(err)
-	}	
-	
+	}
+
 	fmt.Fprintf(testAsm, "_version:\n\t.ascii \"%s\\0\"\n", m[1])
 	for _, name := range extraFuncs {
 		fmt.Fprintf(testAsm, "\n.globl _%s\n_%s:\n\tret\n", name, name)
@@ -66,7 +66,7 @@ var extraFuncs = []string{
 
 var (
 	instRE = regexp.MustCompile(`(?-s)^0x[0-9a-f]+\s+<(\w+)\+([0-9]+)>:\s+(.*)$`)
-	hexRE = regexp.MustCompile(`(?-s)^\s+([0-9a-f]{2}( [0-9a-f]{2})*)\s*$`)
+	hexRE  = regexp.MustCompile(`(?-s)^\s+([0-9a-f]{2}( [0-9a-f]{2})*)\s*$`)
 	callRE = regexp.MustCompile(`callq?\s+0x[0-9a-f]+\s+<(\w+(?:\+[0-9]+)?)>`)
 )
 
@@ -123,12 +123,12 @@ func dodis(name string, dis string) {
 			}
 			fmt.Fprintf(testAsm, "\n")
 		}
-		hexes = append(hexes, hex) 
+		hexes = append(hexes, hex)
 		if call != "" {
 			lastCall = call
 		}
 	}
-	
+
 	if name != "bsd_ast" {
 		return
 	}
@@ -138,10 +138,10 @@ func dodis(name string, dis string) {
 		if inst != "call psignal_internal" {
 			continue
 		}
-		
+
 		// Found end. Work backward.
 		state := 0
-		j := i-1
+		j := i - 1
 		for ; j >= 0; j-- {
 			switch {
 			case state == 0 && insts[j] == "call task_vtimer_clear":
@@ -155,17 +155,17 @@ func dodis(name string, dis string) {
 			case state < 2 && strings.HasPrefix(insts[j], "mov") && strings.HasPrefix(insts[j+1], "test"):
 				state = -1
 			case state >= 2 && strings.HasPrefix(insts[j], "mov") && strings.HasPrefix(insts[j+1], "test"):
-				state++			
+				state++
 			}
 			if state == 4 {
 				break
-			} 
+			}
 		}
 		if j < 0 {
 			continue
 		}
 		nfound++
-		
+
 		// We think insts[j:i+1] and hexes[j:i+1] are worth pursuing.
 		fmt.Printf("Starting at %s\n", lines[2*j])
 		off0 := -1
@@ -189,10 +189,10 @@ func dodis(name string, dis string) {
 			}
 			fmt.Printf("    %-47s // %2d %s\n", buf.String(), off-off0, insts[k])
 		}
-		fmt.Printf("\n")	
+		fmt.Printf("\n")
 	}
-	
+
 	if nfound == 0 {
 		fmt.Printf("no code patterns found in %s\n", name)
-	}	
+	}
 }

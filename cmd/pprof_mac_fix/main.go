@@ -22,9 +22,10 @@
 //
 // This program has been used successfully on the following systems:
 //
-//	OS X 10.6 Snow Leopard   / Darwin 10.8 / i386 only
-//	OS X 10.7 Lion           / Darwin 11.4 / x86_64 only
-//	OS X 10.8 Mountain Lion  / Darwin 12.4 / x86_64 only
+//	OS X 10.6 Snow Leopard      / Darwin 10.8 / i386 only
+//	OS X 10.7 Lion              / Darwin 11.4 / x86_64 only
+//	OS X 10.8 Mountain Lion     / Darwin 12.4 / x86_64 only
+//  OS X 10.9 Mavericks preview / Darwin 13.0 / x86_64 only
 //
 // Snow Leopard x86_64 may work too but is untried.
 //
@@ -41,10 +42,7 @@
 // install the new one.
 //
 //	cp /mach_kernel /mach_kernel0 # only the first time!
-//	cat /tmp/kernel >/mach_kernel
-//
-// Using cat instead of cp to install the kernel preserves the extended
-// attributes of the original kernel, on the off chance that they matter.
+//	cp /tmp/kernel /mach_kernel
 //
 // Finally, cross your fingers and reboot.
 //
@@ -257,7 +255,7 @@ func loadKernel(file string) *kernel {
 				fmt.Printf("%s(%s) is at offset %d, size %d\n", file, *arch, e.Offset, e.Size)
 				kdata = data[e.Offset : e.Offset+e.Size]
 				goto HaveKdata
-			}	
+			}
 		}
 		log.Fatalf("cannot find %s kernel in fat kernel binary", *arch)
 	HaveKdata:
@@ -487,6 +485,15 @@ func (f *fix) apply(current_thread []byte, bsd_ast []byte) error {
 	}
 
 	var replace [][]byte
+	if f.version >= "13." {
+		var err error
+		replace, err = f.apply13(tlsOff, bsd_ast, timers)
+		if err != nil {
+			return err
+		}
+		goto done
+	}
+
 	for i, timer1 := range timers {
 		for _, timer := range timer1 {
 			p := f.bsd_ast[i]
@@ -563,6 +570,7 @@ func (f *fix) apply(current_thread []byte, bsd_ast []byte) error {
 		}
 	}
 
+done:
 	// Commit rewrite.
 	n := 0
 	for _, timer1 := range timers {
@@ -768,4 +776,143 @@ var fixes = []*fix{
 	&fix_10_8_0_i386,
 	&fix_11_4_2,
 	&fix_12_4_0,
+	&fix_13_0_0,
+}
+
+// Darwin 13.0.0 (Mavericks)
+//
+// Mavericks does not have the call to task_vtimer_clear so we cannot use the
+// usual space optimization. Instead, build a parameterized subroutine in the
+// middle of the SIGPROF and SIGVTALRM bodies and change them to call it.
+
+var fix_13_0_0 = fix{
+	"13.0.0",
+	current_thread_pop,
+	[]*pattern{bsd_ast_13_0_0},
+}
+
+var bsd_ast_13_0_0 = mustCompile(`
+    * 0x49 0x8b 0x7f 0x18                           //  0 mov 0x18(%r15), %rdi
+    * 0xbe 0x00/0xfc 0x00 0x00 0x00                 //  4 mov $0x1, %esi [or $0x2]
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00 *  //  9 call task_vtimer_set
+    0x4c 0x89 0xff                                  // 14 mov %r15, %rdi
+    0x31 0xf6                                       // 17 xor %esi, %esi
+    0x31 0xd2                                       // 19 xor %edx, %edx
+    0x31 0xc9                                       // 21 xor %ecx, %ecx
+    0x41 0xb8 * 0x1a/0xfe 0x00 0x00 0x00            // 23 mov $0x1a, %r8d [or $0x1b]
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00 *  // 29 call psignal_internal
+`)
+
+func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, error) {
+	p := f.bsd_ast[0]
+	match1 := p.matchStart(bsd_ast, timers[0][0])
+	match2 := p.matchStart(bsd_ast, timers[0][1])
+	if match1 == nil || match2 == nil {
+		// shouldn't happen - we found the offset above
+		return nil, fmt.Errorf("cannot re-match bsd_ast timer")
+	}
+
+	const asmLen = 34
+	if match1[0] != timers[0][0] || match2[0] != timers[0][1] || match1[4]-match1[0] != asmLen || match2[4]-match2[0] != asmLen {
+		return nil, fmt.Errorf("bsd_ast match mismatch")
+	}
+
+	mov1 := le.Uint32(bsd_ast[match1[1]+1:])
+	mov2 := le.Uint32(bsd_ast[match2[1]+1:])
+	if mov1 != 1 || mov2 != 2 {
+		return nil, fmt.Errorf("bsd_ast mov esi mismatch %#x %#x", mov1, mov2)
+	}
+
+	call1 := le.Uint32(bsd_ast[match1[2]-4:]) + uint32(match1[2])
+	call1a := le.Uint32(bsd_ast[match2[2]-4:]) + uint32(match2[2])
+	if call1 != call1a {
+		return nil, fmt.Errorf("bsd_ast call task_vtimer_set mismatch %#x %#x", call1, call1a)
+	}
+
+	call2 := le.Uint32(bsd_ast[match1[4]-4:]) + uint32(match1[4])
+	call2a := le.Uint32(bsd_ast[match2[4]-4:]) + uint32(match2[4])
+	if call2 != call2a {
+		return nil, fmt.Errorf("bsd_ast call psignal_internal mismatch %#x %#x", call2, call2a)
+	}
+
+	if sig1, sig2 := bsd_ast[match1[3]], bsd_ast[match2[3]]; sig1 != 0x1a || sig2 != 0x1b {
+		return nil, fmt.Errorf("bsd_ast signal number mismatch %#x %#x", sig1, sig2)
+	}
+
+	repl1 := make([]byte, 0, asmLen)
+	repl2 := make([]byte, 0, asmLen)
+
+	repl1 = append(repl1, bsd_ast[match1[1]:match1[1]+5]...) // mov to %esi
+	repl1 = append(repl1,
+		// call 1f
+		0xe8, 0x02, 0x00, 0x00, 0x00,
+		// jmp 2f
+		0xeb, 0x00,
+	)
+	repl1[len(repl1)-1] = byte(asmLen - len(repl1))
+	// 1:
+	repl1 = append(repl1,
+		// mov 0x18(%r15), %rdi
+		0x49, 0x8b, 0x7f, 0x18,
+		// mov %esi, %ebx (caller save)
+		0x89, 0xf3,
+		// call task_vtimer_set
+		0xe8, 0x00, 0x00, 0x00, 0x00,
+	)
+	le.PutUint32(repl1[len(repl1)-4:], call1-uint32(match1[0]+len(repl1)))
+	repl1 = append(repl1,
+		// xor %edi, %edi
+		0x31, 0xff,
+		// xor %esi, %esi
+		0x31, 0xf6,
+		// mov $4, %ecx
+		0xb9, 0x04, 0x00, 0x00, 0x00,
+		// jmp 3f
+		0xeb, 0x00,
+	)
+	d := (match2[0] + 12) - (match1[0] + len(repl1))
+	if int(int8(d)) != d {
+		return nil, fmt.Errorf("bsd_ast jmp 3f too far %d", d)
+	}
+	repl1[len(repl1)-1] = byte(d)
+	// 2:
+
+	if len(repl1) != asmLen {
+		return nil, fmt.Errorf("bsd_ast repl1 bad math %d %d", len(repl1), asmLen)
+	}
+
+	repl2 = append(repl2, bsd_ast[match2[1]:match2[1]+5]...) // mov to %esi
+	repl2 = append(repl2,
+		// call 1b
+		0xe8, 0x00, 0x00, 0x00, 0x00,
+	)
+	le.PutUint32(repl2[len(repl2)-4:], uint32((match1[0]+12)-(match2[0]+10)))
+	repl2 = append(repl2,
+		// jmp 4f
+		0xeb, 0x00,
+	)
+	repl2[len(repl2)-1] = byte(asmLen - len(repl2))
+	// 3:
+	repl2 = append(repl2,
+		// mov %gs:threadTLS, %rdx
+		0x65, 0x48, 0x8b, 0x14, 0x25,
+		byte(tlsOff), byte(tlsOff>>8), byte(tlsOff>>16), byte(tlsOff>>24),
+		// lea 0x19(%ebx), %r8d
+		0x67, 0x44, 0x8d, 0x43, 0x19,
+		// call psignal_internal
+		0xe8, 0x00, 0x00, 0x00, 0x00,
+	)
+	le.PutUint32(repl2[len(repl2)-4:], call2-uint32(match2[0]+len(repl2)))
+	repl2 = append(repl2,
+		// ret
+		0xc3,
+	)
+	for len(repl2) < asmLen {
+		repl2 = append(repl2, 0x90) // nop
+	}
+	if len(repl2) != asmLen {
+		return nil, fmt.Errorf("bsd_ast repl1 bad math %d %d", len(repl2), asmLen)
+	}
+
+	return [][]byte{repl1, repl2}, nil
 }

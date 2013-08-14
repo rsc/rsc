@@ -18,6 +18,7 @@ var tests = []string{
 	"testdata/mach_kernel_10_8_0_i386",
 	"testdata/mach_kernel_11_4_2",
 	"testdata/mach_kernel_12_4_0",
+	"testdata/mach_kernel_13_0_0",
 }
 
 func TestAll(t *testing.T) {
