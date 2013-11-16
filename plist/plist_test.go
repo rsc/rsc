@@ -52,6 +52,10 @@ var thePlist = `<plist version="1.0">
 </plist>
 `
 
+var xmlPrefix = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+`
+
 var plistTests = []struct {
 	in  string
 	out interface{}
@@ -83,6 +87,30 @@ var plistTests = []struct {
 	{
 		thePlist,
 		&struct{}{},
+	},
+	{
+		xmlPrefix + thePlist,
+		&MyStruct{
+			BucketUUID:      "C218A47D-DAFB-4476-9C67-597E556D7D8A",
+			BucketName:      "rsc",
+			ComputerUUID:    "E7859547-BB9C-41C0-871E-858A0526BAE7",
+			LocalPath:       "/Users/rsc",
+			LocalMountPoint: "/Users",
+			IgnoredRelativePaths: []string{
+				"/.Trash",
+				"/go/pkg",
+				"/go1/pkg",
+				"/Library/Caches",
+			},
+			Enabled: true,
+			Excludes: Exclude1{
+				Excludes: []Exclude2{
+					{Type: 2,
+						Text: ".unison.",
+					},
+				},
+			},
+		},
 	},
 }
 
