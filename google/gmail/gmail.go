@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"code.google.com/p/rsc/google"
@@ -108,6 +109,8 @@ func nextMsg(m *imap.Msg) *imap.Msg {
 	return msgs[i]
 }
 
+var search = flag.String("search", "", "search query")
+
 func main() {
 	flag.BoolVar(&imap.Debug, "imapdebug", false, "imap debugging trace")
 	flag.Parse()
@@ -136,9 +139,17 @@ func main() {
 	isGmail = c.IsGmail()
 	threaded = isGmail
 
-	inbox = c.Inbox()
-	if err := inbox.Check(); err != nil {
-		log.Fatal(err)
+	if *search != "" {
+		b, err := c.GmailSearch(*search)
+		if err != nil {
+			log.Fatal(err)
+		}
+		inbox = b
+	} else {
+		inbox = c.Inbox()
+		if err := inbox.Check(); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	msgs = inbox.Msgs()
@@ -156,17 +167,13 @@ func main() {
 
 	rethread()
 
+	interrupts := make(chan os.Signal, 1)
+	signal.Notify(interrupts, syscall.SIGINT)
+
 	go func() {
-		for sig := range signal.Incoming {
-			if sig == os.SIGINT {
-				fmt.Fprintf(os.Stderr, "!interrupt\n")
-				interrupted = true
-				continue
-			}
-			if sig == os.SIGCHLD || sig == os.SIGWINCH {
-				continue
-			}
-			fmt.Fprintf(os.Stderr, "!%s\n", sig)
+		for _ = range interrupts {
+			fmt.Fprintf(os.Stderr, "!interrupt\n")
+			interrupted = true
 		}
 	}()
 
@@ -633,7 +640,7 @@ func from(h *imap.MsgHdr) string {
 
 func header(m *imap.Msg) string {
 	var t string
-	if time.Now().Sub(m.Date) > 365*24*time.Hour {
+	if time.Now().Sub(m.Date) < 365*24*time.Hour {
 		t = m.Date.Format("01/02 15:04")
 	} else {
 		t = m.Date.Format("01/02 2006 ")
