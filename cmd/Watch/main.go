@@ -18,18 +18,18 @@ var win *acme.Win
 var needrun = make(chan bool, 1)
 
 var kq struct {
-	fd int
-	dir *os.File
-	m map[string]*os.File
+	fd   int
+	dir  *os.File
+	m    map[string]*os.File
 	name map[int]string
 }
 
 func kadd(fd int) {
 	kbuf := make([]syscall.Kevent_t, 1)
 	kbuf[0] = syscall.Kevent_t{
-		Ident: uint64(fd),
+		Ident:  uint64(fd),
 		Filter: syscall.EVFILT_VNODE,
-		Flags: syscall.EV_ADD | syscall.EV_RECEIPT | syscall.EV_ONESHOT,
+		Flags:  syscall.EV_ADD | syscall.EV_RECEIPT | syscall.EV_ONESHOT,
 		Fflags: syscall.NOTE_DELETE | syscall.NOTE_EXTEND | syscall.NOTE_WRITE,
 	}
 	n, err := syscall.Kevent(kq.fd, kbuf[:1], kbuf[:1], nil)
@@ -48,7 +48,7 @@ func kadd(fd int) {
 func main() {
 	flag.Parse()
 	args = flag.Args()
-	
+
 	var err error
 	win, err = acme.New()
 	if err != nil {
@@ -61,7 +61,7 @@ func main() {
 	needrun <- true
 	go events()
 	go runner()
-	
+
 	kq.fd, err = syscall.Kqueue()
 	if err != nil {
 		log.Fatal(err)
@@ -79,24 +79,24 @@ func main() {
 
 	for {
 		if readdir {
-		kq.dir.Seek(0, 0)
-		names, err := kq.dir.Readdirnames(-1)
-		if err != nil {
-			log.Fatalf("readdir: %v", err)
-		}
-		for _, name := range names {
-			if kq.m[name] != nil {
-				continue
-			}
-			f, err := os.Open(name)
+			kq.dir.Seek(0, 0)
+			names, err := kq.dir.Readdirnames(-1)
 			if err != nil {
-				continue
+				log.Fatalf("readdir: %v", err)
 			}
-			kq.m[name] = f
-			fd := int(f.Fd())
-			kq.name[fd] = name
-			kadd(fd)
-		}
+			for _, name := range names {
+				if kq.m[name] != nil {
+					continue
+				}
+				f, err := os.Open(name)
+				if err != nil {
+					continue
+				}
+				kq.m[name] = f
+				fd := int(f.Fd())
+				kq.name[fd] = name
+				kadd(fd)
+			}
 		}
 
 		kbuf := make([]syscall.Kevent_t, 1)
@@ -120,10 +120,10 @@ func main() {
 		case needrun <- true:
 		default:
 		}
-	
-		fd := int(ev.Ident) 
+
+		fd := int(ev.Ident)
 		readdir = fd == int(kq.dir.Fd())
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		kadd(fd)
 	}
 }
