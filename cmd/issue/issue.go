@@ -15,13 +15,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
-	"time"
 
+	"code.google.com/p/rsc/issue"
 	"code.google.com/p/rsc/oauthprompt"
 )
 
@@ -34,87 +32,23 @@ const Version = "Go1.2"
 
 var aflag = flag.Bool("a", false, "run in acme mode")
 var project = flag.String("p", "go", "code.google.com project identifier")
-var v = flag.Bool("v", false, "verbose")
-var version = flag.String("dash", "", "Label for dashboard, like \"Go1.2\"")
-var quick = flag.Bool("quick", false, "use cached xml from disk")
-var xmlflag = flag.Bool("xml", false, "dump xml")
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `usage: issue [-a] [-dash Go1.2] [-p project] [query]
+	fmt.Fprintf(os.Stderr, `usage: issue [-a] [-p project] [query]
 
 If query is a single number, prints the full history for the issue.
 Otherwise, prints a table of matching results.
 The special query 'go1' is shorthand for 'Priority-Go1'.
 
 The -a flag runs as an Acme window, making the query optional.
-
-The -dash mode generates an issue dashboard for a Go release.
-It maintains a collection of output files named for the release:
-go12.html, go12.graph, and so on.
 `)
 	os.Exit(2)
 }
-
-type Feed struct {
-	Entry Entries `xml:"entry"`
-}
-
-type Entry struct {
-	ID        string    `xml:"id"`
-	Title     string    `xml:"title"`
-	Published time.Time `xml:"published"`
-	Content   string    `xml:"content"`
-	Updates   []Update  `xml:"updates"`
-	Author    struct {
-		Name string `xml:"name"`
-	} `xml:"author"`
-	Owner      string   `xml:"owner>username"`
-	Status     string   `xml:"status"`
-	Label      []string `xml:"label"`
-	MergedInto string   `xml:"mergedInto"`
-	CC         []string `xml:"cc>username"`
-
-	Dir      string
-	Number   int
-	Comments []Entry
-}
-
-func (e Entry) IsStatus(s string) bool { return e.Status == s }
-
-func (e Entry) Labeled(name string) string {
-	for _, l := range e.Label {
-		if l == name {
-			return name
-		}
-		if strings.HasSuffix(name, "-") && strings.HasPrefix(l, name) {
-			return l[len(name):]
-		}
-	}
-	return ""
-}
-
-type Update struct {
-	Summary string `xml:"summary"`
-	Owner   string `xml:"ownerUpdate"`
-	Label   string `xml:"label"`
-	Status  string `xml:"status"`
-}
-
-type Entries []Entry
-
-func (e Entries) Len() int           { return len(e) }
-func (e Entries) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
-func (e Entries) Less(i, j int) bool { return e[i].Title < e[j].Title }
 
 func main() {
 	flag.Usage = usage
 	flag.Parse()
 	log.SetFlags(0)
-
-	if *version != "" {
-		dash(*version)
-		return
-	}
 
 	if *aflag {
 		if err := login(); err != nil {
@@ -149,6 +83,14 @@ func main() {
 	} else {
 		printList(os.Stdout, data)
 	}
+}
+
+func fetch(query string, full bool) ([]*issue.Issue, error) {
+	can := "open"
+	if full {
+		can = "all"
+	}
+	return issue.Search(*project, can, query, full, client)
 }
 
 type Change struct {
@@ -190,7 +132,7 @@ func write(id int, ch *Change) error {
 		}
 		tag("<issues:status>", status)
 		if merge != "" {
-			tag("<issues:mergedInto>", merge)
+			tag("<issues:mergedIntoUpdate>", merge)
 		}
 	}
 	if ch.Owner != "" {
@@ -228,73 +170,12 @@ func write(id int, ch *Change) error {
 	return nil
 }
 
-func fetch(q string, full bool) ([]Entry, error) {
-	query := url.Values{
-		"q":           {q},
-		"max-results": {"1000"},
-	}
-	if !full {
-		query["can"] = []string{"open"}
-	}
-	u := "https://code.google.com/feeds/issues/p/" + *project + "/issues/full?" + query.Encode()
-	if *v {
-		log.Print(u)
-	}
-	r, err := client.Get(u)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Body.Close()
-
-	if *xmlflag {
-		io.Copy(os.Stdout, r.Body)
-		os.Exit(0)
-	}
-
-	var feed Feed
-	if err := xml.NewDecoder(r.Body).Decode(&feed); err != nil {
-		return nil, err
-	}
-
-	sort.Sort(feed.Entry)
-	if full {
-		for i := range feed.Entry {
-			e := &feed.Entry[i]
-			id := e.ID
-			if i := strings.Index(id, "id="); i >= 0 {
-				id = id[:i+len("id=")]
-			}
-			u := "https://code.google.com/feeds/issues/p/" + *project + "/issues/" + id + "/comments/full"
-			if *v {
-				log.Print(u)
-			}
-			r, err := http.Get(u)
-			if err != nil {
-				return nil, err
-			}
-
-			var feed Feed
-			if err := xml.NewDecoder(r.Body).Decode(&feed); err != nil {
-				return nil, err
-			}
-			r.Body.Close()
-			e.Comments = feed.Entry
-		}
-	}
-
-	return feed.Entry, nil
-}
-
-func printFull(w io.Writer, entries []Entry) {
-	for _, e := range entries {
-		id := e.ID
-		if i := strings.Index(id, "id="); i >= 0 {
-			id = id[:i+len("id=")]
-		}
-		fmt.Fprintf(w, "Summary: %s\n", e.Title)
+func printFull(w io.Writer, list []*issue.Issue) {
+	for _, e := range list {
+		fmt.Fprintf(w, "Summary: %s\n", e.Summary)
 		fmt.Fprintf(w, "Status: %s", e.Status)
 		if e.Status == "Duplicate" {
-			fmt.Fprintf(w, " %s", e.MergedInto)
+			fmt.Fprintf(w, " %d", e.Duplicate)
 		}
 		fmt.Fprintf(w, "\n")
 		fmt.Fprintf(w, "Owner: %s\n", e.Owner)
@@ -308,43 +189,38 @@ func printFull(w io.Writer, entries []Entry) {
 			fmt.Fprintf(w, " %s", l)
 		}
 		fmt.Fprintf(w, "\n")
-		fmt.Fprintf(w, "\n")
 
-		fmt.Fprintf(w, "Reported by %s (%s)\n", e.Author.Name, e.Published.Format("2006-01-02 15:04:05"))
-		if e.Content != "" {
-			fmt.Fprintf(w, "\n\t%s\n", wrap(html.UnescapeString(e.Content), "\t"))
-		}
-
-		for _, e := range e.Comments {
-			fmt.Fprintf(w, "\n%s (%s)\n", e.Title, e.Published.Format("2006-01-02 15:04:05"))
-			for _, up := range e.Updates {
-				if up.Summary != "" {
-					fmt.Fprintf(w, "\tSummary: %s\n", up.Summary)
-				}
-				if up.Owner != "" {
-					fmt.Fprintf(w, "\tOwner: %s\n", up.Owner)
-				}
-				if up.Status != "" {
-					fmt.Fprintf(w, "\tStatus: %s\n", up.Status)
-				}
-				if up.Label != "" {
-					fmt.Fprintf(w, "\tLabel: %s\n", up.Label)
-				}
+		for i, c := range e.Comment {
+			what := "Reported"
+			if i > 0 {
+				what = "Comment"
 			}
-			if e.Content != "" {
-				fmt.Fprintf(w, "\n\t%s\n", wrap(html.UnescapeString(e.Content), "\t"))
+			fmt.Fprintf(w, "\n%s by %s (%s)\n", what, c.Author, c.Time.Format("2006-01-02 15:04:05"))
+			if c.Summary != "" {
+				fmt.Fprintf(w, "\tSummary: %s\n", c.Summary)
+			}
+			if c.Owner != "" {
+				fmt.Fprintf(w, "\tOwner: %s\n", c.Owner)
+			}
+			if c.Status != "" {
+				fmt.Fprintf(w, "\tStatus: %s\n", c.Status)
+			}
+			for _, l := range c.Label {
+				fmt.Fprintf(w, "\tLabel: %s\n", l)
+			}
+			for _, l := range c.CC {
+				fmt.Fprintf(w, "\tLabel: %s\n", l)
+			}
+			if c.Text != "" {
+				fmt.Fprintf(w, "\n\t%s\n", wrap(html.UnescapeString(c.Text), "\t"))
 			}
 		}
 	}
 }
 
-func printList(w io.Writer, entries []Entry) {
-	for _, e := range entries {
-		id := e.ID
-		if i := strings.Index(id, "id="); i >= 0 {
-			id = id[:i+len("id=")]
-		}
-		fmt.Fprintf(w, "%s\t%s\n", id, e.Title)
+func printList(w io.Writer, list []*issue.Issue) {
+	for _, e := range list {
+		fmt.Fprintf(w, "%v\t%v\n", e.ID, e.Summary)
 	}
 }
 
