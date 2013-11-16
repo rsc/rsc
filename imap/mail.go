@@ -35,6 +35,7 @@ const (
 	FlagStarred   // Gmail extension
 	FlagTrash     // Gmail extension
 	FlagImportant // Gmail extension
+	FlagMuted     // Gmail extension
 )
 
 var flagNames = []string{
@@ -60,6 +61,7 @@ var flagNames = []string{
 	"\\Starred",
 	"\\Trash",
 	"\\Important",
+	"\\Muted",
 }
 
 // A Box represents an IMAP mailbox.
@@ -72,6 +74,7 @@ type Box struct {
 	child     []*Box // child boxes
 	dead      bool   // box no longer exists
 	inbox     bool   // box is inbox
+	search    bool   // box is search results
 	flags     Flags  // allowed flags
 	permFlags Flags  // client-modifiable permanent flags
 	readOnly  bool   // box is read-only
@@ -100,6 +103,34 @@ func (c *Client) Box(name string) *Box {
 	defer c.data.unlock()
 
 	return c.boxByName[name]
+}
+
+func (c *Client) GmailRawSearch(query string) (*Box, error) {
+	c.io.lock()
+	defer c.io.unlock()
+
+	return c.gmailSearch(query)
+}
+
+func (c *Client) GmailSearch(query string) (*Box, error) {
+	c.io.lock()
+	defer c.io.unlock()
+
+	return c.gmailSearch("X-GM-RAW " + iquote(query))
+}
+
+func (c *Client) GmailMsgID(id uint64) (*Box, error) {
+	c.io.lock()
+	defer c.io.unlock()
+
+	return c.gmailSearch("X-GM-MSGID " + fmt.Sprint(id))
+}
+
+func (c *Client) GmailThreadID(id uint64) (*Box, error) {
+	c.io.lock()
+	defer c.io.unlock()
+
+	return c.gmailSearch("X-GM-THRID " + fmt.Sprint(id))
 }
 
 func (c *Client) Inbox() *Box {
@@ -149,7 +180,8 @@ type Msg struct {
 	Root        MsgPart   // top-level message part
 	GmailID     uint64    // Gmail message id
 	GmailThread uint64    // Gmail thread id
-	UID         uint64    // unique id for this message
+	GmailLabels []string
+	UID         uint64 // unique id for this message
 
 	deleted bool
 	dead    bool
@@ -197,7 +229,9 @@ func (b *Box) newMsg(uid uint64, id int) *Msg {
 			b.firstNum = id
 		}
 		if id < b.firstNum {
-			log.Printf("warning: unexpected id %d < %d", id, b.firstNum)
+			if !b.search {
+				log.Printf("warning: unexpected id %d < %d", id, b.firstNum)
+			}
 			byNum := make([]*Msg, len(b.msgByNum)+b.firstNum-id)
 			copy(byNum[b.firstNum-id:], b.msgByNum)
 			b.msgByNum = byNum
@@ -207,7 +241,9 @@ func (b *Box) newMsg(uid uint64, id int) *Msg {
 			b.msgByNum[id-b.firstNum] = m
 		} else {
 			if id-b.firstNum > len(b.msgByNum) {
-				log.Printf("warning: unexpected id %d > %d", id, b.firstNum+len(b.msgByNum))
+				if !b.search {
+					log.Printf("warning: unexpected id %d > %d", id, b.firstNum+len(b.msgByNum))
+				}
 				byNum := make([]*Msg, id-b.firstNum)
 				copy(byNum, b.msgByNum)
 				b.msgByNum = byNum
@@ -238,6 +274,17 @@ func (b *Box) Delete(msgs []*Msg) error {
 		}
 	}
 	return err
+}
+
+func (b *Box) MarkSeen(msgs []*Msg) error {
+	for _, m := range msgs {
+		if m.Box != b {
+			return fmt.Errorf("messages not from this box")
+		}
+	}
+	b.Client.io.lock()
+	defer b.Client.io.unlock()
+	return b.Client.markListSeen(msgs)
 }
 
 func (b *Box) Copy(msgs []*Msg) error {
@@ -404,7 +451,6 @@ var onwrote = regexp.MustCompile(`\A\s*On .* wrote:\s*\z`)
 
 func (p *MsgPart) ShortText() []byte {
 	t := p.Text()
-
 	return shortText(t)
 }
 

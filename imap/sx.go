@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -119,21 +120,6 @@ func rdsx1(b *bufio.Reader) (*sx, error) {
 		}
 		return &sx{kind: sxString, data: data}, nil
 	}
-	if '0' <= c && c <= '9' { // number
-		n := int64(c) - '0'
-		for {
-			c, err := b.ReadByte()
-			if err != nil {
-				return nil, err
-			}
-			if c < '0' || c > '9' {
-				break
-			}
-			n = n*10 + int64(c) - '0'
-		}
-		b.UnreadByte()
-		return &sx{kind: sxNumber, number: n}, nil
-	}
 
 	// atom
 	nbr := 0
@@ -165,6 +151,18 @@ func rdsx1(b *bufio.Reader) (*sx, error) {
 	if c != ' ' {
 		b.UnreadByte()
 	}
+
+	n := int64(0)
+	for i := 0; i < len(data); i++ {
+		c := data[i]
+		if c < '0' || '9' < c {
+			goto NotNumber
+		}
+		n = n*10 + int64(c) - '0'
+	}
+	return &sx{kind: sxNumber, number: n, data: data}, nil
+
+NotNumber:
 	return &sx{kind: sxAtom, data: data}, nil
 }
 
@@ -239,16 +237,22 @@ func (x *sx) match(format string) bool {
 				xx.data = nil
 			}
 		}
-		if xx.kind == sxAtom && c == 'S' {
+		if (xx.kind == sxAtom || xx.kind == sxNumber) && c == 'S' {
 			xx.kind = sxString
 		}
 		if xx.kind != fmtKind[c] {
-			log.Printf("sxmatch: %s not %c", xx, c)
+			buf := make([]byte, 4000)
+			n := runtime.Stack(buf, false)
+			log.Printf("sxmatch: %s not %c in %v\n%s", xx, c, x, buf[:n])
 			return false
 		}
 	}
 	if len(format) > len(x.sx) {
-		log.Printf("sxmatch: too long")
+		extra := format[len(x.sx):]
+		if extra == "*" || len(extra) == 2 && extra[1] == '*' {
+			return true
+		}
+		log.Printf("sxmatch: too short: %s %s", format, x.String())
 		return false
 	}
 	return true
