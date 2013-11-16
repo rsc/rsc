@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"go/ast"
 	"go/build"
-	"go/token"
 	"go/parser"
 	"go/printer"
+	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
@@ -21,14 +21,14 @@ import (
 )
 
 var (
-	warnCall = flag.Bool("warncall", false, "warn about CALLs")
+	warnCall  = flag.Bool("warncall", false, "warn about CALLs")
 	fixOffset = flag.Bool("fixoffset", false, "fix offsets")
-	fixNames = flag.Bool("fixnames", false, "fix variable names")
-	useInt64 = flag.Bool("int64", false, "assume 64-bit int on amd64")
-	fixInt64 = flag.Bool("fixint64", false, "assume converting to 64-bit int on amd64")
+	fixNames  = flag.Bool("fixnames", false, "fix variable names")
+	useInt64  = flag.Bool("int64", false, "assume 64-bit int on amd64")
+	fixInt64  = flag.Bool("fixint64", false, "assume converting to 64-bit int on amd64")
 
 	diffMode = flag.Bool("d", false, "diff")
-	verbose = flag.Bool("v", false, "verbose")
+	verbose  = flag.Bool("v", false, "verbose")
 
 	fset = token.NewFileSet()
 
@@ -36,7 +36,7 @@ var (
 	intSize = 4
 	ptrKind = "L"
 	ptrSize = 4
-	
+
 	newIntSize = intSize
 )
 
@@ -44,7 +44,7 @@ func init() {
 	flag.StringVar(&build.Default.GOARCH, "goarch", build.Default.GOARCH, "goarch")
 }
 
-func main() {	
+func main() {
 	flag.Parse()
 	if build.Default.GOARCH == "amd64" {
 		ptrKind = "Q"
@@ -79,28 +79,28 @@ func main() {
 }
 
 type varInfo struct {
-	name string
-	kind string
-	typ string
-	off int
+	name   string
+	kind   string
+	typ    string
+	off    int
 	newOff int
 }
 
 type funcInfo struct {
-	vars map[string]*varInfo
+	vars        map[string]*varInfo
 	varByOffset map[int]*varInfo
-	size int
+	size        int
 }
 
 var funcByName map[string]*funcInfo
 
 var (
-	call = regexp.MustCompile(`\b(CALL|BL)\b`)
-	text = regexp.MustCompile(`\bTEXT\b.*·([^\(]+)\(SB\)(?:\s*,\s*([0-9]+))?(?:\s*,\s*\$([0-9]+)(?:-([0-9]+))?)?`)
+	call  = regexp.MustCompile(`\b(CALL|BL)\b`)
+	text  = regexp.MustCompile(`\bTEXT\b.*·([^\(]+)\(SB\)(?:\s*,\s*([0-9]+))?(?:\s*,\s*\$([0-9]+)(?:-([0-9]+))?)?`)
 	globl = regexp.MustCompile(`\b(DATA|GLOBL)\b`)
-	fp = regexp.MustCompile(`([a-zA-Z0-9_\xFF-\x{10FFFF}]+)(?:\+([0-9]+))\(FP\)`)
-	fp2 = regexp.MustCompile(`[^+\-0-9]](([0-9]+)\(FP\))`)
-	inst = regexp.MustCompile(`^\s*(?:[A-Z0-9a-z_]+:)?\s*([A-Z]+)\s*([^,]*)(?:,\s*(.*))?`)
+	fp    = regexp.MustCompile(`([a-zA-Z0-9_\xFF-\x{10FFFF}]+)(?:\+([0-9]+))\(FP\)`)
+	fp2   = regexp.MustCompile(`[^+\-0-9]](([0-9]+)\(FP\))`)
+	inst  = regexp.MustCompile(`^\s*(?:[A-Z0-9a-z_]+:)?\s*([A-Z]+)\s*([^,]*)(?:,\s*(.*))?`)
 )
 
 func check(p *build.Package) {
@@ -126,14 +126,14 @@ func check(p *build.Package) {
 	if err != nil {
 		log.Fatalf("parsing Go code: %v", err)
 	}
-	
+
 	funcByName := make(map[string]*funcInfo)
 	pkg := pkgs[p.Name]
 	if pkg == nil {
 		log.Printf("no package %s in %s", p.Name, p.Dir)
 		return
 	}
-	
+
 	for filename, file := range pkg.Files {
 		for _, decl := range file.Decls {
 			switch decl := decl.(type) {
@@ -144,7 +144,7 @@ func check(p *build.Package) {
 			}
 		}
 	}
-	
+
 	for _, sfile := range p.SFiles {
 		var buf bytes.Buffer
 		var curFunc *funcInfo
@@ -262,13 +262,13 @@ func check(p *build.Package) {
 					if off != v.off && (!halfMove || off != v.off+4) {
 						fmt.Printf("%s:%d: invalid offset %s - expected +%d\n", path, i+1, m[0], v.off)
 					}
-					if instKind != v.kind && !halfMove{
+					if instKind != v.kind && !halfMove {
 						fmt.Printf("%s:%d: invalid %s of %s (%s)\n", path, i+1, instm[1], m[0], v.typ)
 					}
 				case "string":
 					switch off - v.off {
 					default:
-						fmt.Printf("%s:%d: invalid offset %s (%d into string)\n", path, i+1, m[0], off - v.off)
+						fmt.Printf("%s:%d: invalid offset %s (%d into string)\n", path, i+1, m[0], off-v.off)
 					case 0:
 						if instKind != ptrKind {
 							fmt.Printf("%s:%d: invalid %s of %s (string base ptr)\n", path, i+1, instm[1], m[0])
@@ -281,7 +281,7 @@ func check(p *build.Package) {
 				case "slice":
 					switch off - v.off {
 					default:
-						fmt.Printf("%s:%d: invalid offset %s (%d into slice)\n", path, i+1, m[0], off - v.off)
+						fmt.Printf("%s:%d: invalid offset %s (%d into slice)\n", path, i+1, m[0], off-v.off)
 					case 0:
 						if instKind != ptrKind {
 							fmt.Printf("%s:%d: invalid %s of %s (slice base ptr)\n", path, i+1, instm[1], m[0])
@@ -290,7 +290,7 @@ func check(p *build.Package) {
 						if instKind != intKind {
 							fmt.Printf("%s:%d: invalid %s of %s (slice len)\n", path, i+1, instm[1], m[0])
 						}
-					case ptrSize+intSize:
+					case ptrSize + intSize:
 						if instKind != intKind {
 							fmt.Printf("%s:%d: invalid %s of %s (slice cap)\n", path, i+1, instm[1], m[0])
 						}
@@ -301,14 +301,14 @@ func check(p *build.Package) {
 					fmt.Printf("%s:%d: checked %s; newoff=%d\n", path, i+1, m[0], v.newOff+newExtra)
 				}
 				if *fixOffset && v.newOff+newExtra != v.off {
-					off += v.newOff+newExtra - v.off
+					off += v.newOff + newExtra - v.off
 					newArg := fmt.Sprintf("%s+%d(FP)", v.name, off)
-					re := `\b`+regexp.QuoteMeta(m[0])
+					re := `\b` + regexp.QuoteMeta(m[0])
 					line = regexp.MustCompile(re).ReplaceAllString(line, newArg)
 					if *verbose {
 						fmt.Printf("%s:%d: %s -> %s\n", path, i+1, m[0], newArg)
 					}
-				}					
+				}
 			}
 			buf.WriteString(line)
 		}
@@ -337,12 +337,12 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 	if decl.Recv != nil {
 		log.Fatalf("%s: %s: assembly receivers not supported", file, decl.Name.Name)
 	}
-	
+
 	funci := &funcInfo{
-		vars: map[string]*varInfo{},
+		vars:        map[string]*varInfo{},
 		varByOffset: map[int]*varInfo{},
 	}
-	
+
 	off := 0
 	newOff := 0
 	doparams := func(list []*ast.Field) {
@@ -388,13 +388,13 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 					align = ptrSize
 				case "string":
 					kind = "string"
-					size = ptrSize*2
+					size = ptrSize * 2
 					align = ptrSize
 				}
 			case *ast.InterfaceType:
 				kind = "interface"
 				align = ptrSize
-				size = 2*ptrSize
+				size = 2 * ptrSize
 			case *ast.ArrayType:
 				if t.Len == nil {
 					kind = "slice"
@@ -407,7 +407,7 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 			case *ast.StructType:
 				log.Fatalf("%s: %s: struct type not supported", file, decl.Name.Name)
 			}
-	
+
 			if align == 0 {
 				log.Fatalf("%s: %s: 0 alignment for %s", file, decl.Name.Name, typ)
 			}
@@ -418,8 +418,8 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 				newSize = size
 			}
 
-			off += -off&(align-1)
-			newOff += -newOff&(newAlign-1)
+			off += -off & (align - 1)
+			newOff += -newOff & (newAlign - 1)
 			if len(names) == 0 {
 				name := "_"
 				if decl.Type.Results != nil && len(decl.Type.Results.List) > 0 && &list[0] == &decl.Type.Results.List[0] && i == 0 {
@@ -430,10 +430,10 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 			for _, id := range names {
 				name := id.Name
 				v := &varInfo{
-					name: name,
-					kind: kind,
-					typ: typ,
-					off: off,
+					name:   name,
+					kind:   kind,
+					typ:    typ,
+					off:    off,
 					newOff: newOff,
 				}
 				funci.vars[name] = v
@@ -445,18 +445,18 @@ func newFuncInfo(file string, decl *ast.FuncDecl) *funcInfo {
 			}
 		}
 	}
-	
+
 	doparams(decl.Type.Params.List)
 	if decl.Type.Results != nil && len(decl.Type.Results.List) > 0 {
-		off += -off&(ptrSize-1)
-		newOff += -newOff&(ptrSize-1)
+		off += -off & (ptrSize - 1)
+		newOff += -newOff & (ptrSize - 1)
 		doparams(decl.Type.Results.List)
 	}
 	funci.size = off
-	
+
 	return funci
 }
-	
+
 const (
 	tabWidth    = 4
 	parserMode  = parser.ParseComments
