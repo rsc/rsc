@@ -190,7 +190,7 @@ var dashTemplate = `<html>
           width: 800, height: 400,
           title: '{{.Version}} Issues',
           strictFirstColumnType: true,
-          vAxis: {minValue: 0, maxValue: 299},
+          vAxis: {minValue: 0},
           vAxes: {0: {title: 'Open Issues'}}
         };
         var chart = new google.visualization.AreaChart(document.getElementById('open_div'));
@@ -244,6 +244,8 @@ var dashTemplate = `<html>
         rehide();
       }
       function start() {
+	mode = window.location.hash || "#all";
+	mode = mode.substr(1);
         rehide();
       }
     </script>
@@ -275,6 +277,9 @@ var dashTemplate = `<html>
     <tr><td class="suggest"><td class="size">XL</td><td>extra large change: more than one day
     <tr><td class="suggest"><td>&#x261e;</td><td>suggested for people looking for work
     <tr><td class="suggest"><td>&#x2605;</td><td>must be done before feature freeze (if at all)
+    <tr><td class="suggest"><td>&#x26a0;</td><td>blocking release
+    <tr><td class="suggest"><td>&#x270e;</td><td>documentation only
+    <tr><td class="suggest"><td>&#x23db;</td><td>testing only
     </table>
     </div>
     <br><br>
@@ -286,8 +291,8 @@ var dashTemplate = `<html>
     {{range $dir, $list := .Issues}}
       <tr class="{{if hasLabel $list $.Label}}yes{{else}}maybe{{end}} {{if hasLabel $list "Suggested"}}suggest{{else}}nosuggest{{end}} {{if hasLabel $list "Feature"}}feature{{else}}nofeature{{end}}"><td class="dir" colspan="4">{{$dir}}
       {{range $list}}
-        <tr class="{{if hasLabel . $.Label}}yes{{else}}maybe{{end}} {{if hasLabel . "Suggested"}}suggest{{else}}nosuggest{{end}} {{if hasLabel . "Feature"}}feature{{else}}nofeature{{end}}">
-          <td class="suggest">{{if hasLabel . "Feature"}}&#x2605;{{end}} {{if hasLabel . "Suggested"}}&#x261e;{{end}}
+        <tr class="{{if hasLabel . $.Label}}yes{{else}}maybe{{end}} {{if hasLabel . "Suggested"}}suggest{{else}}nosuggest{{end}} {{if hasLabel . "Feature"}}feature{{else}}nofeature{{end}} {{if hasLabel . "Documentation"}}doc{{else}}nodoc{{end}} {{if hasLabel . "ReleaseBlocker"}}blocker{{else}}noblocker{{end}}">
+          <td class="suggest">{{if hasLabel . "Documentation"}}&#x270e;{{end}}{{if hasLabel . "ReleaseBlocker"}}&#x26a0;{{end}}{{if hasLabel . "Testing"}}&#x23db;{{end}}{{if hasLabel . "Feature"}}&#x2605;{{end}}{{if hasLabel . "Suggested"}}&#x261e;{{end}}
           <td class="size">{{hasLabel . "Size-"}}
           <td class="num">{{.ID}}
           <td class="title"><a href="http://golang.org/issue/{{.ID}}">{{.Summary}}</a>
