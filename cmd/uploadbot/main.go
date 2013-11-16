@@ -1,5 +1,5 @@
 // Uploadbot uploads tgz snapshots of Mercurial repositories to the download
-// section of a Google Code project. 
+// section of a Google Code project.
 //
 // Usage
 //
