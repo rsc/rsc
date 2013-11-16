@@ -151,13 +151,13 @@ func unmarshalValue(data []byte, v reflect.Value) (rest []byte, err error) {
 		}
 		v.SetInt(int64(i))
 		return data, nil
-	
+
 	case "<true/>", "<false/>":
 		if v.Kind() != reflect.Bool {
 			return nil, fmt.Errorf("cannot unmarshal %s into non-bool %s", stag, v.Type())
 		}
 		v.SetBool(stag == "<true/>")
-		return data, nil		
+		return data, nil
 	}
 	return nil, fmt.Errorf("unexpected tag %s", tag)
 }
