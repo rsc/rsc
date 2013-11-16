@@ -50,13 +50,13 @@ func (a Addrs) has(s string) bool {
 	return false
 }
 
-func (a *Addrs) Set(s string) bool {
+func (a *Addrs) Set(s string) error {
 	s = strings.TrimSpace(s)
 	if strings.HasSuffix(s, ">") {
 		j := strings.LastIndex(s, "<")
 		if j >= 0 {
 			*a = append(*a, Addr{strings.TrimSpace(s[:j]), s[j+1 : len(s)-1]})
-			return true
+			return nil
 		}
 	}
 
@@ -65,7 +65,7 @@ func (a *Addrs) Set(s string) bool {
 		os.Exit(2)
 	}
 	*a = append(*a, Addr{"", s})
-	return true
+	return nil
 }
 
 func (a *Addrs) parseLine(s string) {
