@@ -30,6 +30,12 @@ var thePlist = `<plist version="1.0">
         </array>
         <key>Dead</key>
         <string>foo<br/>baz</string>
+        <key>Enabled</key>
+        <true/>
+        <key>Disabled</key>
+        <false/>
+        <key>IgnoredBool</key>
+        <true/>
         <key>Excludes</key>
         <dict>
             <key>excludes</key>
@@ -64,6 +70,7 @@ var plistTests = []struct {
 				"/go1/pkg",
 				"/Library/Caches",
 			},
+			Enabled: true,
 			Excludes: Exclude1{
 				Excludes: []Exclude2{
 					{Type: 2,
@@ -87,6 +94,8 @@ type MyStruct struct {
 	LocalMountPoint      string
 	IgnoredRelativePaths []string
 	Excludes             Exclude1
+	Enabled bool
+	Disabled bool
 }
 
 type Exclude1 struct {
