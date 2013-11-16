@@ -94,8 +94,8 @@ type MyStruct struct {
 	LocalMountPoint      string
 	IgnoredRelativePaths []string
 	Excludes             Exclude1
-	Enabled bool
-	Disabled bool
+	Enabled              bool
+	Disabled             bool
 }
 
 type Exclude1 struct {
