@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
-	"time"
 
 	"code.google.com/p/rsc/google"
 )
@@ -56,7 +55,7 @@ func TestImap(t *testing.T) {
 			fmt.Println("From:", m.Hdr.From)
 			fmt.Println("To:", m.Hdr.To)
 			fmt.Println("Subject:", m.Hdr.Subject)
-			fmt.Println("M-Date:", time.Unix(m.Date, 0))
+			fmt.Println("M-Date:", m.Date)
 			fmt.Println("Date:", m.Hdr.Date)
 			fmt.Println()
 			fmt.Println(string(m.Root.Child[0].Text()))

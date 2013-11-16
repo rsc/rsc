@@ -65,15 +65,16 @@ type Client struct {
 	autoReconnect bool               // reconnect on failure
 	connected     bool               // rw is active
 
-	data       lock
-	capability map[string]bool
-	flags      Flags
-	boxByName  map[string]*Box // all known boxes
-	allBox     []*Box          // all known boxes (do we need this?)
-	rootBox    *Box            // root of box tree
-	inbox      *Box            // inbox (special, not in tree)
-	box        *Box            // selected (current) box
-	nextBox    *Box            // next box to select (do we need this?)
+	data          lock
+	capability    map[string]bool
+	flags         Flags
+	boxByName     map[string]*Box // all known boxes
+	allBox        []*Box          // all known boxes (do we need this?)
+	rootBox       *Box            // root of box tree
+	inbox         *Box            // inbox (special, not in tree)
+	box           *Box            // selected (current) box
+	nextBox       *Box            // next box to select (do we need this?)
+	searchResults []int64         // search results
 }
 
 func NewClient(mode Mode, server, user, passwd string, root string) (*Client, error) {
@@ -291,7 +292,7 @@ Trying:
 			}
 		}
 
-		if b != nil && b != c.box {
+		if b != nil && !b.search && b != c.box {
 			if c.box != nil {
 				// TODO c.box.init = false
 			}
@@ -303,6 +304,9 @@ Trying:
 				}
 				return nil, err
 			}
+		}
+		if b != nil {
+			c.box = b
 		}
 
 		x, err := c.cmdsx0(format, args...)
@@ -422,10 +426,14 @@ func boxTrim(list []*Box) []*Box {
 	return list[:w]
 }
 
-const maxFetch = 1000
+const maxFetch = 10000
 
 func (c *Client) setAutoReconnect(b bool) {
 	c.autoReconnect = b
+}
+
+func (c *Client) setBox(b *Box) {
+	c.box = b
 }
 
 func (c *Client) check(b *Box) error {
@@ -508,6 +516,76 @@ func (c *Client) fetchBox(b *Box, lo int, hi int) error {
 	return c.cmd(b, "FETCH %s:%s (FLAGS UID INTERNALDATE RFC822.SIZE ENVELOPE BODY%s)", slo, shi, extra)
 }
 
+func (c *Client) gmailSearch(query string) (*Box, error) {
+	c.io.mustBeLocked()
+
+	// Have to get through this in one session.
+	// Caller can call again if we get disconnected
+	// and return an error.
+	c.autoReconnect = false
+	defer c.setAutoReconnect(true)
+
+	if !c.IsGmail() {
+		return nil, fmt.Errorf("not a gmail IMAP server")
+	}
+	c.searchResults = nil
+	if err := c.cmd(c.boxByName["[Gmail]/All Mail"], "SEARCH %s", query); err != nil {
+		return nil, err
+	}
+	ids := c.searchResults
+
+	b := &Box{
+		Name:   "search results",
+		Elem:   "search results",
+		Client: c,
+		search: true,
+	}
+	defer c.setBox(c.box)
+	c.box = b
+	b.load = true
+
+	extra := ""
+	if c.IsGmail() {
+		extra = " X-GM-MSGID X-GM-THRID X-GM-LABELS"
+	}
+	println("got", len(ids))
+	for len(ids) > 1000 {
+		println("fetch", len(ids))
+		chunk := ids[:1000]
+		ids = ids[1000:]
+		if err := c.cmd(b, "FETCH %s (FLAGS UID INTERNALDATE RFC822.SIZE ENVELOPE BODY%s)", makeSet(chunk), extra); err != nil {
+			return nil, err
+		}
+	}
+	println("fetch", len(ids))
+	if err := c.cmd(b, "FETCH %s (FLAGS UID INTERNALDATE RFC822.SIZE ENVELOPE BODY%s)", makeSet(ids), extra); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func makeSet(uids []int64) string {
+	var buf bytes.Buffer
+	for len(uids) > 0 {
+		lo := uids[0]
+		uids = uids[1:]
+		hi := lo
+		for len(uids) > 0 && uids[0] == hi+1 {
+			hi++
+			uids = uids[1:]
+		}
+		if buf.Len() > 0 {
+			fmt.Fprintf(&buf, ",")
+		}
+		if lo == hi {
+			fmt.Fprintf(&buf, "%d", lo)
+		} else {
+			fmt.Fprintf(&buf, "%d:%d", lo, hi)
+		}
+	}
+	return buf.String()
+}
+
 func (c *Client) IsGmail() bool {
 	return c.capability["X-GM-EXT-1"]
 }
@@ -527,7 +605,7 @@ var unextab = []struct {
 	{0, "LIST", "AALSS", xlist},
 	{0, "XLIST", "AALSS", xlist},
 	{0, "OK", "", xok},
-	//	{0, "SEARCH", "AAN*", xsearch},
+	{0, "SEARCH", "AAN*", xsearch},
 	{1, "EXISTS", "ANA", xexists},
 	{1, "EXPUNGE", "ANA", xexpunge},
 	{1, "FETCH", "ANAL", xfetch},
@@ -560,6 +638,16 @@ func (c *Client) unexpected(x *sx) {
 		}
 	}
 	c.data.unlock()
+}
+
+func xsearch(c *Client, x *sx) {
+	c.data.mustBeLocked()
+	c.searchResults = nil
+	for _, xx := range x.sx[2:] {
+		if xx.kind == sxNumber {
+			c.searchResults = append(c.searchResults, xx.number)
+		}
+	}
 }
 
 func xbye(c *Client, x *sx) {
@@ -737,6 +825,9 @@ var msgtab = []struct {
 	{"X-GM-THRID", xmsggmthrid},
 	{"BODY", xmsgbody},
 	{"BODY[", xmsgbodydata},
+	{"BODY.PEEK", xmsgbody},
+	{"BODY.PEEK[", xmsgbodydata},
+	{"X-GM-LABELS", xmsggmlabels},
 }
 
 func xfetch(c *Client, x *sx) {
@@ -790,6 +881,18 @@ func xmsggmmsgid(m *Msg, k, v *sx) {
 
 func xmsggmthrid(m *Msg, k, v *sx) {
 	m.GmailThread = uint64(v.number)
+}
+
+func xmsggmlabels(m *Msg, k, v *sx) {
+	m.GmailLabels = nil
+	if v.kind == sxList {
+		v.match("S*")
+		for _, xx := range v.sx {
+			if len(xx.data) > 0 {
+				m.GmailLabels = append(m.GmailLabels, string(xx.data))
+			}
+		}
+	}
 }
 
 func xmsgflags(m *Msg, k, v *sx) {
@@ -926,7 +1029,6 @@ func parseStructure(p *MsgPart, x *sx) {
 	p.Bytes = x.sx[6].number
 	if p.Type == "message/rfc822" {
 		if len(x.sx) < 10 || !x.sx[7].isList() || !x.sx[8].isList() || !x.sx[9].isNumber() {
-			log.Printf("bad rfc822 structure: %s", x)
 			return
 		}
 		p.Hdr = parseEnvelope(x.sx[7])
@@ -972,7 +1074,7 @@ func (c *Client) fetch(p *MsgPart, what string) {
 		}
 		id += what
 	}
-	c.cmd(p.Msg.Box, "UID FETCH %d BODY[%s]", p.Msg.UID&(1<<32-1), id)
+	c.cmd(p.Msg.Box, "UID FETCH %d BODY.PEEK[%s]", p.Msg.UID&(1<<32-1), id)
 }
 
 func xmsgbodydata(m *Msg, k, v *sx) {
@@ -1064,6 +1166,26 @@ func (c *Client) deleteList(msgs []*Msg) error {
 	if err == nil && c.box == b {
 		err = c.cmd(b, "EXPUNGE")
 	}
+	return err
+}
+
+func (c *Client) markListSeen(msgs []*Msg) error {
+	if len(msgs) == 0 {
+		return nil
+	}
+	c.io.mustBeLocked()
+
+	b := msgs[0].Box
+	for _, m := range msgs {
+		if m.Box != b {
+			return fmt.Errorf("messages span boxes: %q and %q", b.Name, m.Box.Name)
+		}
+		if uint32(m.UID>>32) != b.validity {
+			return fmt.Errorf("stale message")
+		}
+	}
+
+	err := c.cmd(b, "UID STORE %s +FLAGS (\\Seen)", uidList(msgs))
 	return err
 }
 
