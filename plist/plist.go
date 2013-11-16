@@ -17,7 +17,12 @@ func next(data []byte) (skip, tag, rest []byte) {
 	if i < 0 {
 		return data, nil, nil
 	}
-	j := bytes.IndexByte(data[i:], '>')
+	var j int
+	if i+1 < len(data) && data[i+1] == '?' {
+		j = bytes.Index(data[i:], []byte("?>"))
+	} else {
+		j = bytes.IndexByte(data[i:], '>')
+	}
 	if j < 0 {
 		return data, nil, nil
 	}
@@ -27,6 +32,12 @@ func next(data []byte) (skip, tag, rest []byte) {
 
 func Unmarshal(data []byte, v interface{}) error {
 	_, tag, data := next(data)
+	if bytes.HasPrefix(tag, []byte("<?xml")) {
+		_, tag, data = next(data)
+	}
+	if bytes.HasPrefix(tag, []byte("<!DOCTYPE")) {
+		_, tag, data = next(data)
+	}
 	if !bytes.HasPrefix(tag, []byte("<plist")) {
 		return fmt.Errorf("not a plist")
 	}
