@@ -14,9 +14,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"code.google.com/p/goplan9/draw"
 	"code.google.com/p/goplan9/plan9/acme"
+	"code.google.com/p/rsc/issue"
 )
 
 func acmeMode() {
@@ -45,7 +47,7 @@ type awin struct {
 	mode     int
 	query    string
 	id       int
-	data     []Entry
+	data     []*issue.Issue
 	tab      int
 	font     *draw.Font
 	fontName string
@@ -82,7 +84,12 @@ func (w *awin) new(title string) *awin {
 	var err error
 	w1.Win, err = acme.New()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("creating acme window: %v", err)
+		time.Sleep(10 * time.Millisecond)
+		w1.Win, err = acme.New()
+		if err != nil {
+			log.Fatalf("creating acme window again: %v", err)
+		}
 	}
 	w1.prefix = w.prefix
 	w1.Name(w1.prefix + title)
@@ -164,6 +171,40 @@ func (w *awin) look(text string) bool {
 	return false
 }
 
+func (w *awin) label(labels, text string) {
+	println("label", text)
+	defer close(w.blinker())
+	if w.mode == modeSingle {
+		w.labelOne(labels, w.id)
+		w.load()
+		return
+	}
+	if n, _ := strconv.Atoi(text); 0 < n && n < 100000 {
+		w.labelOne(labels, n)
+		return
+	}
+	if m := numRE.FindAllString(text, -1); m != nil {
+		println("numre", len(m))
+		for _, s := range m {
+			n, _ := strconv.Atoi(strings.TrimSpace(s))
+			println(n, s)
+			if 0 < n && n < 100000 {
+				w.labelOne(labels, n)
+			}
+		}
+		return
+	}
+}
+
+func (w *awin) labelOne(labels string, n int) {
+	println("labelOne", n, labels)
+	var ch Change
+	ch.Label = strings.Fields(labels)
+	if err := write(n, &ch); err != nil {
+		w.err(fmt.Sprintf("labeling issue %d: %v\n", n, err))
+	}
+}
+
 func (w *awin) newIssue(title string, id int) {
 	w = w.new(title)
 	w.mode = modeSingle
@@ -179,10 +220,36 @@ func (w *awin) newSearch(title, query string) {
 	w.mode = modeQuery
 	w.query = query
 	w.Ctl("cleartag")
-	w.Fprintf("tag", " Search ")
+	w.Fprintf("tag", " Get Search ")
 	w.Write("body", []byte("Loading..."))
 	go w.load()
 	go w.loop()
+}
+
+func (w *awin) blinker() chan struct{} {
+	c := make(chan struct{})
+	go func() {
+		t := time.NewTicker(300 * time.Millisecond)
+		defer t.Stop()
+		dirty := false
+		for {
+			select {
+			case <-t.C:
+				dirty = !dirty
+				if dirty {
+					w.Ctl("dirty")
+				} else {
+					w.Ctl("clean")
+				}
+			case <-c:
+				if dirty {
+					w.Ctl("clean")
+				}
+				return
+			}
+		}
+	}()
+	return c
 }
 
 func (w *awin) clear() {
@@ -288,6 +355,7 @@ func diffUpdates(line, field string, old []string) []string {
 }
 
 func (w *awin) put() {
+	defer close(w.blinker())
 	switch w.mode {
 	case modeSingle:
 		e := w.data[0]
@@ -307,12 +375,12 @@ func (w *awin) put() {
 			}
 			switch {
 			case strings.HasPrefix(line, "Summary:"):
-				ch.Summary = diff(line, "Summary:", e.Title)
+				ch.Summary = diff(line, "Summary:", e.Summary)
 
 			case strings.HasPrefix(line, "Status:"):
 				status := e.Status
 				if status == "Duplicate" {
-					status += " " + e.MergedInto
+					status += " " + fmt.Sprint(e.Duplicate)
 				}
 				ch.Status = diff(line, "Status:", status)
 
@@ -357,11 +425,32 @@ func (w *awin) put() {
 	}
 }
 
+func (w *awin) loadText(e *acme.Event) {
+	if len(e.Text) == 0 && e.Q0 < e.Q1 {
+		w.Addr("#%d,#%d", e.Q0, e.Q1)
+		data, err := w.ReadAll("xdata")
+		if err != nil {
+			w.err(err.Error())
+		}
+		e.Text = data
+	}
+}
+
+func (w *awin) selection() string {
+	w.Ctl("addr=dot")
+	data, err := w.ReadAll("xdata")
+	if err != nil {
+		w.err(err.Error())
+	}
+	return string(data)
+}
+
 func (w *awin) loop() {
 	defer w.exit()
 	for e := range w.EventChan() {
 		switch e.C2 {
 		case 'x', 'X': // execute
+			println("x", string(e.Text))
 			cmd := strings.TrimSpace(string(e.Text))
 			if cmd == "Get" {
 				w.load()
@@ -379,16 +468,14 @@ func (w *awin) loop() {
 				w.newSearch("search", strings.TrimSpace(strings.TrimPrefix(cmd, "Search")))
 				break
 			}
+			if strings.HasPrefix(cmd, "Label ") {
+				text := w.selection()
+				w.label(strings.TrimSpace(strings.TrimPrefix(cmd, "Label")), text)
+				break
+			}
 			w.WriteEvent(e)
 		case 'l', 'L': // look
-			if len(e.Text) == 0 && e.Q0 < e.Q1 {
-				w.Addr("#%d,#%d", e.Q0, e.Q1)
-				data, err := w.ReadAll("xdata")
-				if err != nil {
-					w.err(err.Error())
-				}
-				e.Text = data
-			}
+			w.loadText(e)
 			if !w.look(string(e.Text)) {
 				w.WriteEvent(e)
 			}
@@ -436,16 +523,12 @@ func (w *awin) printTabbed(rows [][]string) {
 	w.Write("body", buf.Bytes())
 }
 
-func (w *awin) printList(entries []Entry) {
+func (w *awin) printList(entries []*issue.Issue) {
 	var rows [][]string
 	var buf bytes.Buffer
 	for _, e := range entries {
-		id := e.ID
-		if i := strings.Index(id, "id="); i >= 0 {
-			id = id[:i+len("id=")]
-		}
 		buf.Reset()
-		buf.WriteString(e.Title)
+		buf.WriteString(e.Summary)
 		if len(e.Label) > 0 {
 			buf.WriteString(" [")
 			for i, l := range e.Label {
@@ -456,7 +539,7 @@ func (w *awin) printList(entries []Entry) {
 			}
 			buf.WriteString("]")
 		}
-		rows = append(rows, []string{id, buf.String()})
+		rows = append(rows, []string{fmt.Sprint(e.ID), buf.String()})
 	}
 	w.printTabbed(rows)
 }
