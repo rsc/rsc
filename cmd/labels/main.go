@@ -118,7 +118,7 @@ func main() {
 
 	var buf bytes.Buffer
 	if *vs == 0 {
-		*vs = *ps * 12 / 10
+		*vs = (*ps*12 + 5) / 10
 	}
 	fmt.Fprintf(&buf, prolog, *font, *ps, *vs)
 
