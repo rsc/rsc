@@ -144,8 +144,14 @@ func main() {
 			}
 			field = strings.Replace(field, "(", `\(`, -1)
 			field = strings.Replace(field, ")", `\)`, -1)
-			fmt.Fprintf(&buf, "%s (%s)", mark, field)
-			mark = ""
+			for _, f := range strings.Split(field, "\n") {
+				f = strings.TrimSpace(f)
+				if f == "" {
+					continue
+				}
+				fmt.Fprintf(&buf, "%s (%s)", mark, f)
+				mark = ""
+			}
 		}
 		if mark == "" {
 			nlabel++
