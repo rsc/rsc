@@ -652,8 +652,9 @@ abdec1:
 		$<span>$ = span($<span>1, $<span>4)
 		abdecor := $1
 		span := $<span>$
+		expr := $3
 		$$ = func(t *Type) *Type {
-			return abdecor(&Type{Span: span, Kind: Array, Base: t, Width: $3})
+			return abdecor(&Type{Span: span, Kind: Array, Base: t, Width: expr})
 		}
 			
 	}	
@@ -701,8 +702,9 @@ decor:
 		$<span>$ = span($<span>1, $<span>4)
 		decor := $1
 		span := $<span>$
+		expr := $3
 		$$ = func(t *Type) (*Type, string) {
-			return decor(&Type{Span: span, Kind: Array, Base: t, Width: $3})
+			return decor(&Type{Span: span, Kind: Array, Base: t, Width: expr})
 		}	
 	}	
 
