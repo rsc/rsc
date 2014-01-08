@@ -34,7 +34,7 @@
 package cc
 
 type typeClass struct {
-	c TypeStorage
+	c Storage
 	q TypeQual
 	t *Type
 }
@@ -74,6 +74,7 @@ type idecor struct {
 
 %token	<str>	tokARGBEGIN
 %token	<str>	tokARGEND
+%token	<str>	tokAUTOLIB
 %token	<str>	tokAuto
 %token	<str>	tokBreak
 %token	<str>	tokCase
@@ -197,6 +198,9 @@ prog:
 	{
 		$<span>$ = span($<span>1, $<span>2)
 		$$ = append($1, $2...)
+	}
+|	prog tokAUTOLIB '(' tokName ')'
+	{
 	}
 
 cexpr:
@@ -499,12 +503,12 @@ block1:
 block:
 	'{'
 	{
-		pushScope()
+		yylex.(*lexer).pushScope()
 	}
 	block1 '}'
 	{
 		$<span>$ = span($<span>1, $<span>4)
-		popScope()
+		yylex.(*lexer).popScope()
 		$$ = &Stmt{Span: $<span>$, Op: Block, Block: $3}
 	}
 
@@ -623,9 +627,7 @@ abdecor:
 		_, q, _ := splitTypeWords($2)
 		abdecor := $3
 		$$ = func(t *Type) *Type {
-			t = abdecor(t)
-			t = &Type{Span: $<span>$, Kind: Ptr, Base: t, Qual: q}
-			return t
+			return abdecor(&Type{Span: $<span>$, Kind: Ptr, Base: t, Qual: q})
 		}
 	}
 |	abdec1
@@ -642,19 +644,16 @@ abdec1:
 		decls := $3
 		span := $<span>$
 		$$ = func(t *Type) *Type {
-			t = abdecor(t)
-			t = &Type{Span: span, Kind: Func, Base: t, Decls: decls}
-			return t
+			return abdecor(&Type{Span: span, Kind: Func, Base: t, Decls: decls})
 		}
 	}
 |	abdecor '[' expr_opt ']'
 	{
 		$<span>$ = span($<span>1, $<span>4)
 		abdecor := $1
+		span := $<span>$
 		$$ = func(t *Type) *Type {
-			t = abdecor(t)
-			// TODO: use expr
-			return t
+			return abdecor(&Type{Span: span, Kind: Array, Base: t, Width: $3})
 		}
 			
 	}	
@@ -679,9 +678,7 @@ decor:
 		decor := $3
 		span := $<span>$
 		$$ = func(t *Type) (*Type, string) {
-			t, name := decor(t)
-			t = &Type{Span: span, Kind: Ptr, Base: t, Qual: q}
-			return t, name
+			return decor(&Type{Span: span, Kind: Ptr, Base: t, Qual: q})
 		}
 	}
 |	'(' decor ')'
@@ -696,9 +693,7 @@ decor:
 		decls := $3
 		span := $<span>$
 		$$ = func(t *Type) (*Type, string) {
-			t, name := decor(t)
-			t = &Type{Span: span, Kind: Func, Base: t, Decls: decls}
-			return t, name
+			return decor(&Type{Span: span, Kind: Func, Base: t, Decls: decls})
 		}
 	}
 |	decor '[' expr_opt ']'
@@ -707,10 +702,7 @@ decor:
 		decor := $1
 		span := $<span>$
 		$$ = func(t *Type) (*Type, string) {
-			t, name := decor(t)
-			// TODO: use expr
-			t = &Type{Span: span, Kind: Array, Base: t}
-			return t, name
+			return decor(&Type{Span: span, Kind: Array, Base: t, Width: $3})
 		}	
 	}	
 
@@ -875,6 +867,9 @@ typespec:
 	{
 		$<span>$ = $<span>1
 		$$ = $<typ>1
+		if $$ == nil {
+			$$ = &Type{Kind: TypedefType, Name: $<str>1}
+		}
 	}
 
 // Types annotated with class info.
@@ -948,13 +943,14 @@ decl:
 		$$ = nil
 		for _, idec := range $2 {
 			typ, name := idec.d($1.t)
-			if $1.c&Typedef != 0 {
-				pushNamedType(name, typ)
-			}
-			$$ = append($$, &Decl{Span: $<span>$, Name: name, Type: typ, Storage: $1.c, Init: idec.i})
+			decl := &Decl{Span: $<span>$, Name: name, Type: typ, Storage: $1.c, Init: idec.i}
+			yylex.(*lexer).pushDecl(decl);
+			$$ = append($$, decl);
 		}
 		if $2 == nil {
-			$$ = append($$, &Decl{Span: $<span>$, Name: "", Type: $1.t, Storage: $1.c})
+			decl := &Decl{Span: $<span>$, Name: "", Type: $1.t, Storage: $1.c}
+			yylex.(*lexer).pushDecl(decl);
+			$$ = append($$, decl)
 		}
 	}
 
@@ -970,6 +966,10 @@ xdecl:
 		$<span>$ = $<span>1
 		$$ = []*Decl{$1}
 	}
+|	tokExtern tokString '{' prog '}'
+	{
+		$$ = $4
+	}
 
 fndef:
 	typeclass decor decl_list_opt block
@@ -981,6 +981,7 @@ fndef:
 			yylex.(*lexer).Errorf("cannot use pre-prototype definitions")
 		}
 		$$.Body = $4
+		yylex.(*lexer).pushDecl($$);
 	}
 
 tag:
@@ -1043,12 +1044,12 @@ typespec:
 	structunion tag
 	{
 		$<span>$ = span($<span>1, $<span>2)
-		$$ = &Type{Span: $<span>$, Kind: $1, Tag: $2}
+		$$ = yylex.(*lexer).pushType(&Type{Span: $<span>$, Kind: $1, Tag: $2})
 	}
 |	structunion tag_opt '{' sudecl_list '}'
 	{
 		$<span>$ = span($<span>1, $<span>5)
-		$$ = &Type{Span: $<span>$, Kind: $1, Tag: $2, Decls: $4}
+		$$ = yylex.(*lexer).pushType(&Type{Span: $<span>$, Kind: $1, Tag: $2, Decls: $4})
 	}
 
 initprefix:
@@ -1075,19 +1076,23 @@ typespec:
 	tokEnum tag
 	{
 		$<span>$ = span($<span>1, $<span>2)
-		$$ = &Type{Span: $<span>$, Kind: Enum, Tag: $2}
+		$$ = yylex.(*lexer).pushType(&Type{Span: $<span>$, Kind: Enum, Tag: $2})
 	}
 |	tokEnum tag_opt '{' edecl_list comma_opt '}'
 	{
 		$<span>$ = span($<span>1, $<span>6)
-		$$ = &Type{Span: $<span>$, Kind: Enum, Tag: $2, Decls: $4}
+		$$ = yylex.(*lexer).pushType(&Type{Span: $<span>$, Kind: Enum, Tag: $2, Decls: $4})
 	}
 
 edecl:
 	tokName eqexpr_opt
 	{
 		$<span>$ = span($<span>1, $<span>2)
-		$$ = &Decl{Span: $<span>$, Name: $1, Init: &Init{Span: $<span>$, Expr: $2}}
+		var x *Init
+		if $2 != nil {
+			x = &Init{Span: $<span>$, Expr: $2}
+		}
+		$$ = &Decl{Span: $<span>$, Name: $1, Init: x}
 	}
 
 eqexpr:
