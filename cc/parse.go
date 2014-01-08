@@ -8,42 +8,39 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
-	"os"
 )
 
-func Read(name string, r io.Reader) {
+func Read(name string, r io.Reader) (*Prog, error) {
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
-		log.Fatalf("reading %s: %v", name, err)
+		return nil, err
 	}
+	data = append(data, '\n')
 	lx := &lexer{
-		start:  startProg,
-		input:  string(data),
-		file:   name,
-		lineno: 1,
+		start: startProg,
+		lexInput: lexInput{
+			input:  string(data),
+			file:   name,
+			lineno: 1,
+		},
 	}
-	yyParse(lx)
+	lx.parse()
 	if lx.errors != nil {
-		for _, err := range lx.errors {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-		}
-		os.Exit(1)
+		return nil, fmt.Errorf("%v", lx.errors[0])
 	}
-	if lx.input != "" {
-		log.Fatalf("reading %s: did not consume entire file", name)
-		os.Exit(1)
-	}
+	return lx.prog, nil
 }
 
 func ParseExpr(str string) (*Expr, error) {
 	lx := &lexer{
-		input:  str + "\n",
-		file:   "<string>",
-		lineno: 1,
-		start:  startExpr,
+		start: startExpr,
+		lexInput: lexInput{
+			input:  str + "\n",
+			file:   "<string>",
+			lineno: 1,
+		},
 	}
-	yyParse(lx)
+	lx.parse()
 	if lx.errors != nil {
 		return nil, fmt.Errorf("parsing expression %#q: %v", str, lx.errors[0])
 	}

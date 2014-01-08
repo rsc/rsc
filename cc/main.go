@@ -8,6 +8,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -26,8 +27,17 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			cc.Read(arg, f)
+			prog, err := cc.Read(arg, f)
 			f.Close()
+			if err != nil {
+				log.Print(err)
+				continue
+			}
+			for _, decl := range prog.Decl {
+				var p cc.Printer
+				p.Print(decl)
+				fmt.Printf("%s\n", p.String())
+			}
 		}
 	}
 }

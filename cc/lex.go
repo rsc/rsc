@@ -6,22 +6,104 @@ package cc
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 )
 
 type lexer struct {
+	// input
+	start int
+	lexInput
+	pushed []lexInput
+
+	// type checking state
+	scope *Scope
+
+	// output
+	errors []string
+	prog   *Prog
+	expr   *Expr
+}
+
+func (lx *lexer) parse() {
+	lx.scope = &Scope{}
+	yyParse(lx)
+}
+
+type lexInput struct {
 	input   string
 	tok     string
 	lastsym string
 	file    string
 	lineno  int
 	byte    int
-	start   int
+}
 
-	// output
-	errors []string
-	prog   *Prog
-	expr   *Expr
+func (lx *lexer) pushInclude(includeLine string) {
+	s := strings.TrimSpace(strings.TrimPrefix(includeLine, "#include"))
+	if !strings.HasPrefix(s, "<") && !strings.HasPrefix(s, "\"") {
+		lx.Errorf("malformed #include")
+		return
+	}
+	sep := ">"
+	if s[0] == '"' {
+		sep = "\""
+	}
+	i := strings.Index(s, sep)
+	if i < 0 {
+		lx.Errorf("malformed #include")
+		return
+	}
+	file := s[1:i]
+
+	file, data, err := lx.findInclude(file, s[0] == '<')
+	if err != nil {
+		lx.Errorf("#include %s: %v", s[:i+1], err)
+		return
+	}
+
+	if data == nil {
+		return
+	}
+
+	lx.pushed = append(lx.pushed, lx.lexInput)
+	lx.lexInput = lexInput{
+		input:  string(append(data, '\n')),
+		file:   file,
+		lineno: 1,
+	}
+}
+
+var stdMap = map[string]string{
+	"u.h":    "",
+	"libc.h": "",
+}
+
+func (lx *lexer) findInclude(name string, std bool) (string, []byte, error) {
+	if std {
+		if redir, ok := stdMap[name]; ok {
+			if redir == "" {
+				return "", nil, nil
+			}
+			name = redir
+		} else {
+			name = "/Users/rsc/g/go/include/" + name
+		}
+	}
+	data, err := ioutil.ReadFile(name)
+	if err != nil {
+		return "", nil, err
+	}
+	return name, data, nil
+}
+
+func (lx *lexer) pop() bool {
+	if len(lx.pushed) == 0 {
+		return false
+	}
+	lx.lexInput = lx.pushed[len(lx.pushed)-1]
+	lx.pushed = lx.pushed[:len(lx.pushed)-1]
+	return true
 }
 
 func (lx *lexer) pos() Pos {
@@ -88,6 +170,9 @@ Restart:
 	yy.span.Start = lx.pos()
 	in := lx.input
 	if len(in) == 0 {
+		if lx.pop() {
+			goto Restart
+		}
 		return tokEOF
 	}
 	c := in[0]
@@ -110,7 +195,11 @@ Restart:
 			}
 			i++
 		}
+		str := in[:i]
 		lx.skip(i)
+		if strings.HasPrefix(str, "#include") {
+			lx.pushInclude(str)
+		}
 		goto Restart
 
 	case 'L':
@@ -220,9 +309,9 @@ Restart:
 		if t := tokId[lx.tok]; t != 0 {
 			return int(t)
 		}
-		// XXX determine tokTypeName vs tokName
-		if t, ok := namedType[lx.tok]; ok {
-			yy.typ = t
+		yy.decl = lx.lookupDecl(lx.tok)
+		if yy.decl != nil && yy.decl.Storage&Typedef != 0 {
+			yy.typ = &Type{Kind: TypedefType, Name: yy.str, Base: yy.decl.Type}
 			return tokTypeName
 		}
 		return tokName
@@ -322,32 +411,26 @@ var tokId = map[string]int32{
 	"volatile": tokVolatile,
 	"while":    tokWhile,
 
+	"ARGBEGIN": tokARGBEGIN,
+	"ARGEND":   tokARGEND,
+	"AUTOLIB":  tokAUTOLIB,
+
 	"int32":   tokTypeName,
 	"uint32":  tokTypeName,
 	"int64":   tokTypeName,
+	"u64int":  tokTypeName,
+	"u32int":  tokTypeName,
+	"u16int":  tokTypeName,
 	"uint64":  tokTypeName,
 	"ushort":  tokTypeName,
 	"ulong":   tokTypeName,
 	"uint":    tokTypeName,
 	"vlong":   tokTypeName,
 	"uvlong":  tokTypeName,
-	"Biobuf":  tokTypeName,
 	"Strlit":  tokTypeName,
 	"Val":     tokTypeName,
 	"Rune":    tokTypeName,
 	"uchar":   tokTypeName,
 	"schar":   tokTypeName,
 	"va_list": tokTypeName,
-}
-
-var namedType = map[string]*Type{}
-
-func pushNamedType(name string, typ *Type) {
-	namedType[name] = typ
-}
-
-func pushScope() {
-}
-
-func popScope() {
 }

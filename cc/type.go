@@ -19,6 +19,7 @@ type Type struct {
 	Tag   string
 	Decls []*Decl
 	Width *Expr
+	Name  string
 }
 
 type TypeKind int
@@ -44,28 +45,30 @@ const (
 	Enum
 	Array
 	Func
+	TypedefType
 )
 
 var typeKindString = []string{
-	Void:      "void",
-	Char:      "char",
-	Uchar:     "uchar",
-	Short:     "short",
-	Ushort:    "ushort",
-	Int:       "int",
-	Uint:      "uint",
-	Long:      "long",
-	Ulong:     "ulong",
-	Longlong:  "vlong",
-	Ulonglong: "uvlong",
-	Float:     "float",
-	Double:    "double",
-	Ptr:       "pointer",
-	Struct:    "struct",
-	Union:     "union",
-	Enum:      "enum",
-	Array:     "array",
-	Func:      "func",
+	Void:        "void",
+	Char:        "char",
+	Uchar:       "uchar",
+	Short:       "short",
+	Ushort:      "ushort",
+	Int:         "int",
+	Uint:        "uint",
+	Long:        "long",
+	Ulong:       "ulong",
+	Longlong:    "longlong",
+	Ulonglong:   "ulonglong",
+	Float:       "float",
+	Double:      "double",
+	Ptr:         "pointer",
+	Struct:      "struct",
+	Union:       "union",
+	Enum:        "enum",
+	Array:       "array",
+	Func:        "func",
+	TypedefType: "<typedef>",
 }
 
 func (k TypeKind) String() string {
@@ -96,10 +99,10 @@ func (q TypeQual) String() string {
 	return s[:len(s)-1]
 }
 
-type TypeStorage int
+type Storage int
 
 const (
-	Auto TypeStorage = 1 << iota
+	Auto Storage = 1 << iota
 	Static
 	Extern
 	Typedef
@@ -107,7 +110,7 @@ const (
 	Inline
 )
 
-func (c TypeStorage) String() string {
+func (c Storage) String() string {
 	s := ""
 	if c&Auto != 0 {
 		s += "auto "
@@ -194,7 +197,7 @@ var builtinTypes = map[typeOp]*Type{
 	tVoid:   typeVoid,
 }
 
-func splitTypeWords(ws []string) (c TypeStorage, q TypeQual, ty *Type) {
+func splitTypeWords(ws []string) (c Storage, q TypeQual, ty *Type) {
 	// Could check for doubled words in general,
 	// like const const, but no one cares.
 	var t typeOp
@@ -267,51 +270,34 @@ func newType(k TypeKind) *Type {
 	return &Type{Kind: k}
 }
 
-var typeKinds = map[TypeKind]string{
-	Void:      "void",
-	Char:      "char",
-	Uchar:     "uchar",
-	Short:     "short",
-	Ushort:    "ushort",
-	Int:       "int",
-	Uint:      "uint",
-	Long:      "long",
-	Ulong:     "ulong",
-	Longlong:  "longlong",
-	Ulonglong: "ulonglong",
-	Float:     "float",
-	Double:    "double",
-}
-
 func (t *Type) String() string {
 	if t == nil {
 		return "<nil>"
 	}
-	if s := typeKinds[t.Kind]; s != "" {
-		return s
-	}
 	switch t.Kind {
+	default:
+		return t.Kind.String()
+	case TypedefType:
+		return t.Name
 	case Ptr:
 		return t.Base.String() + "*"
-	case Struct:
-		return "struct " + t.Tag
-	case Union:
-		return "union " + t.Tag
-	case Enum:
-		return "enum " + t.Tag
+	case Struct, Union, Enum:
+		if t.Tag == "" {
+			return t.Kind.String()
+		}
+		return t.Kind.String() + " " + t.Tag
 	case Array:
 		return t.Base.String() + "[]"
 	case Func:
 		return "func() " + t.Base.String()
 	}
-	return "?"
 }
 
 type Decl struct {
 	Span    Span
 	Name    string
 	Type    *Type
-	Storage TypeStorage
+	Storage Storage
 	Init    *Init
 	Body    *Stmt
 }

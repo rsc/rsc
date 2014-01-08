@@ -7,10 +7,21 @@ package cc
 import (
 	"bytes"
 	"fmt"
+	"strings"
+)
+
+type special int
+
+const (
+	indent special = iota
+	unindent
+	untab
+	newline
 )
 
 type Printer struct {
-	buf bytes.Buffer
+	buf    bytes.Buffer
+	indent int
 }
 
 func (p *Printer) Bytes() []byte {
@@ -24,6 +35,16 @@ func (p *Printer) String() string {
 type exprPrec struct {
 	expr *Expr
 	prec int
+}
+
+type nestBlock struct {
+	stmt *Stmt
+	more bool
+}
+
+type TypedName struct {
+	Type *Type
+	Name string
 }
 
 func (p *Printer) Print(args ...interface{}) {
@@ -43,14 +64,44 @@ func (p *Printer) Print(args ...interface{}) {
 			p.printInit(arg)
 		case *Prog:
 			p.printProg(arg)
-		//case *Stmt:
-		//	p.printStmt(arg)
-		case *Label:
-			p.printLabel(arg)
+		case *Stmt:
+			p.printStmt(arg)
 		case *Type:
-			p.printType(arg)
+			p.printType(arg, "")
 		case *Decl:
 			p.printDecl(arg)
+		case TypedName:
+			p.printType(arg.Type, arg.Name)
+		case Storage:
+			p.Print(arg.String())
+		case nestBlock:
+			if arg.stmt.Op == Block {
+				p.Print(" ", arg.stmt)
+			} else {
+				p.Print(indent, newline, arg.stmt, unindent)
+				if arg.more {
+					p.Print(newline)
+				}
+			}
+		case special:
+			switch arg {
+			default:
+				fmt.Fprintf(&p.buf, "(?special:%d)", arg)
+			case indent:
+				p.indent++
+			case unindent:
+				p.indent--
+			case untab:
+				b := p.buf.Bytes()
+				if len(b) > 0 && b[len(b)-1] == '\t' {
+					p.buf.Truncate(len(b) - 1)
+				}
+			case newline:
+				p.buf.WriteString("\n")
+				for i := 0; i < p.indent; i++ {
+					p.buf.WriteByte('\t')
+				}
+			}
 		}
 	}
 }
@@ -140,10 +191,8 @@ var opStr = []string{
 	And:        "&",
 	AndAnd:     "&&",
 	AndEq:      "&=",
-	Arrow:      "->",
 	Div:        "/",
 	DivEq:      "/=",
-	Dot:        ".",
 	Eq:         "=",
 	EqEq:       "==",
 	Gt:         ">",
@@ -177,13 +226,16 @@ var opStr = []string{
 }
 
 func (p *Printer) printExpr(x *Expr, prec int) {
+	if x == nil {
+		return
+	}
 	var newPrec int
 	if 0 <= int(x.Op) && int(x.Op) < len(opPrec) {
 		newPrec = opPrec[x.Op]
 	}
 	if prec < newPrec {
-		p.buf.WriteString("(")
-		defer p.buf.WriteString(")")
+		p.Print("(")
+		defer p.Print(")")
 	}
 	prec = newPrec
 
@@ -227,7 +279,7 @@ func (p *Printer) printExpr(x *Expr, prec int) {
 			if i > 0 {
 				p.Print(", ")
 			}
-			p.printExpr(y, prec-1)
+			p.printExpr(y, precComma)
 		}
 		p.Print(")")
 
@@ -260,9 +312,9 @@ func (p *Printer) printExpr(x *Expr, prec int) {
 	case String:
 		for i, str := range x.Texts {
 			if i > 0 {
-				p.buf.WriteString(" ")
+				p.Print(" ")
 			}
-			p.buf.WriteString(str)
+			p.Print(str)
 		}
 
 	case Offsetof:
@@ -286,21 +338,41 @@ func (p *Printer) printExpr(x *Expr, prec int) {
 }
 
 func (p *Printer) printPrefix(x *Prefix) {
+	if x.Dot != "" {
+		p.Print(".", x.Dot)
+	} else {
+		p.Print("[", x.Index, "]")
+	}
 }
 
 func (p *Printer) printInit(x *Init) {
-	for _, pre := range x.Prefix {
-		p.Print(pre)
+	if len(x.Prefix) > 0 {
+		for _, pre := range x.Prefix {
+			p.Print(pre)
+		}
+		p.Print(" = ")
 	}
 	if x.Expr != nil {
 		p.printExpr(x.Expr, precComma)
 	} else {
+		nl := len(x.Braced) > 0 && x.Braced[0].Span.Start.Line != x.Braced[len(x.Braced)-1].Span.End.Line
 		p.Print("{")
+		if nl {
+			p.Print(indent)
+		}
 		for i, y := range x.Braced {
 			if i > 0 {
-				p.Print(", ")
+				p.Print(",")
+			}
+			if nl {
+				p.Print(newline)
+			} else if i > 0 {
+				p.Print(" ")
 			}
 			p.Print(y)
+		}
+		if nl {
+			p.Print(unindent, newline)
 		}
 		p.Print("}")
 	}
@@ -309,87 +381,157 @@ func (p *Printer) printInit(x *Init) {
 func (p *Printer) printProg(x *Prog) {
 }
 
-/*
 func (p *Printer) printStmt(x *Stmt) {
-	// TODO labels
+	if len(x.Labels) > 0 {
+		for _, lab := range x.Labels {
+			p.Print(untab)
+			switch {
+			case lab.Name != "":
+				p.Print(lab.Name)
+			case lab.Expr != nil:
+				p.Print("case ", lab.Expr)
+			default:
+				p.Print("default")
+			}
+			p.Print(":", newline)
+		}
+	}
 
 	switch x.Op {
 	case ARGBEGIN:
-		p.print("ARGBEGIN{", indent, x.Body, unindent, "\n", "}ARGEND")
+		p.Print("ARGBEGIN{", indent, newline, x.Body, unindent, newline, "}ARGEND")
 
 	case Block:
-		p.print("{", indent)
-		for _, b := range x.Stmt {
-			p.print("\n", b)
+		p.Print("{", indent)
+		for _, b := range x.Block {
+			p.Print(newline, b)
 		}
-		p.print(unindent, "\n", "}")
+		p.Print(unindent, newline, "}")
 
 	case Break:
-		p.print("break;")
+		p.Print("break;")
 
 	case Continue:
-		p.print("continue;")
-
-	case StmtDecl:
-		//xxx
+		p.Print("continue;")
 
 	case Do:
-		p.print("do", nestBlock{p.Body}, " while(", p.Expr, ");")
+		p.Print("do", nestBlock{x.Body, true}, " while(", x.Expr, ");")
 
 	case Empty:
-		p.print(";")
-
-	case StmtExpr:
-		p.print(x.Expr)
+		p.Print(";")
 
 	case For:
-		p.print("for(", x.Pre, "; ", x.Expr, "; ", x.Post, ")", nestBlock{p.Body})
+		p.Print("for(", x.Pre, ";")
+		if x.Expr != nil {
+			p.Print(" ")
+		}
+		p.Print(x.Expr, ";")
+		if x.Post != nil {
+			p.Print(" ")
+		}
+		p.Print(x.Post, ")", nestBlock{x.Body, false})
 
 	case If:
-		p.print("if(", x.Expr, ")", nestBlock{p.Body})
+		p.Print("if(", x.Expr, ")", nestBlock{x.Body, x.Else != nil})
 		if x.Else != nil {
-			if p.Body.Op == Block && p.Body.Labels == nil {
-				p.print(" else")
-			} else {
-				p.print("\n", "else")
+			if x.Body.Op == Block {
+				p.Print(" ")
 			}
-			p.print(nestBlock{p.Else})
+			p.Print("else", nestBlock{x.Else, false})
 		}
 
 	case Goto:
-		p.print("goto ", x.Text, ";")
+		p.Print("goto ", x.Text, ";")
 
 	case Return:
 		if x.Expr == nil {
-			p.print("return;")
+			p.Print("return;")
 		} else {
-			p.print("return ", x.Expr, ";")
+			p.Print("return ", x.Expr, ";")
 		}
 
+	case StmtDecl:
+		p.Print(x.Decl, ";")
+
+	case StmtExpr:
+		p.Print(x.Expr, ";")
+
 	case Switch:
-		p.print("switch(", x.Expr, ")", nestBlock{p.Body})
+		p.Print("switch(", x.Expr, ")", nestBlock{x.Body, false})
 
 	case While:
-		p.print("while(", x.Expr, ")", nestBlock{p.Body})
+		p.Print("while(", x.Expr, ")", nestBlock{x.Body, false})
 	}
 }
-*/
 
-func (p *Printer) printLabel(x *Label) {
-}
-
-func (p *Printer) printType(x *Type) {
+func (p *Printer) printType(x *Type, name string) {
 	switch x.Kind {
+	case Ptr:
+		p.printType(x.Base, "*"+name)
+	case Array:
+		if strings.HasPrefix(name, "*") {
+			name = "(" + name + ")"
+		}
+		if x.Width == nil {
+			p.printType(x.Base, name+"[]")
+		} else {
+			p.printType(x.Base, name+"["+x.Width.String()+"]")
+		}
+	case Func:
+		var pp Printer
+		if strings.HasPrefix(name, "*") {
+			name = "(" + name + ")"
+		}
+		pp.Print(name, "(")
+		for i, decl := range x.Decls {
+			if i > 0 {
+				pp.Print(", ")
+			}
+			pp.Print(decl)
+		}
+		pp.Print(")")
+		p.printType(x.Base, pp.String())
+
 	default:
-		p.Print(x.Kind.String())
-		//case Ptr:
-		//case Struct:
-		//case Union:
-		//case Enum:
-		//case Array:
-		//case Func:
+		p.Print(x.String())
+		i := 0
+		for i < len(name) && name[i] == '*' {
+			i++
+		}
+		if i < len(name) && name[i] != '\n' {
+			p.Print(" ")
+		}
+		p.Print(name)
 	}
 }
 
 func (p *Printer) printDecl(x *Decl) {
+	if x.Storage != 0 {
+		p.Print(x.Storage, " ")
+	}
+	if x.Type == nil {
+		p.Print(x.Name)
+	} else {
+		name := x.Name
+		if x.Type.Kind == Func && x.Body != nil {
+			name = "\n" + name
+		}
+		p.Print(TypedName{x.Type, name})
+		if x.Name == "" {
+			switch x.Type.Kind {
+			case Struct, Union, Enum:
+				p.Print(" {", indent)
+				for _, decl := range x.Type.Decls {
+					p.Print(newline, decl)
+				}
+				p.Print(unindent, newline, "}")
+			}
+		}
+	}
+	if x.Init != nil {
+		p.Print(" = ", x.Init)
+	}
+	if x.Body != nil {
+		p.Print(newline, x.Body)
+	}
 }
