@@ -17,6 +17,10 @@ type Expr struct {
 	Texts []string // list of literals, for String
 	Type  *Type    // type operand, for SizeofType, Offsetof, Cast, CastInit, VaArg
 	Init  *Init    // initializer, for CastInit
+	
+	// derived information
+	XDecl *Decl
+	XType *Type // expression type, derived
 }
 
 func (x *Expr) String() string {

@@ -75,6 +75,9 @@ type idecor struct {
 %token	<str>	tokARGBEGIN
 %token	<str>	tokARGEND
 %token	<str>	tokAUTOLIB
+%token	<str>	tokSET
+%token	<str>	tokUSED
+
 %token	<str>	tokAuto
 %token	<str>	tokBreak
 %token	<str>	tokCase
@@ -180,7 +183,7 @@ type idecor struct {
 top:
 	startProg prog tokEOF
 	{
-		yylex.(*lexer).prog = &Prog{Decl: $2}
+		yylex.(*lexer).prog = &Prog{Decls: $2}
 		return 0
 	}
 |	startExpr cexpr tokEOF
@@ -218,7 +221,7 @@ expr:
 	tokName
 	{
 		$<span>$ = $<span>1
-		$$ = &Expr{Span: $<span>$, Op: Name, Text: $1}
+		$$ = &Expr{Span: $<span>$, Op: Name, Text: $1, XDecl: $<decl>1}
 	}
 |	tokNumber
 	{
@@ -543,6 +546,16 @@ stmt:
 		$<span>$ = $<span>1
 		$$ = &Stmt{Span: $<span>$, Op: Empty}
 	}
+|	tokUSED '(' cexpr ')' ';'
+	{
+		$<span>$ = $<span>1
+		$$ = &Stmt{Span: $<span>$, Op: Empty}
+	}
+|	tokSET '(' cexpr ')' ';'
+	{
+		$<span>$ = $<span>1
+		$$ = &Stmt{Span: $<span>$, Op: Empty}
+	}			
 |	block
 	{
 		$<span>$ = $<span>1
@@ -643,6 +656,20 @@ abdec1:
 		abdecor := $1
 		decls := $3
 		span := $<span>$
+		for _, decl := range decls {
+			t := decl.Type
+			if t != nil {
+				if t.Kind == TypedefType && t.Base != nil {
+					t = t.Base
+				}
+				if t.Kind == Array {
+					if t.Width == nil {
+						t = t.Base
+					}
+					decl.Type = &Type{Kind: Ptr, Base: t}
+				}
+			}
+		}
 		$$ = func(t *Type) *Type {
 			return abdecor(&Type{Span: span, Kind: Func, Base: t, Decls: decls})
 		}
@@ -974,15 +1001,29 @@ xdecl:
 	}
 
 fndef:
-	typeclass decor decl_list_opt block
+	typeclass decor decl_list_opt 
 	{
-		$<span>$ = span($<span>1, $<span>4)
+		yylex.(*lexer).pushScope()
 		typ, name := $2($1.t)
-		$$ = &Decl{Span: $<span>$, Name: name, Type: typ}
+		$<typ>$ = typ
+		$<str>$ = name
+		if typ.Kind != Func {
+			yylex.(*lexer).Errorf("invalid function definition")
+			return 0
+		}
+		for _, decl := range typ.Decls {
+			yylex.(*lexer).pushDecl(decl);
+		}
+	}
+	block
+	{
+		yylex.(*lexer).popScope();
+		$<span>$ = span($<span>1, $<span>5)
+		$$ = &Decl{Span: $<span>$, Name: $<str>4, Type: $<typ>4}
 		if $3 != nil {
 			yylex.(*lexer).Errorf("cannot use pre-prototype definitions")
 		}
-		$$.Body = $4
+		$$.Body = $5
 		yylex.(*lexer).pushDecl($$);
 	}
 

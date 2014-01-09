@@ -15,6 +15,8 @@ type lexer struct {
 	start int
 	lexInput
 	pushed []lexInput
+	forcePos Pos
+	c2goComment bool // inside /*c2go ... */ comment
 
 	// type checking state
 	scope *Scope
@@ -49,11 +51,12 @@ func (lx *lexer) pushInclude(includeLine string) {
 	if s[0] == '"' {
 		sep = "\""
 	}
-	i := strings.Index(s, sep)
+	i := strings.Index(s[1:], sep)
 	if i < 0 {
 		lx.Errorf("malformed #include")
 		return
 	}
+	i++
 	file := s[1:i]
 
 	file, data, err := lx.findInclude(file, s[0] == '<')
@@ -75,8 +78,8 @@ func (lx *lexer) pushInclude(includeLine string) {
 }
 
 var stdMap = map[string]string{
-	"u.h":    "",
-	"libc.h": "",
+	"u.h":    hdr_u_h,
+	"libc.h": hdr_libc_h,
 }
 
 func (lx *lexer) findInclude(name string, std bool) (string, []byte, error) {
@@ -85,10 +88,9 @@ func (lx *lexer) findInclude(name string, std bool) (string, []byte, error) {
 			if redir == "" {
 				return "", nil, nil
 			}
-			name = redir
-		} else {
-			name = "/Users/rsc/g/go/include/" + name
+			return "internal/" + name, []byte(redir), nil
 		}
+		name = "/Users/rsc/g/go/include/" + name
 	}
 	data, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -107,11 +109,18 @@ func (lx *lexer) pop() bool {
 }
 
 func (lx *lexer) pos() Pos {
+	if lx.forcePos.Line != 0 {
+		return lx.forcePos
+	}
 	return Pos{lx.file, lx.lineno, lx.byte}
 }
 func (lx *lexer) span() Span {
 	p := lx.pos()
 	return Span{p, p}
+}
+
+func (lx *lexer) setSpan(s Span) {
+	lx.forcePos = s.Start
 }
 
 func span(l1, l2 Span) Span {
@@ -255,6 +264,11 @@ Restart:
 	case '/':
 		switch in[1] {
 		case '*':
+			if strings.HasPrefix(in, "/*c2go") {
+				lx.skip(6)
+				lx.c2goComment = true
+				goto Restart
+			}
 			i := 2
 			for ; ; i++ {
 				if i+2 <= len(in) && in[i] == '*' && in[i+1] == '/' {
@@ -280,6 +294,11 @@ Restart:
 		fallthrough
 
 	case '~', '*', '(', ')', '[', ']', '{', '}', '?', ':', ';', ',', '%', '^', '!', '=', '<', '>', '+', '-', '&', '|':
+		if lx.c2goComment && in[0] == '*' && in[1] == '/' {
+			lx.c2goComment = false
+			lx.skip(2)
+			goto Restart
+		}
 		if c == '-' && in[1] == '>' {
 			lx.token(2)
 			return tokArrow
@@ -311,7 +330,11 @@ Restart:
 		}
 		yy.decl = lx.lookupDecl(lx.tok)
 		if yy.decl != nil && yy.decl.Storage&Typedef != 0 {
-			yy.typ = &Type{Kind: TypedefType, Name: yy.str, Base: yy.decl.Type}
+			t := yy.decl.Type
+			for t.Kind == TypedefType && t.Base != nil {
+				t = t.Base
+			}
+			yy.typ = &Type{Kind: TypedefType, Name: yy.str, Base: t}
 			return tokTypeName
 		}
 		return tokName
@@ -414,23 +437,6 @@ var tokId = map[string]int32{
 	"ARGBEGIN": tokARGBEGIN,
 	"ARGEND":   tokARGEND,
 	"AUTOLIB":  tokAUTOLIB,
-
-	"int32":   tokTypeName,
-	"uint32":  tokTypeName,
-	"int64":   tokTypeName,
-	"u64int":  tokTypeName,
-	"u32int":  tokTypeName,
-	"u16int":  tokTypeName,
-	"uint64":  tokTypeName,
-	"ushort":  tokTypeName,
-	"ulong":   tokTypeName,
-	"uint":    tokTypeName,
-	"vlong":   tokTypeName,
-	"uvlong":  tokTypeName,
-	"Strlit":  tokTypeName,
-	"Val":     tokTypeName,
-	"Rune":    tokTypeName,
-	"uchar":   tokTypeName,
-	"schar":   tokTypeName,
-	"va_list": tokTypeName,
+	"USED": tokUSED,
+	"SET": tokSET,
 }
