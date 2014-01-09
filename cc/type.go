@@ -39,10 +39,10 @@ const (
 	Ulonglong
 	Float
 	Double
+	Enum
 	Ptr
 	Struct
 	Union
-	Enum
 	Array
 	Func
 	TypedefType
@@ -150,6 +150,7 @@ var (
 	typeFloat     = newType(Float)
 	typeDouble    = newType(Double)
 	typeVoid      = newType(Void)
+	typeBool = &Type{Kind: TypedefType, Name: "bool", Base: typeInt}
 )
 
 type typeOp int
@@ -231,7 +232,7 @@ func splitTypeWords(ws []string) (c Storage, q TypeQual, ty *Type) {
 			ts = append(ts, w)
 		case "long":
 			if t&tLong != 0 {
-				t |= tLonglong
+				t ^= tLonglong | tLong
 			} else {
 				t |= tLong
 			}

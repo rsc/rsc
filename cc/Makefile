@@ -6,4 +6,4 @@ y.go: cc.y
 
 try: y.go
 	go install
-	go run main.go /Users/rsc/g/go/src/libmach/8db.c
+	go run main.go /Users/rsc/g/go/src/libmach/8db.c >x.html

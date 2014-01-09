@@ -22,6 +22,16 @@ const (
 type Printer struct {
 	buf    bytes.Buffer
 	indent int
+	html bool
+}
+
+func (p *Printer) StartHTML() {
+	p.buf.WriteString("<pre>")
+	p.html = true
+}
+
+func (p *Printer) EndHTML() {
+	p.buf.WriteString("</pre>")
 }
 
 func (p *Printer) Bytes() []byte {
@@ -47,13 +57,19 @@ type TypedName struct {
 	Name string
 }
 
+var htmlEscaper = strings.NewReplacer("<", "&lt;", ">", "&gt;", "&", "&amp;")
+
 func (p *Printer) Print(args ...interface{}) {
 	for _, arg := range args {
 		switch arg := arg.(type) {
 		default:
 			fmt.Fprintf(&p.buf, "(?%T)", arg)
 		case string:
-			p.buf.WriteString(arg)
+			if p.html {
+				htmlEscaper.WriteString(&p.buf, arg)
+			} else {
+				p.buf.WriteString(arg)
+			}
 		case exprPrec:
 			p.printExpr(arg.expr, arg.prec)
 		case *Expr:
@@ -229,6 +245,10 @@ func (p *Printer) printExpr(x *Expr, prec int) {
 	if x == nil {
 		return
 	}
+	if p.html {
+		fmt.Fprintf(&p.buf, "<span title='%s type %v'>", x.Op, x.XType)
+		defer fmt.Fprintf(&p.buf, "</span>")
+	}
 	var newPrec int
 	if 0 <= int(x.Op) && int(x.Op) < len(opPrec) {
 		newPrec = opPrec[x.Op]
@@ -379,6 +399,9 @@ func (p *Printer) printInit(x *Init) {
 }
 
 func (p *Printer) printProg(x *Prog) {
+	for _, decl := range x.Decls {
+		p.Print(decl, newline)
+	}
 }
 
 func (p *Printer) printStmt(x *Stmt) {

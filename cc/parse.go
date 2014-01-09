@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 )
 
 func Read(name string, r io.Reader) (*Prog, error) {
@@ -27,6 +28,10 @@ func Read(name string, r io.Reader) (*Prog, error) {
 	lx.parse()
 	if lx.errors != nil {
 		return nil, fmt.Errorf("%v", lx.errors[0])
+	}
+	lx.typecheck(lx.prog)
+	if lx.errors != nil {
+		return nil, fmt.Errorf("%v", strings.Join(lx.errors, "\n"))
 	}
 	return lx.prog, nil
 }
@@ -48,5 +53,5 @@ func ParseExpr(str string) (*Expr, error) {
 }
 
 type Prog struct {
-	Decl []*Decl
+	Decls []*Decl
 }

@@ -33,11 +33,11 @@ func main() {
 				log.Print(err)
 				continue
 			}
-			for _, decl := range prog.Decl {
-				var p cc.Printer
-				p.Print(decl)
-				fmt.Printf("%s\n", p.String())
-			}
+			var p cc.Printer
+			p.StartHTML()
+			p.Print(prog)
+			p.EndHTML()
+			fmt.Printf("%s\n", p.String())
 		}
 	}
 }
