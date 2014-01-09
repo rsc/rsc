@@ -14,8 +14,8 @@ type lexer struct {
 	// input
 	start int
 	lexInput
-	pushed []lexInput
-	forcePos Pos
+	pushed      []lexInput
+	forcePos    Pos
 	c2goComment bool // inside /*c2go ... */ comment
 
 	// type checking state
@@ -437,6 +437,6 @@ var tokId = map[string]int32{
 	"ARGBEGIN": tokARGBEGIN,
 	"ARGEND":   tokARGEND,
 	"AUTOLIB":  tokAUTOLIB,
-	"USED": tokUSED,
-	"SET": tokSET,
+	"USED":     tokUSED,
+	"SET":      tokSET,
 }

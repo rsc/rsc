@@ -43,6 +43,7 @@ char *strcpy(char*, char*);
 int errstr(char*, uint);
 void werrstr(char*, ...);
 
+int fprint(int, char*, ...);
 int snprint(char*, int, char*, ...);
 char *seprint(char*, char*, char*, ...);
 char *vseprint(char*, char*, char*, va_list);
@@ -50,5 +51,3 @@ char *vseprint(char*, char*, char*, va_list);
 void va_start(va_list, void*);
 void va_end(va_list);
 `
-
-
