@@ -8,7 +8,7 @@ import "fmt"
 
 // An Expr is a parsed C expression.
 type Expr struct {
-	Span  Span
+	SyntaxInfo
 	Op    ExprOp   // operator
 	Left  *Expr    // left (or only) operand
 	Right *Expr    // right operand
@@ -164,7 +164,7 @@ type Prefix struct {
 
 // Init is an initializer expression.
 type Init struct {
-	Span   Span
+	SyntaxInfo
 	Prefix []*Prefix // list of prefixes
 	Expr   *Expr     // Expr
 	Braced []*Init   // {Braced}

@@ -77,6 +77,7 @@ func (lx *lexer) pushType(typ *Type) *Type {
 		if old.Decls != nil {
 			lx.Errorf("multiple definitions for %s %s", old.Kind, old.Tag)
 		}
+		old.SyntaxInfo = typ.SyntaxInfo
 		old.Decls = typ.Decls
 	}
 	return old

@@ -29,6 +29,7 @@ func Read(name string, r io.Reader) (*Prog, error) {
 	if lx.errors != nil {
 		return nil, fmt.Errorf("%v", lx.errors[0])
 	}
+	lx.assignComments()
 	lx.typecheck(lx.prog)
 	if lx.errors != nil {
 		return nil, fmt.Errorf("%v", strings.Join(lx.errors, "\n"))
@@ -53,5 +54,6 @@ func ParseExpr(str string) (*Expr, error) {
 }
 
 type Prog struct {
+	SyntaxInfo
 	Decls []*Decl
 }
