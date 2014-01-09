@@ -22,7 +22,7 @@ const (
 type Printer struct {
 	buf    bytes.Buffer
 	indent int
-	html bool
+	html   bool
 }
 
 func (p *Printer) StartHTML() {
@@ -167,7 +167,7 @@ var opPrec = []int{
 	Lsh:        precLsh,
 	LshEq:      precEq,
 	Lt:         precLt,
-	LtEq:       precEq,
+	LtEq:       precLt,
 	Minus:      precAddr,
 	Mod:        precMul,
 	ModEq:      precEq,

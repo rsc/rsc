@@ -9,8 +9,8 @@ package cc
 
 import (
 	"fmt"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type Scope struct {
@@ -109,7 +109,9 @@ func (lx *lexer) typecheck(prog *Prog) {
 
 func (lx *lexer) typecheckDecl(decl *Decl) {
 	lx.typecheckType(decl.Type)
-	lx.typecheckInit(decl.Type, decl.Init)
+	if decl.Init != nil {
+		lx.typecheckInit(decl.Type, decl.Init)
+	}
 	lx.typecheckStmt(decl.Body)
 }
 
@@ -142,6 +144,10 @@ func (lx *lexer) typecheckStmt(stmt *Stmt) {
 		lx.typecheckExpr(stmt.Expr)
 	case For:
 		// push break/continue context
+		lx.typecheckExpr(stmt.Pre)
+		lx.typecheckExpr(stmt.Expr)
+		lx.typecheckExpr(stmt.Post)
+		lx.typecheckStmt(stmt.Body)
 	case If:
 		lx.typecheckExpr(stmt.Expr)
 		// check bool
@@ -163,9 +169,129 @@ func (lx *lexer) typecheckStmt(stmt *Stmt) {
 }
 
 func (lx *lexer) typecheckType(typ *Type) {
+	if typ == nil {
+		return
+	}
+
+	// TODO: Is there any other work to do for type checking a type?
+	switch typ.Kind {
+	case Enum:
+		// Give enum type to the declared names.
+		// Perhaps should be done during parsing.
+		for _, decl := range typ.Decls {
+			decl.Type = typ
+		}
+	}
 }
 
 func (lx *lexer) typecheckInit(typ *Type, x *Init) {
+	// TODO: Type check initializers (ugh).
+
+	typ = stripTypedef(typ)
+	lx.setSpan(x.Span)
+	if x.Braced == nil {
+		lx.typecheckExpr(x.Expr)
+		if x.Expr.XType == nil {
+			return
+		}
+		if typ.Kind == Array && typ.Base.Is(Char) && x.Expr.Op == String {
+			// ok to initialize char array with string
+			if typ.Width == nil {
+				typ.Width = x.Expr.XType.Width
+			}
+			return
+		}
+		if !canAssign(typ, x.Expr.XType, x.Expr) {
+			lx.Errorf("cannot initialize %v with %v (type %v)", typ, x.Expr.XType, x.Expr)
+			return
+		}
+		return
+	}
+
+	switch typ.Kind {
+	case Array, Struct:
+		// ok
+	case Union:
+		// C allows this but we do not.
+		fallthrough
+	default:
+		lx.Errorf("cannot initialize type %v with braced initializer", typ)
+		return
+	}
+
+	// Keep our sanity: require that either all elements have prefixes or none do.
+	// This is not required by the C standard; it just makes this code more tractable.
+	n := 0
+	for _, elem := range x.Braced {
+		if len(elem.Prefix) > 0 {
+			if len(elem.Prefix) != 1 {
+				lx.setSpan(elem.Span)
+				lx.Errorf("unsupported compound initializer prefix")
+				return
+			}
+			n++
+		}
+	}
+	if n != 0 && n != len(x.Braced) {
+		lx.Errorf("initializer elements must have no prefixes or all be prefixed")
+		return
+	}
+
+	if n == 0 {
+		// Assign elements in order.
+		if typ.Kind == Array {
+			// TODO: Check against typ.Width and record new typ.Width if missing
+			for _, elem := range x.Braced {
+				lx.typecheckInit(typ.Base, elem)
+			}
+			return
+		}
+
+		// Struct
+		if len(x.Braced) > len(typ.Decls) {
+			lx.Errorf("more initializer elements than struct fields in %v (%d > %d)", typ, len(x.Braced), len(typ.Decls))
+			return
+		}
+		for i, elem := range x.Braced {
+			decl := typ.Decls[i]
+			lx.typecheckInit(decl.Type, elem)
+		}
+		return
+	}
+
+	// All elements have initializing prefixes.
+
+	if typ.Kind == Array {
+		for _, elem := range x.Braced {
+			lx.setSpan(elem.Span)
+			pre := elem.Prefix[0]
+			if pre.Index == nil {
+				lx.Errorf("field initializer prefix in array")
+				continue
+			}
+			lx.typecheckExpr(pre.Index)
+			// TODO: check that pre.Index is integer constant
+			// TODO: record width if needed
+			lx.typecheckInit(typ.Base, elem)
+		}
+		return
+	}
+
+	// Struct
+	for _, elem := range x.Braced {
+		lx.setSpan(elem.Span)
+		pre := elem.Prefix[0]
+		if pre.Dot == "" {
+			lx.Errorf("array initializer prefix in struct")
+			continue
+		}
+		decl := structDot(typ, pre.Dot)
+		if decl == nil {
+			lx.Errorf("type %v has no field .%v", typ, pre.Dot)
+			continue
+		}
+		lx.typecheckInit(decl.Type, elem)
+	}
 }
 
 func stripTypedef(t *Type) *Type {
@@ -191,7 +317,7 @@ func ptrBase(t *Type) *Type {
 		return nil
 	}
 	return t.Base
-}	
+}
 
 func toPtr(t *Type) *Type {
 	t1 := stripTypedef(t)
@@ -202,7 +328,7 @@ func toPtr(t *Type) *Type {
 		return &Type{Kind: Ptr, Base: t1.Base}
 	}
 	return nil
-}	
+}
 
 func isArith(t *Type) bool {
 	t = stripTypedef(t)
@@ -214,7 +340,7 @@ func isScalar(t *Type) bool {
 	return Char <= t.Kind && t.Kind <= Ptr
 }
 
-func isKind(t *Type, k TypeKind) bool {
+func (t *Type) Is(k TypeKind) bool {
 	t = stripTypedef(t)
 	return t != nil && t.Kind == k
 }
@@ -227,7 +353,7 @@ func isNull(x *Expr) bool {
 }
 
 func isVoidPtr(t *Type) bool {
-	return isKind(ptrBase(t), Void)
+	return ptrBase(t).Is(Void)
 }
 
 func isCompatPtr(t1, t2 *Type) bool {
@@ -278,21 +404,23 @@ func compositePtr(t1, t2 *Type) *Type {
 }
 
 func canAssign(l, r *Type, rx *Expr) bool {
-		switch {
-		case isArith(l) && isArith(r):
-			// ok
-		case isCompat(l, r):
-			// ok
-		case isCompatPtr(l, r):
-			// ok
-		case isPtr(l) && isPtr(r) && (isVoidPtr(l) || isVoidPtr(r)):
-			// ok
-		case isPtr(l) && isNull(rx):
-			// ok
-		default:
-			return false
-		}
-		return true
+	switch {
+	case isArith(l) && isArith(r):
+		// ok
+	case isCompat(l, r):
+		// ok
+	case isCompatPtr(l, r):
+		// ok
+	case isPtr(l) && isPtr(r) && (isVoidPtr(l) || isVoidPtr(r)):
+		// ok
+	case isPtr(l) && isNull(rx):
+		// ok
+	case isPtr(l) && isCompat(ptrBase(l), r):
+		// ok
+	default:
+		return false
+	}
+	return true
 }
 
 func (lx *lexer) toBool(x *Expr) *Type {
@@ -301,7 +429,7 @@ func (lx *lexer) toBool(x *Expr) *Type {
 	}
 	t := stripTypedef(x.XType)
 	if Char <= t.Kind && t.Kind <= Ptr || t.Kind == Enum {
-		return typeBool
+		return BoolType
 	}
 	lx.Errorf("cannot use %v (type %v) in boolean context", x, x.XType)
 	return nil
@@ -311,7 +439,7 @@ func (lx *lexer) toBool(x *Expr) *Type {
 func promote2(l, r *Type) *Type {
 	l = promote1(l)
 	r = promote1(r)
-	
+
 	// if mixed signedness, make l signed and r unsigned.
 	// specifically, if l is unsigned, swap with r.
 	if (l.Kind-Char)&1 == 1 {
@@ -345,12 +473,12 @@ func promote2(l, r *Type) *Type {
 		return r
 	// signed is higher kind than unsigned (l.Kind > r.Kind).
 	// if signed bigger than unsigned, signed wins.
-	// only possible way this isn't true 
+	// only possible way this isn't true
 	case (l.Kind-Char)/2 > (r.Kind-Char)/2 && (l.Kind != Long || r.Kind != Uint):
 		return l
 	// otherwise, use unsigned type corresponding to the signed type.
 	default:
-		return &Type{Kind: l.Kind+1}
+		return &Type{Kind: l.Kind + 1}
 	}
 	panic(fmt.Sprintf("missing case in promote2(%v, %v)", l, r))
 }
@@ -358,13 +486,13 @@ func promote2(l, r *Type) *Type {
 func promote1(l *Type) *Type {
 	l = stripTypedef(l)
 	if Char <= l.Kind && l.Kind <= Ushort || l.Kind == Enum {
-		l = typeInt
+		l = IntType
 	}
-	return l		
+	return l
 }
 
 func structDot(t *Type, name string) *Decl {
-	if t == nil {
+	if t == nil || (t.Kind != Struct && t.Kind != Union) {
 		return nil
 	}
 	for _, decl := range t.Decls {
@@ -410,7 +538,7 @@ func (lx *lexer) parseChar1(text string) (val byte, wid int, ok bool) {
 		i := 2
 		v := int(text[1] - '0')
 		for i < 4 && i < len(text) && '0' <= text[i] && text[i] <= '7' {
-			v = v*8 + int(text[i] - '0')
+			v = v*8 + int(text[i]-'0')
 			i++
 		}
 		if v >= 256 {
@@ -433,7 +561,7 @@ func (lx *lexer) parseChar1(text string) (val byte, wid int, ok bool) {
 			return
 		}
 		return byte(v), i, true
-		
+
 	default:
 		lx.Errorf("invalid escape sequence %s", text[:2])
 	}
@@ -462,11 +590,11 @@ func (lx *lexer) parseChar(text string) (val byte, ok bool) {
 		lx.Errorf("invalid character constant %v", text)
 		return 0, false
 	}
-	val, wid, ok := lx.parseChar1(text[1:len(text)-1])
+	val, wid, ok := lx.parseChar1(text[1 : len(text)-1])
 	if !ok {
 		return 0, false
 	}
-	if wid != len(text) - 2 {
+	if wid != len(text)-2 {
 		lx.Errorf("invalid character constant %v - multiple characters", text)
 		return 0, false
 	}
@@ -478,7 +606,7 @@ func (lx *lexer) parseString(text string) (val string, ok bool) {
 		lx.Errorf("invalid string constant %v", text)
 		return "", false
 	}
-	tval := text[1:len(text)-1]
+	tval := text[1 : len(text)-1]
 	var bval []byte
 	for len(tval) > 0 {
 		ch, wid, ok := lx.parseChar1(tval)
@@ -504,7 +632,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 		lx.typecheckExpr(y)
 	}
 	lx.typecheckType(x.Type)
-	
+
 	lx.setSpan(x.Span)
 	switch x.Op {
 	default:
@@ -564,7 +692,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 		if l == nil || r == nil {
 			break
 		}
-		x.XType = typeBool
+		x.XType = BoolType
 
 	case AndEq, ModEq, OrEq, XorEq:
 		// int &= int
@@ -577,7 +705,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			break
 		}
 		x.XType = l
-	
+
 	case Arrow:
 		t := x.Left.XType
 		if t == nil {
@@ -594,7 +722,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 		}
 		d := structDot(t, x.Text)
 		if d == nil {
-			lx.Errorf("unknown field .%v", x.Text)
+			lx.Errorf("unknown field ->%v", x.Text)
 			break
 		}
 		x.XType = d.Type
@@ -641,7 +769,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 
 	case Comma:
 		x.XType = x.List[len(x.List)-1].XType
-	
+
 	case Cond:
 		c, l, r := lx.toBool(x.List[0]), x.List[1].XType, x.List[2].XType
 		if c == nil || l == nil || r == nil {
@@ -665,13 +793,13 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 		case isPtr(r) && isVoidPtr(l):
 			x.XType = l
 		}
-	
+
 	case Div, Mul:
 		lx.typecheckArith(x)
-	
+
 	case DivEq, MulEq:
 		lx.typecheckArithEq(x)
-	
+
 	case Dot:
 		t := x.Left.XType
 		if t == nil {
@@ -688,7 +816,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			break
 		}
 		x.XType = d.Type
-	
+
 	case Eq:
 		l, r := x.Left.XType, x.Right.XType
 		if l == nil || r == nil {
@@ -701,7 +829,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 		}
 
 	case EqEq, NotEq, Gt, GtEq, Lt, LtEq:
-		x.XType = typeBool
+		x.XType = BoolType
 		l, r := x.Left.XType, x.Right.XType
 		if l == nil || r == nil {
 			break
@@ -734,7 +862,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 		default:
 			lx.Errorf("invalid index %v (types %v, %v)", x, l, r, isPtr(l), isInt(r), r.Kind, r.Base, r.Base.Kind)
 		}
-	
+
 	case Indir:
 		// *ptr
 		t := x.Left.XType
@@ -770,7 +898,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			break
 		}
 		x.XType = l
-	
+
 	case Minus, Plus:
 		// -int
 		// -float
@@ -782,27 +910,26 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			lx.Errorf("invalid ± of %v (type %v)", x, t)
 			break
 		}
-		x.XType = promote1(t)		
-	
+		x.XType = promote1(t)
+
 	case Name:
 		if x.XDecl == nil {
-panic("x")
 			lx.Errorf("undefined: %s", x.Text)
 			break
 		}
 		x.XType = x.XDecl.Type
-	
+
 	case Not:
 		// !bool
 		lx.toBool(x.Left)
-		x.XType = typeBool
+		x.XType = BoolType
 
 	case Number:
 		num := x.Text
 		if num[0] == '\'' {
 			// character constant
 			_, _ = lx.parseChar(num)
-			x.XType = typeInt
+			x.XType = IntType
 			break
 		}
 
@@ -816,10 +943,10 @@ panic("x")
 				break
 			}
 			_ = f // TODO use this
-			x.XType = typeDouble
+			x.XType = DoubleType
 			switch suf {
 			case "f", "F":
-				x.XType = typeFloat
+				x.XType = FloatType
 			default:
 				lx.Errorf("unsupported floating point constant suffix %v", x.Text)
 			}
@@ -839,45 +966,45 @@ panic("x")
 		suf = strings.ToUpper(suf)
 		switch {
 		case has(suf, "U") && has(suf, "LL"):
-			x.XType = typeUlonglong
+			x.XType = UlonglongType
 		case has(suf, "U") && has(suf, "L"):
 			if uint64(uint32(i)) == i {
-				x.XType = typeUlong
+				x.XType = UlongType
 			} else {
-				x.XType = typeUlonglong
+				x.XType = UlonglongType
 			}
 		case has(suf, "U"):
 			if uint64(uint32(i)) == i {
-				x.XType = typeUint
+				x.XType = UintType
 			} else {
-				x.XType = typeUlonglong
+				x.XType = UlonglongType
 			}
 		case has(suf, "LL"):
 			if int64(i) >= 0 {
-				x.XType = typeLonglong
+				x.XType = LonglongType
 			} else {
 				lx.Errorf("integer constant %v overflows signed long long", x.Text)
 			}
 		case has(suf, "L"):
 			if int32(i) >= 0 && uint64(int32(i)) == i {
-				x.XType = typeLong
+				x.XType = LongType
 			} else if int64(i) >= 0 {
-				x.XType = typeLonglong
+				x.XType = LonglongType
 			} else {
 				lx.Errorf("integer constant %v overflows signed long long", x.Text)
 			}
 		default:
 			if int32(i) >= 0 && uint64(int32(i)) == i {
-				x.XType = typeInt
+				x.XType = IntType
 			} else if int64(i) >= 0 {
-				x.XType = typeLonglong
+				x.XType = LonglongType
 			} else {
 				lx.Errorf("integer constant %v overflows signed long long", x.Text)
 			}
-		}		
-			
+		}
+
 	case Offsetof:
-		x.XType = typeLong
+		x.XType = LongType
 		if x.Left.Op != Name {
 			lx.Errorf("offsetof field too complicated")
 		}
@@ -911,12 +1038,12 @@ panic("x")
 			break
 		}
 		x.XType = t
-	
+
 	case SizeofExpr:
-		x.XType = typeLong
-	
+		x.XType = LongType
+
 	case SizeofType:
-		x.XType = typeLong
+		x.XType = LongType
 
 	case String:
 		// string list
@@ -934,7 +1061,7 @@ panic("x")
 		}
 		s := strings.Join(str, "")
 		_ = s // TODO use this
-		x.XType = &Type{Kind: Array, Width: &Expr{Op: Number, Text: fmt.Sprint(len(s))}, Base: typeChar}
+		x.XType = &Type{Kind: Array, Width: &Expr{Op: Number, Text: fmt.Sprint(len(s) + 1)}, Base: CharType}
 
 	case Sub:
 		l, r := x.Left.XType, x.Right.XType
@@ -945,7 +1072,7 @@ panic("x")
 		case isPtr(l) && isInt(r):
 			x.XType = toPtr(l)
 		case isCompatPtr(l, r):
-			x.XType = typeLong
+			x.XType = LongType
 		default:
 			lx.typecheckArith(x)
 		}
@@ -953,7 +1080,7 @@ panic("x")
 	case SubEq:
 		// ptr -= int
 		lx.typecheckArithEq(x)
-	
+
 	case Twid:
 		// ~int
 		t := x.Left.XType
@@ -964,7 +1091,7 @@ panic("x")
 			lx.Errorf("invalid ~ of %v (type %v)", x, t)
 			break
 		}
-		x.XType = promote1(t)		
+		x.XType = promote1(t)
 
 	case VaArg:
 		// va_arg(arg, int)
@@ -1006,4 +1133,3 @@ func (lx *lexer) typecheckArithEq(x *Expr) {
 	}
 	x.XType = l
 }
-
