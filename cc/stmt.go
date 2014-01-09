@@ -5,10 +5,10 @@
 package cc
 
 type Stmt struct {
-	Span   Span
+	SyntaxInfo
 	Op     StmtOp
-	Expr   *Expr
 	Pre    *Expr
+	Expr   *Expr
 	Post   *Expr
 	Decl   *Decl
 	Body   *Stmt
@@ -39,7 +39,7 @@ const (
 )
 
 type Label struct {
-	Span Span
+	SyntaxInfo
 	Op   LabelOp
 	Expr *Expr
 	Name string

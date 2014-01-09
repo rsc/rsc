@@ -12,7 +12,7 @@ import (
 var printf = fmt.Printf
 
 type Type struct {
-	Span  Span
+	SyntaxInfo
 	Kind  TypeKind
 	Qual  TypeQual
 	Base  *Type
@@ -295,7 +295,7 @@ func (t *Type) String() string {
 }
 
 type Decl struct {
-	Span    Span
+	SyntaxInfo
 	Name    string
 	Type    *Type
 	Storage Storage

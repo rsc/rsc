@@ -7,16 +7,64 @@ package cc
 import (
 	"fmt"
 	"io/ioutil"
+	"sort"
 	"strings"
 )
+
+// A Syntax represents any syntax element.
+type Syntax interface {
+	// GetSpan returns the start and end position of the syntax,
+	// excluding leading or trailing comments.
+	// The use of a Get prefix is non-standard but avoids a conflict
+	// with the field named Span in most implementations.
+	GetSpan() Span
+
+	// GetComments returns the comments attached to the syntax.
+	// This method would normally be named 'Comments' but that
+	// would interfere with embedding a type of the same name.
+	// The use of a Get prefix is non-standard but avoids a conflict
+	// with the field named Comments in most implementations.
+	GetComments() *Comments
+}
+
+// SyntaxInfo contains metadata about a piece of syntax.
+type SyntaxInfo struct {
+	Span     Span // location of syntax in input
+	Comments Comments
+}
+
+func (s *SyntaxInfo) GetSpan() Span {
+	return s.Span
+}
+
+func (s *SyntaxInfo) GetComments() *Comments {
+	return &s.Comments
+}
+
+// Comments collects the comments associated with a syntax element.
+type Comments struct {
+	Before []Comment // whole-line comments before this syntax
+	Suffix []Comment // end-of-line comments after this syntax
+
+	// For top-level syntax elements only, After lists whole-line
+	// comments following the syntax.
+	After []Comment
+}
 
 type lexer struct {
 	// input
 	start int
+	byte  int
 	lexInput
 	pushed      []lexInput
 	forcePos    Pos
 	c2goComment bool // inside /*c2go ... */ comment
+	comments    []Comment
+
+	// comment assignment
+	pre      []Syntax
+	post     []Syntax
+	enumSeen map[interface{}]bool
 
 	// type checking state
 	scope *Scope
@@ -28,17 +76,20 @@ type lexer struct {
 }
 
 func (lx *lexer) parse() {
+	if lx.wholeInput == "" {
+		lx.wholeInput = lx.input
+	}
 	lx.scope = &Scope{}
 	yyParse(lx)
 }
 
 type lexInput struct {
-	input   string
-	tok     string
-	lastsym string
-	file    string
-	lineno  int
-	byte    int
+	wholeInput string
+	input      string
+	tok        string
+	lastsym    string
+	file       string
+	lineno     int
 }
 
 func (lx *lexer) pushInclude(includeLine string) {
@@ -70,10 +121,12 @@ func (lx *lexer) pushInclude(includeLine string) {
 	}
 
 	lx.pushed = append(lx.pushed, lx.lexInput)
+	str := string(append(data, '\n'))
 	lx.lexInput = lexInput{
-		input:  string(append(data, '\n')),
-		file:   file,
-		lineno: 1,
+		input:      str,
+		wholeInput: str,
+		file:       file,
+		lineno:     1,
 	}
 }
 
@@ -150,9 +203,28 @@ func (lx *lexer) sym(i int) {
 }
 
 func (lx *lexer) comment(i int) {
-	com := lx.input[:i]
-	_ = com
+	var c Comment
+	c.Span.Start = lx.pos()
+	c.Text = lx.input[:i]
+	j := len(lx.wholeInput) - len(lx.input)
+	for j > 0 && (lx.wholeInput[j-1] == ' ' || lx.wholeInput[j-1] == '\t') {
+		j--
+	}
+	if j > 0 && lx.wholeInput[j-1] != '\n' {
+		c.Suffix = true
+	}
+	prefix := lx.wholeInput[j : len(lx.wholeInput)-len(lx.input)]
+	lines := strings.Split(c.Text, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, prefix) {
+			lines[i] = line[len(prefix):]
+		}
+	}
+	c.Text = strings.Join(lines, "\n")
+
 	lx.skip(i)
+	c.Span.End = lx.pos()
+	lx.comments = append(lx.comments, c)
 }
 
 func isalpha(c byte) bool {
@@ -287,7 +359,6 @@ Restart:
 			for in[i] != '\n' {
 				i++
 			}
-			i++
 			lx.comment(i)
 			goto Restart
 		}
@@ -367,6 +438,12 @@ func (l Span) String() string {
 	return fmt.Sprintf("%s:%d", l.Start.File, l.Start.Line)
 }
 
+type Comment struct {
+	Span
+	Text   string
+	Suffix bool
+}
+
 var tokEq = [256]int32{
 	'*': tokMulEq,
 	'/': tokDivEq,
@@ -439,4 +516,202 @@ var tokId = map[string]int32{
 	"AUTOLIB":  tokAUTOLIB,
 	"USED":     tokUSED,
 	"SET":      tokSET,
+}
+
+// Comment assignment.
+// We build two lists of all subexpressions, preorder and postorder.
+// The preorder list is ordered by start location, with outer expressions first.
+// The postorder list is ordered by end location, with outer expressions last.
+// We use the preorder list to assign each whole-line comment to the syntax
+// immediately following it, and we use the postorder list to assign each
+// end-of-line comment to the syntax immediately preceding it.
+
+// enum walks the expression adding it and its subexpressions to the pre list.
+// The order may not reflect the order in the input.
+func (lx *lexer) enum(x Syntax) {
+	switch x := x.(type) {
+	default:
+		panic(fmt.Errorf("order: unexpected type %T", x))
+	case nil:
+		return
+	case *Expr:
+		if x == nil {
+			return
+		}
+		lx.enum(x.Left)
+		lx.enum(x.Right)
+		for _, y := range x.List {
+			lx.enum(y)
+		}
+	case *Init:
+		if x == nil {
+			return
+		}
+		lx.enum(x.Expr)
+		for _, y := range x.Braced {
+			lx.enum(y)
+		}
+	case *Prog:
+		if x == nil {
+			return
+		}
+		for _, y := range x.Decls {
+			lx.enum(y)
+		}
+	case *Stmt:
+		if x == nil {
+			return
+		}
+		for _, y := range x.Labels {
+			lx.enum(y)
+		}
+		lx.enum(x.Pre)
+		lx.enum(x.Expr)
+		lx.enum(x.Post)
+		lx.enum(x.Body)
+		lx.enum(x.Else)
+		for _, y := range x.Block {
+			lx.enum(y)
+		}
+	case *Label:
+		// ok
+	case *Decl:
+		if x == nil {
+			return
+		}
+		if lx.enumSeen[x] {
+			return
+		}
+		lx.enumSeen[x] = true
+		lx.enum(x.Type)
+		lx.enum(x.Init)
+		lx.enum(x.Body)
+	case *Type:
+		if x == nil {
+			return
+		}
+		lx.enum(x.Base)
+		for _, y := range x.Decls {
+			lx.enum(y)
+		}
+		return // do not record type itself, just inner decls
+	}
+	lx.pre = append(lx.pre, x)
+}
+
+func (lx *lexer) order(prog *Prog) {
+	lx.enumSeen = make(map[interface{}]bool)
+	lx.enum(prog)
+	sort.Sort(byStart(lx.pre))
+	lx.post = make([]Syntax, len(lx.pre))
+	copy(lx.post, lx.pre)
+	sort.Sort(byEnd(lx.post))
+}
+
+type byStart []Syntax
+
+func (x byStart) Len() int      { return len(x) }
+func (x byStart) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+func (x byStart) Less(i, j int) bool {
+	pi := x[i].GetSpan()
+	pj := x[j].GetSpan()
+	// Order by start byte, leftmost first,
+	// and break ties by choosing outer before inner.
+	if pi.Start.Byte != pj.Start.Byte {
+		return pi.Start.Byte < pj.Start.Byte
+	}
+	return pi.End.Byte > pi.End.Byte
+}
+
+type byEnd []Syntax
+
+func (x byEnd) Len() int      { return len(x) }
+func (x byEnd) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+func (x byEnd) Less(i, j int) bool {
+	pi := x[i].GetSpan()
+	pj := x[j].GetSpan()
+	// Order by end byte, leftmost first,
+	// and break ties by choosing inner before outer.
+	if pi.End.Byte != pj.End.Byte {
+		return pi.End.Byte < pj.End.Byte
+	}
+	return pi.Start.Byte > pj.Start.Byte
+}
+
+// assignComments attaches comments to nearby syntax.
+func (lx *lexer) assignComments() {
+	// Generate preorder and postorder lists.
+	lx.order(lx.prog)
+
+	// Split into whole-line comments and suffix comments.
+	var line, suffix []Comment
+	for _, com := range lx.comments {
+		if com.Suffix {
+			suffix = append(suffix, com)
+		} else {
+			line = append(line, com)
+		}
+	}
+
+	// Assign line comments to syntax immediately following.
+	for _, x := range lx.pre {
+		start := x.GetSpan().Start
+		xcom := x.GetComments()
+		for len(line) > 0 && start.Byte >= line[0].Start.Byte {
+			xcom.Before = append(xcom.Before, line[0])
+			line = line[1:]
+		}
+	}
+
+	// Remaining line comments go at end of file.
+	lx.prog.Comments.After = append(lx.prog.Comments.After, line...)
+
+	// Assign suffix comments to syntax immediately before.
+	for i := len(lx.post) - 1; i >= 0; i-- {
+		x := lx.post[i]
+
+		// Do not assign suffix comments to call, list, end-of-list, or whole file.
+		// Instead assign them to the last argument, element, or rule.
+		/*
+			switch x.(type) {
+			case *CallExpr, *ListExpr, *End, *File:
+				continue
+			}
+		*/
+
+		// Do not assign suffix comments to something that starts
+		// on an earlier line, so that in
+		//
+		//	tags = [ "a",
+		//		"b" ], # comment
+		//
+		// we assign the comment to "b" and not to tags = [ ... ].
+		span := x.GetSpan()
+		start, end := span.Start, span.End
+		if start.Line != end.Line {
+			continue
+		}
+		xcom := x.GetComments()
+		for len(suffix) > 0 && end.Byte <= suffix[len(suffix)-1].Start.Byte {
+			xcom.Suffix = append(xcom.Suffix, suffix[len(suffix)-1])
+			suffix = suffix[:len(suffix)-1]
+		}
+	}
+
+	// We assigned suffix comments in reverse.
+	// If multiple suffix comments were appended to the same
+	// expression node, they are now in reverse. Fix that.
+	for _, x := range lx.post {
+		reverseComments(x.GetComments().Suffix)
+	}
+
+	// Remaining suffix comments go at beginning of file.
+	lx.prog.Comments.Before = append(lx.prog.Comments.Before, suffix...)
+}
+
+// reverseComments reverses the []Comment list.
+func reverseComments(list []Comment) {
+	for i, j := 0, len(list)-1; i < j; i, j = i+1, j-1 {
+		list[i], list[j] = list[j], list[i]
+	}
 }

@@ -23,6 +23,7 @@ type Printer struct {
 	buf    bytes.Buffer
 	indent int
 	html   bool
+	suffix []Comment // suffix comments to print at next newline
 }
 
 func (p *Printer) StartHTML() {
@@ -90,6 +91,19 @@ func (p *Printer) Print(args ...interface{}) {
 			p.printType(arg.Type, arg.Name)
 		case Storage:
 			p.Print(arg.String())
+		case []Comment:
+			for _, com := range arg {
+				p.Print(com)
+			}
+		case Comment:
+			com := arg
+			if com.Suffix {
+				p.suffix = append(p.suffix, com)
+			} else {
+				for _, line := range strings.Split(com.Text, "\n") {
+					p.Print(line, newline)
+				}
+			}
 		case nestBlock:
 			if arg.stmt.Op == Block {
 				p.Print(" ", arg.stmt)
@@ -113,6 +127,10 @@ func (p *Printer) Print(args ...interface{}) {
 					p.buf.Truncate(len(b) - 1)
 				}
 			case newline:
+				for _, com := range p.suffix {
+					p.Print(" ", com.Text)
+				}
+				p.suffix = p.suffix[:0]
 				p.buf.WriteString("\n")
 				for i := 0; i < p.indent; i++ {
 					p.buf.WriteByte('\t')
@@ -249,6 +267,10 @@ func (p *Printer) printExpr(x *Expr, prec int) {
 		fmt.Fprintf(&p.buf, "<span title='%s type %v'>", x.Op, x.XType)
 		defer fmt.Fprintf(&p.buf, "</span>")
 	}
+
+	p.Print(x.Comments.Before)
+	defer p.Print(x.Comments.Suffix, x.Comments.After)
+
 	var newPrec int
 	if 0 <= int(x.Op) && int(x.Op) < len(opPrec) {
 		newPrec = opPrec[x.Op]
@@ -366,6 +388,9 @@ func (p *Printer) printPrefix(x *Prefix) {
 }
 
 func (p *Printer) printInit(x *Init) {
+	p.Print(x.Comments.Before)
+	defer p.Print(x.Comments.Suffix, x.Comments.After)
+
 	if len(x.Prefix) > 0 {
 		for _, pre := range x.Prefix {
 			p.Print(pre)
@@ -396,9 +421,16 @@ func (p *Printer) printInit(x *Init) {
 		}
 		p.Print("}")
 	}
+
+	for _, com := range x.Comments.After {
+		p.Print(com)
+	}
 }
 
 func (p *Printer) printProg(x *Prog) {
+	p.Print(x.Comments.Before)
+	defer p.Print(x.Comments.Suffix, x.Comments.After)
+
 	for _, decl := range x.Decls {
 		p.Print(decl, newline)
 	}
@@ -406,7 +438,9 @@ func (p *Printer) printProg(x *Prog) {
 
 func (p *Printer) printStmt(x *Stmt) {
 	if len(x.Labels) > 0 {
+		p.Print(untab, unindent, x.Comments.Before, indent, "\t")
 		for _, lab := range x.Labels {
+			p.Print(untab, unindent, lab.Comments.Before, indent, "\t")
 			p.Print(untab)
 			switch {
 			case lab.Name != "":
@@ -416,9 +450,12 @@ func (p *Printer) printStmt(x *Stmt) {
 			default:
 				p.Print("default")
 			}
-			p.Print(":", newline)
+			p.Print(":", lab.Comments.Suffix, newline)
 		}
+	} else {
+		p.Print(x.Comments.Before)
 	}
+	defer p.Print(x.Comments.Suffix, x.Comments.After)
 
 	switch x.Op {
 	case ARGBEGIN:
@@ -488,6 +525,10 @@ func (p *Printer) printStmt(x *Stmt) {
 }
 
 func (p *Printer) printType(x *Type, name string) {
+	// Shouldn't happen but handle in case it does.
+	p.Print(x.Comments.Before)
+	defer p.Print(x.Comments.Suffix, x.Comments.After)
+
 	switch x.Kind {
 	case Ptr:
 		p.printType(x.Base, "*"+name)
@@ -529,6 +570,9 @@ func (p *Printer) printType(x *Type, name string) {
 }
 
 func (p *Printer) printDecl(x *Decl) {
+	p.Print(x.Comments.Before)
+	defer p.Print(x.Comments.Suffix, x.Comments.After)
+
 	if x.Storage != 0 {
 		p.Print(x.Storage, " ")
 	}
