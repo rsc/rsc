@@ -146,8 +146,8 @@ import (
 	"strings"
 )
 
-// Handle registers handler to handle paths of the form given by pattern.
-func Handle(pattern string, handler interface{}) {
+// Handle registers fn to handle paths of the form given by pattern.
+func Handle(pattern string, fn interface{}) {
 	elems := strings.Split(pattern, "/")
 	n := len(elems)
 	if n == 0 {
@@ -202,7 +202,7 @@ func Handle(pattern string, handler interface{}) {
 		regexp.MustCompile(re),
 		vars,
 		nil,
-		handler,
+		fn,
 	}
 
 	fmt.Printf("h %s\n", re)
