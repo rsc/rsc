@@ -23,7 +23,7 @@
 // This program has been used successfully on the following systems:
 //
 //	OS X 10.6 Snow Leopard      / Darwin 10.8 / i386 only
-//	OS X 10.7 Lion              / Darwin 11.4 / x86_64 only
+//	OS X 10.7 Lion              / Darwin 11.4 / i386 and x86_64
 //	OS X 10.8 Mountain Lion     / Darwin 12.4 / x86_64 only
 //  OS X 10.9 Mavericks preview / Darwin 13.0 / x86_64 only
 //
@@ -531,7 +531,25 @@ func (f *fix) apply(current_thread []byte, bsd_ast []byte) error {
 			new = append(new, old[m[3]:m[4]]...)
 			le.PutUint32(new[len(new)-4:], le.Uint32(new[len(new)-4:])-uint32(len(new)-m[4]))
 			// Set up arguments to psignal_internal.
-			if strings.Contains(f.version, "i386") {
+			if f.version == "11.4.2 (i386)" {
+				// This version passes the arguments to psignal_internal
+				// differently than other i386 versions.
+				new = append(new,
+					// xor %ecx, %ecx
+					0x31, 0xc9,
+					// xor %edx, %edx
+					0x31, 0xd2,
+					// mov %gs:threadTLS, %eax
+					0x65, 0x8b, 0x04, 0x25,
+					byte(tlsOff), byte(tlsOff>>8), byte(tlsOff>>16), byte(tlsOff>>24),
+					// mov %eax, (%esp)
+					0x89, 0x04, 0x24,
+					// movl $4, 4(%esp)
+					0xc7, 0x44, 0x24, 0x04, 0x04, 0x00, 0x00, 0x00,
+					// movl $0x1a (or $0x1b), 8(%esp)
+					0xc7, 0x44, 0x24, 0x08, old[m[5]], 0x00, 0x00, 0x00,
+				)
+			} else if strings.Contains(f.version, "i386") {
 				new = append(new,
 					// xor %eax, %eax
 					0x31, 0xc0,
@@ -717,6 +735,15 @@ var current_thread_pop = mustCompile(`
     0x90                            // 15   nop
 `)
 
+var current_thread_pop_i386 = mustCompile(`
+    0x55                            //  0   push %rbp
+    0x89 0xe5                       //  1   mov %rsp, %rbp
+    0x65 0xa1                       //  3   mov %gs:0x4, %rax
+    * 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00
+    0x5d                            //  9   pop %rbp
+    0xc3                            // 14   retq
+`)
+
 var bsd_ast_11_4_2 = mustCompile(`
     0x49 0x83 0xbe 0xc0/0xdf 0x01 0x00 0x00 0x00    //  0 cmpq   $0x0,0x1c0(%r14)
     0x75 0x0a                                       //  8 jne    +10
@@ -737,10 +764,38 @@ var bsd_ast_11_4_2 = mustCompile(`
     0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 65 call psignal_internal
 `)
 
+var bsd_ast_11_4_2_i386 = mustCompile(`
+    0x83 0xbe 0x04/0xef 0x01 0x00 0x00 0x00          //  0 cmpl   $0x0,0x104(%esi)
+    0x75 0x09                                        //  7 jne    +9
+    0x83 0xbe 0x08/0xef 0x01 0x00 0x00 0x00          //  9 cmpl   $0x0,0x108(%esi)
+    0x74 0x15                                        // 16 je     +21
+    * 0x8b 0x46 0x0c                                 // 18 mov    0xc(%esi),%eax
+    0x89 0x04 0x24                                   // 21 mov    %eax,(%esp)
+    0xc7 0x44 0x24 0x04 0x00/0xfc 0x00 0x00 0x00 *   // 24 movl   $0x1,0x4(%esp)
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00     // 32 call task_vtimer_set
+    0xeb 0x13                                        // 37 jmp    +19
+    * 0x8b 0x46 0x0c                                 // 39 mov    0xc(%esi),%eax
+    0x89 0x04 0x24                                   // 42 mov    %eax,(%esp)
+    0xc7 0x44 0x24 0x04 0x00/0xfc 0x00 0x00 0x00 *   // 45 movl   $0x1,0x4(%esp)
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00     // 53 call task_vtimer_clear
+    * 0xc7 0x44 0x24 0x08 * 0x1a/0xfe 0x00 0x00 0x00 // 58 movl   $0x1a,0x8(%esp)
+    0xc7 0x44 0x24 0x04 0x00 0x00 0x00 0x00          // 66 movl   $0x0,0x4(%esp)
+    0xc7 0x04 0x24 0x00 0x00 0x00 0x00               // 74 movl   $0x0,(%esp)
+    0x31 0xd2                                        // 81 xor    %edx,%edx
+    0x89 0xf1 *                                      // 83 mov    %esi,%ecx
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00     // 85 call psignal_internal
+`)
+
 var fix_11_4_2 = fix{
 	"11.4.2",
 	current_thread_pop,
 	[]*pattern{bsd_ast_11_4_2},
+}
+
+var fix_11_4_2_i386 = fix{
+	"11.4.2 (i386)",
+	current_thread_pop_i386,
+	[]*pattern{bsd_ast_11_4_2_i386},
 }
 
 // Darwin 12.4.0 (Mountain Lion)
@@ -775,6 +830,7 @@ var fixes = []*fix{
 	&fix_10_8_0,
 	&fix_10_8_0_i386,
 	&fix_11_4_2,
+	&fix_11_4_2_i386,
 	&fix_12_4_0,
 	&fix_13_0_0,
 }
