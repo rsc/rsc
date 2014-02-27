@@ -5,15 +5,15 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"path"
-	"strconv"
-	"strings"
-	"syscall"
+	"fmt"
 	"time"
+	"path"
+	"strings"
+	"strconv"
+	"syscall"
 
 	"code.google.com/p/goplan9/plan9/acme"
 )
@@ -62,8 +62,6 @@ func main() {
 	w.Ctl("clean")
 	defer w.Ctl("clean")
 
-	stop := blinker(w)
-
 	cmd := exec.Command("go", append([]string{"run", os.Getenv("samfile")}, os.Args[1:]...)...)
 	cmd.Stdout = bodyWriter{w}
 	cmd.Stderr = cmd.Stdout
@@ -73,6 +71,10 @@ func main() {
 		w.Fprintf("body", "error starting command: %v\n", err)
 		return
 	}
+	
+	//stop := blinker(w)
+	w.Ctl("cleartag")
+	w.Fprintf("tag", " Kill Stack")
 
 	done := make(chan bool)
 	go func() {
@@ -80,10 +82,10 @@ func main() {
 		if err != nil {
 			w.Fprintf("body", "\nerror running command: %v\n", err)
 		}
-		stop <- true
+		//stop <- true
 		done <- true
 	}()
-
+	
 	deleted := make(chan bool, 1)
 	go func() {
 		for e := range w.EventChan() {
@@ -99,14 +101,18 @@ func main() {
 				case "Kill":
 					syscall.Kill(-cmd.Process.Pid, 2)
 					continue
+				case "Stack":
+					syscall.Kill(-cmd.Process.Pid, 3)
+					continue
 				}
 				w.WriteEvent(e)
 			}
 		}
 	}()
-
+	
 	<-done
-
+	w.Ctl("cleartag")
+	
 	select {
 	case <-deleted:
 		w.Ctl("delete")
