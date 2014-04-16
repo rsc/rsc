@@ -21,16 +21,16 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
-	"os"
-	"io/ioutil"
-	"io"
-	"bufio"
-	"log"
 	"fmt"
-	"strings"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -58,7 +58,7 @@ func rewritePath(s string) string {
 	for _, oldnew := range rewrites {
 		old, new := oldnew[0], oldnew[1]
 		if s == old || strings.HasPrefix(s, old+"/") {
-			return new+s[len(old):]
+			return new + s[len(old):]
 		}
 	}
 	return s
@@ -76,12 +76,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	wf, err := os.Create(flag.Arg(1))
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	r := newRewriter(rf, wf, rewritePath)
 
 	r.verbose = *verbose
@@ -96,22 +96,22 @@ func main() {
 }
 
 type rewriter struct {
-	fn func(string) string
-	rf *os.File
-	wf *os.File
-	r *bufio.Reader
-	w *bufio.Writer
+	fn      func(string) string
+	rf      *os.File
+	wf      *os.File
+	r       *bufio.Reader
+	w       *bufio.Writer
 	roffset int64
 	verbose bool
-	tmp []byte
+	tmp     []byte
 }
 
 func newRewriter(rf, wf *os.File, fn func(string) string) *rewriter {
 	return &rewriter{
 		rf: rf,
 		wf: wf,
-		r: bufio.NewReader(rf),
-		w: bufio.NewWriter(wf),
+		r:  bufio.NewReader(rf),
+		w:  bufio.NewWriter(wf),
 		fn: fn,
 	}
 }
@@ -145,7 +145,6 @@ func (r *rewriter) rewrite() (err error) {
 	return nil
 }
 
-
 func (r *rewriter) flush() {
 	err := r.w.Flush()
 	if err != nil {
@@ -160,7 +159,7 @@ func (r *rewriter) wseek(delta int64, whence int) int64 {
 		panic(rewriterError{fmt.Errorf("seeking in %s: %v", r.wf.Name(), err)})
 	}
 	return off
-}		
+}
 
 // trimSpace removes trailing spaces from b and returns the corresponding string.
 // This effectively parses the form used in archive headers.
@@ -170,7 +169,7 @@ func trimSpace(b []byte) string {
 
 func (r *rewriter) readArchive() {
 	r.readFixed([]byte("!<arch>\n"))
-	
+
 	for {
 		_, err := r.r.ReadByte()
 		if err == io.EOF {
@@ -192,19 +191,19 @@ func (r *rewriter) readArchive() {
 			r.corrupt()
 		}
 		wstart := r.wseek(0, 1)
-	
+
 		name := trimSpace(buf[0:16])
 		size, err := strconv.ParseInt(trimSpace(buf[48:58]), 10, 64)
 		if err != nil {
 			r.corrupt()
 		}
-		
+
 		switch name {
 		case "__.SYMDEF", "__.GOSYMDEF", "__.PKGDEF":
-			r.skip(size+size&1)
+			r.skip(size + size&1)
 			continue
 		}
-		
+
 		start := r.roffset
 		r.readObject()
 		n := r.roffset - start
@@ -215,7 +214,7 @@ func (r *rewriter) readArchive() {
 			r.r.ReadByte()
 			r.roffset++
 		}
-		
+
 		wend := r.wseek(0, 1)
 		wsize := wend - wstart
 		r.wseek(wstart-60+48, 0)
@@ -238,11 +237,11 @@ func (r *rewriter) readObject() {
 
 	// Header + version.
 	r.readFixed([]byte("\x00\x00go13ld\x01"))
-	
+
 	// Package imports.
 	for r.readString() != "" {
 	}
-	
+
 	discard := bufio.NewWriter(ioutil.Discard)
 
 	// Symbols.
@@ -253,47 +252,47 @@ func (r *rewriter) readObject() {
 			}
 			break
 		}
-		
+
 		kind := r.readInt()
 		name, _ := r.readSymID()
-		r.readInt() // dupok
-		r.readInt() // size
-		r.readSymID() // type
-		r.readData() // data
-		n := r.readInt() // nreloc
+		r.readInt()              // dupok
+		r.readInt()              // size
+		r.readSymID()            // type
+		r.readData()             // data
+		n := r.readInt()         // nreloc
 		for i := 0; i < n; i++ { // reloc
-			r.readInt() // offset
-			r.readInt() // size
-			r.readInt() // type
-			r.readInt() // add
-			r.readInt() // xadd
+			r.readInt()   // offset
+			r.readInt()   // size
+			r.readInt()   // type
+			r.readInt()   // add
+			r.readInt()   // xadd
 			r.readSymID() // sym
 			r.readSymID() // xsym
 		}
-		
+
 		const STEXT = 1
 		if kind == STEXT {
 			if r.verbose {
 				fmt.Printf("%s\n", name)
 			}
-			r.readInt() // args
-			r.readInt() // frame
-			n = r.readInt() // nvar
+			r.readInt()              // args
+			r.readInt()              // frame
+			n = r.readInt()          // nvar
 			for i := 0; i < n; i++ { // var
 				r.readSymID() // name
-				r.readInt() // offset
-				r.readInt() // kind
+				r.readInt()   // offset
+				r.readInt()   // kind
 				r.readSymID() // type
 			}
-			
-			r.readData() // pcsp
-			r.readData() // pcfile
-			r.readData() // pcline
-			n = r.readInt() // npcdata
+
+			r.readData()             // pcsp
+			r.readData()             // pcfile
+			r.readData()             // pcline
+			n = r.readInt()          // npcdata
 			for i := 0; i < n; i++ { // pcdata
 				r.readData()
 			}
-			n = r.readInt() // nfuncdata
+			n = r.readInt()          // nfuncdata
 			for i := 0; i < n; i++ { // funcdata syms
 				r.readSymID()
 			}
@@ -322,7 +321,7 @@ func (r *rewriter) readObject() {
 			r.w = w
 		}
 	}
-	
+
 	r.readFixed([]byte("\xffgo13ld")) // first ff already read
 }
 
@@ -352,7 +351,7 @@ func (r *rewriter) readFixed(match []byte) {
 }
 
 func (r *rewriter) skip(n int64) {
-	const chunk = 1<<16
+	const chunk = 1 << 16
 	if r.tmp == nil {
 		r.tmp = make([]byte, chunk)
 	}
@@ -377,17 +376,17 @@ func (r *rewriter) readByte() byte {
 
 func (r *rewriter) readInt() int {
 	var u uint64
-	for shift := uint(0);; shift += 7 {
+	for shift := uint(0); ; shift += 7 {
 		if shift >= 64 {
 			r.corrupt()
 		}
 		c := r.readByte()
-		u |= uint64(c&0x7F)<<shift
+		u |= uint64(c&0x7F) << shift
 		if c&0x80 == 0 {
 			break
 		}
 	}
-	v := int64(u>>1) ^ (int64(u)<<63>>63)
+	v := int64(u>>1) ^ (int64(u) << 63 >> 63)
 	if int64(int(v)) != v {
 		r.corrupt()
 	}
@@ -415,7 +414,7 @@ func writeInt(w *bufio.Writer, n int) {
 	v := int64(n)
 	u := uint64(v<<1) ^ uint64(v>>63)
 	for u >= 0x80 {
-		w.WriteByte(byte(u)|0x80)
+		w.WriteByte(byte(u) | 0x80)
 		u >>= 7
 	}
 	w.WriteByte(byte(u))
