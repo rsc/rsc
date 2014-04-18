@@ -552,6 +552,7 @@ func (lx *lexer) parseChar1(text string) (val byte, wid int, ok bool) {
 		v := 0
 		for i < len(text) && ishex(text[i]) {
 			v = v*16 + unhex(text[i])
+			i++
 		}
 		if i-2 >= 2 {
 			lx.Errorf("hexadecimal escape %s out of range", text[:i])

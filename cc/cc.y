@@ -1002,14 +1002,14 @@ xdecl:
 fndef:
 	typeclass decor decl_list_opt 
 	{
-		yylex.(*lexer).pushScope()
 		typ, name := $2($1.t)
-		$<typ>$ = typ
-		$<str>$ = name
 		if typ.Kind != Func {
 			yylex.(*lexer).Errorf("invalid function definition")
 			return 0
 		}
+		$<decl>$ = &Decl{Name: name, Type: typ}
+		yylex.(*lexer).pushDecl($<decl>$);
+		yylex.(*lexer).pushScope()
 		for _, decl := range typ.Decls {
 			yylex.(*lexer).pushDecl(decl);
 		}
@@ -1018,7 +1018,8 @@ fndef:
 	{
 		yylex.(*lexer).popScope();
 		$<span>$ = span($<span>1, $<span>5)
-		$$ = &Decl{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Name: $<str>4, Type: $<typ>4}
+		$$ = $<decl>4
+		$$.Span = $<span>$
 		if $3 != nil {
 			yylex.(*lexer).Errorf("cannot use pre-prototype definitions")
 		}

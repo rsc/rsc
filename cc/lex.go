@@ -7,6 +7,7 @@ package cc
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -144,6 +145,9 @@ func (lx *lexer) findInclude(name string, std bool) (string, []byte, error) {
 			return "internal/" + name, []byte(redir), nil
 		}
 		name = "/Users/rsc/g/go/include/" + name
+	}
+	if !filepath.IsAbs(name) {
+		name = filepath.Join(filepath.Dir(lx.file), name)
 	}
 	data, err := ioutil.ReadFile(name)
 	if err != nil {
