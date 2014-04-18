@@ -17,6 +17,8 @@ typedef long int32;
 typedef ulong uint32;
 typedef vlong int64;
 typedef uvlong uint64;
+typedef float float32;
+typedef double float64;
 
 typedef schar s8int;
 typedef uchar u8int;
@@ -26,8 +28,11 @@ typedef long s32int;
 typedef ulong u32int;
 typedef vlong s64int;
 typedef uvlong u64int;
+typedef struct Fmt Fmt;
 
 typedef uint32 Rune;
+
+void *nil;
 
 typedef struct va_list *va_list;
 `
@@ -43,10 +48,19 @@ char *strcpy(char*, char*);
 int errstr(char*, uint);
 void werrstr(char*, ...);
 
+int print(char*, ...);
 int fprint(int, char*, ...);
 int snprint(char*, int, char*, ...);
 char *seprint(char*, char*, char*, ...);
 char *vseprint(char*, char*, char*, va_list);
+void exits(char*);
+void sysfatal(char*, ...);
+char *strstr(char*, char*);
+int strlen(char*);
+void memmove(void*, void*, int);
+char *strdup(char*);
+void *malloc(int);
+void *realloc(void*, int);
 
 void va_start(va_list, void*);
 void va_end(va_list);
