@@ -6,7 +6,7 @@
 // optionally adding a prefix to all top-level names.
 //
 // Usage:
-//	bundle [-p prefix] importpath >file.go
+//	bundle [-p pkgname] [-x prefix] importpath >file.go
 //
 // Bugs
 //
@@ -36,7 +36,10 @@ import (
 	"strings"
 )
 
-var prefix = flag.String("p", "", "prefix to add to all top-level names")
+var (
+	pkgname = flag.String("p", "", "package name to use in output file")
+	prefix  = flag.String("x", "", "prefix to add to all top-level names")
+)
 
 func notest(fi os.FileInfo) bool {
 	return !strings.HasSuffix(fi.Name(), "_test.go")
@@ -138,6 +141,9 @@ func main() {
 		f := pkg.Files[name]
 		if i == 0 {
 			f0 = f
+			if *pkgname != "" {
+				f.Name.Name = *pkgname
+			}
 		} else {
 			f.Name = &ast.Ident{Name: "PACKAGE-DELETE-ME"}
 			for _, spec := range f.Imports {
