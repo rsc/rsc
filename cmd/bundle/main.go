@@ -8,9 +8,16 @@
 // Usage:
 //	bundle [-p pkgname] [-x prefix] importpath >file.go
 //
+// Example
+//
+// The Go 1.3 cmd/objdump embeds the code for rsc.io/x86/x86asm.
+// Its Makefile builds x86.go using:
+//
+//	bundle -p main -x x86_ rsc.io/x86/x86asm >x86.go
+//
 // Bugs
 //
-// Bundle has many limitations, none of them fundamental.
+// Bundle has many limitations, most of them not fundamental.
 // It does not work with cgo.
 // It does not work with renamed imports.
 // It does not correctly translate struct literals when prefixing is enabled
@@ -198,6 +205,8 @@ func main() {
 
 	os.Stdout.Write(buf.Bytes())
 }
+
+// NOTE: Below here stolen from gofix, should probably be in a library eventually.
 
 // addImport adds the import path to the file f, if absent.
 // Copied from cmd/fix.
