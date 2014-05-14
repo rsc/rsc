@@ -18,10 +18,14 @@
 // Bugs
 //
 // Bundle has many limitations, most of them not fundamental.
+//
 // It does not work with cgo.
+//
 // It does not work with renamed imports.
+//
 // It does not correctly translate struct literals when prefixing is enabled
 // and a field key in the literal key is the same as a top-level name.
+//
 // It does not work with embedded struct fields.
 package main
 
