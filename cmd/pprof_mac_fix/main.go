@@ -25,9 +25,14 @@
 //	OS X 10.6 Snow Leopard      / Darwin 10.8 / i386 only
 //	OS X 10.7 Lion              / Darwin 11.4 / i386 and x86_64
 //	OS X 10.8 Mountain Lion     / Darwin 12.4 / x86_64 only
-//  OS X 10.9 Mavericks preview / Darwin 13.0 / x86_64 only
 //
 // Snow Leopard x86_64 may work too but is untried.
+//
+// This program has shipped in the past with a patch for
+// OS X 10.9 Mavericks/Darwin 13.0, but the patch can cause
+// rare system crashes during profiling and has been removed.
+// People who applied the 10.9 patch are encouraged to copy
+// the standard kernel back (cp /mach_kernel0 /mach_kernel).
 //
 // Installation
 //
@@ -832,7 +837,7 @@ var fixes = []*fix{
 	&fix_11_4_2,
 	&fix_11_4_2_i386,
 	&fix_12_4_0,
-	&fix_13_0_0,
+	// &fix_13_0_0, BUGGY!
 }
 
 // Darwin 13.0.0 (Mavericks)
@@ -840,6 +845,12 @@ var fixes = []*fix{
 // Mavericks does not have the call to task_vtimer_clear so we cannot use the
 // usual space optimization. Instead, build a parameterized subroutine in the
 // middle of the SIGPROF and SIGVTALRM bodies and change them to call it.
+//
+// NOTE: This patch is buggy. It does work fairly reliably but on occasion
+// another section of the signal handler can try to jump into the middle
+// of the rewritten section, and of course it doesn't land where it expects
+// and things go south rather quickly.
+// This is disabled until it can be fixed.
 
 var fix_13_0_0 = fix{
 	"13.0.0",
