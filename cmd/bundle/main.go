@@ -107,6 +107,7 @@ func main() {
 	}
 
 	isTop := make(map[interface{}]bool)
+	isType := make(map[string]bool)
 	isTopName := make(map[string]bool)
 	for _, f := range pkg.Files {
 		for _, d := range f.Decls {
@@ -122,6 +123,7 @@ func main() {
 						}
 					case *ast.TypeSpec:
 						isTop[spec] = true
+						isType[spec.Name.Name] = true
 						isTopName[spec.Name.Name] = true
 						rename(spec.Name)
 					}
@@ -140,6 +142,12 @@ func main() {
 
 	for _, f := range pkg.Files {
 		walk(f, func(n interface{}) {
+			kv, ok := n.(*ast.KeyValueExpr)
+			if ok {
+				if id, ok := kv.Key.(*ast.Ident); ok && renamed[id] && isType[id.Name[len(*prefix):]] {
+					id.Name = id.Name[len(*prefix):]
+				}
+			}
 			id, ok := n.(*ast.Ident)
 			if ok && (id.Obj != nil && isTop[id.Obj.Decl] || id.Obj == nil && isTopName[id.Name]) {
 				rename(id)
