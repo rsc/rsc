@@ -949,7 +949,7 @@ type:
 		if $1.c != 0 {
 			yylex.(*lexer).Errorf("%v not allowed here", $1.c)
 		}
-		if $1.q != 0 {
+		if $1.q != 0 && $1.q != Const && $1.q != Volatile {
 			yylex.(*lexer).Errorf("%v ignored here (TODO)?", $1.q)
 		}
 		$$ = $1.t
@@ -1002,16 +1002,23 @@ xdecl:
 fndef:
 	typeclass decor decl_list_opt 
 	{
+		lx := yylex.(*lexer)
 		typ, name := $2($1.t)
 		if typ.Kind != Func {
 			yylex.(*lexer).Errorf("invalid function definition")
 			return 0
 		}
-		$<decl>$ = &Decl{Name: name, Type: typ}
-		yylex.(*lexer).pushDecl($<decl>$);
-		yylex.(*lexer).pushScope()
+		d := lx.lookupDecl(name)
+		if d == nil {
+			d = &Decl{Name: name, Type: typ}
+			lx.pushDecl(d);
+		} else {
+			d.Type = typ
+		}
+		$<decl>$ = d
+		lx.pushScope()
 		for _, decl := range typ.Decls {
-			yylex.(*lexer).pushDecl(decl);
+			lx.pushDecl(decl);
 		}
 	}
 	block
@@ -1024,7 +1031,6 @@ fndef:
 			yylex.(*lexer).Errorf("cannot use pre-prototype definitions")
 		}
 		$$.Body = $5
-		yylex.(*lexer).pushDecl($$);
 	}
 
 tag:

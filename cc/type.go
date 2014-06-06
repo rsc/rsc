@@ -301,4 +301,13 @@ type Decl struct {
 	Storage Storage
 	Init    *Init
 	Body    *Stmt
+
+	XOuter *Decl
+}
+
+func (d *Decl) String() string {
+	if d == nil {
+		return "nil Decl"
+	}
+	return fmt.Sprintf("Decl{%s, %s}", d.Name, d.Type)
 }

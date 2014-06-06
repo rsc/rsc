@@ -20,10 +20,11 @@ const (
 )
 
 type Printer struct {
-	buf    bytes.Buffer
-	indent int
-	html   bool
-	suffix []Comment // suffix comments to print at next newline
+	buf          bytes.Buffer
+	indent       int
+	html         bool
+	suffix       []Comment // suffix comments to print at next newline
+	hideComments bool
 }
 
 func (p *Printer) StartHTML() {
@@ -96,6 +97,9 @@ func (p *Printer) Print(args ...interface{}) {
 				p.Print(com)
 			}
 		case Comment:
+			if p.hideComments {
+				break
+			}
 			com := arg
 			if com.Suffix {
 				p.suffix = append(p.suffix, com)
