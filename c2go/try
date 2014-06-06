@@ -1,0 +1,9 @@
+#!/bin/bash
+
+go run main.go "$@" ~/g/go/src/liblink/{anames5.c,anames6.c,anames8.c,asm5.c,asm6.c,asm8.c,data.c,go.c,ld.c,list5.c,list6.c,list8.c,obj.c,obj5.c,obj6.c,obj8.c,objfile.c,pass.c,pcln.c,sym.c}
+
+go run main.go -I ~/g/go/src/cmd/6g "$@" ~/g/go/src/cmd/gc/{align.c,array.c,bits.c,builtin.c,bv.c,closure.c,const.c,dcl.c,esc.c,export.c,fmt.c,gen.c,init.c,inl.c,lex.c,md5.c,mparith[123].c,obj.c,order.c,racewalk.c,range.c,reflect.c,select.c,sinit.c,subr.c,swt.c,typecheck.c,unsafe.c,walk.c,pgen.c,plive.c,popt.c} ~/g/go/src/cmd/6g/{cgen.c,galign.c,ggen.c,gobj.c,gsubr.c,peep.c,prog.c,reg.c}
+
+go run main.go -I ~/g/go/src/cmd/8g "$@" ~/g/go/src/cmd/gc/{align.c,array.c,bits.c,builtin.c,bv.c,closure.c,const.c,dcl.c,esc.c,export.c,fmt.c,gen.c,init.c,inl.c,lex.c,md5.c,mparith[123].c,obj.c,order.c,racewalk.c,range.c,reflect.c,select.c,sinit.c,subr.c,swt.c,typecheck.c,unsafe.c,walk.c,pgen.c,plive.c,popt.c} ~/g/go/src/cmd/8g/{cgen.c,cgen64.c,galign.c,ggen.c,gobj.c,gsubr.c,peep.c,prog.c,reg.c}
+
+go run main.go -I ~/g/go/src/cmd/5g "$@" ~/g/go/src/cmd/gc/{align.c,array.c,bits.c,builtin.c,bv.c,closure.c,const.c,dcl.c,esc.c,export.c,fmt.c,gen.c,init.c,inl.c,lex.c,md5.c,mparith[123].c,obj.c,order.c,racewalk.c,range.c,reflect.c,select.c,sinit.c,subr.c,swt.c,typecheck.c,unsafe.c,walk.c,pgen.c,plive.c,popt.c} ~/g/go/src/cmd/5g/{cgen.c,cgen64.c,galign.c,ggen.c,gobj.c,gsubr.c,peep.c,prog.c,reg.c}
