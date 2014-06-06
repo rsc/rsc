@@ -161,11 +161,17 @@ func (lx *lexer) typecheckStmt(stmt *Stmt) {
 		// check return
 	case Switch:
 		lx.typecheckExpr(stmt.Expr)
+		lx.typecheckStmt(stmt.Body)
 		// push break context
 		// push switch type
 	case While:
 		lx.typecheckExpr(stmt.Expr)
+		lx.typecheckStmt(stmt.Body)
 		// push break/continue context
+	}
+
+	for _, lab := range stmt.Labels {
+		lx.typecheckExpr(lab.Expr)
 	}
 }
 
@@ -416,8 +422,10 @@ func canAssign(l, r *Type, rx *Expr) bool {
 		// ok
 	case isPtr(l) && isNull(rx):
 		// ok
+		rx.XType = toPtr(l)
 	case isPtr(l) && isCompat(ptrBase(l), r):
 		// ok
+	case isVoidPtr(l) && r.Is(Func), isVoidPtr(r) && l.Is(Func):
 	default:
 		return false
 	}
@@ -554,7 +562,7 @@ func (lx *lexer) parseChar1(text string) (val byte, wid int, ok bool) {
 			v = v*16 + unhex(text[i])
 			i++
 		}
-		if i-2 >= 2 {
+		if i-2 > 2 {
 			lx.Errorf("hexadecimal escape %s out of range", text[:i])
 			return
 		}
@@ -711,6 +719,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 	case Arrow:
 		t := x.Left.XType
 		if t == nil {
+			lx.Errorf("arrow missing type %s", x.Left)
 			break
 		}
 		if !isPtr(t) {
@@ -727,6 +736,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			lx.Errorf("unknown field ->%v", x.Text)
 			break
 		}
+		x.XDecl = d
 		x.XType = d.Type
 
 	case Call:
@@ -753,6 +763,9 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 				break
 			}
 			if i >= len(x.List) {
+				if len(x.List) == 0 && len(t.Decls) == 1 && t.Decls[0].Type.Is(Void) {
+					break
+				}
 				lx.Errorf("not enough arguments to call")
 				break
 			}
@@ -788,8 +801,10 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			x.XType = compositePtr(l, r)
 		case isPtr(l) && isNull(x.List[1]):
 			x.XType = toPtr(l)
+			x.List[1].XType = x.XType
 		case isPtr(r) && isNull(x.List[0]):
 			x.XType = toPtr(r)
+			x.List[0].XType = x.XType
 		case isPtr(l) && isVoidPtr(r):
 			x.XType = r
 		case isPtr(r) && isVoidPtr(l):
@@ -817,6 +832,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			lx.Errorf("unknown field .%v", x.Text)
 			break
 		}
+		x.XDecl = d
 		x.XType = d.Type
 
 	case Eq:
@@ -836,18 +852,33 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 		if l == nil || r == nil {
 			break
 		}
-		switch {
-		case isArith(l) && isArith(r):
-			// ok
-		case isCompatPtr(l, r):
-			// ok
-		case (x.Op == EqEq || x.Op == NotEq) && isPtr(l) && (isNull(x.Right) || isVoidPtr(r)):
-			// ok
-		case (x.Op == EqEq || x.Op == NotEq) && isPtr(r) && (isNull(x.Left) || isVoidPtr(l)):
-			// ok
-		default:
-			lx.Errorf("invalid comparison of %v (type %v) and %v (type %v)", x.Left, l, x.Right, r)
+		if isArith(l) && isArith(r) {
+			if x.Left.Op != Number && x.Right.Op == Number {
+				x.Right.XType = x.Left.XType
+			}
+			if x.Right.Op != Number && x.Left.Op == Number {
+				x.Left.XType = x.Right.XType
+			}
+			break
 		}
+		if isCompatPtr(l, r) {
+			break
+		}
+		if x.Op == EqEq || x.Op == NotEq {
+			if isPtr(l) {
+				if isNull(x.Right) || isVoidPtr(r) {
+					x.Right.XType = toPtr(l)
+					break
+				}
+			}
+			if isPtr(r) {
+				if isNull(x.Left) || isVoidPtr(l) {
+					x.Left.XType = toPtr(r)
+					break
+				}
+			}
+		}
+		lx.Errorf("invalid comparison of %v (type %v) and %v (type %v)", x.Left, l, x.Right, r)
 
 	case Index:
 		// ptr[int]
@@ -919,6 +950,10 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			lx.Errorf("undefined: %s", x.Text)
 			break
 		}
+		//	XXX this happens for enums
+		//	if x.XDecl.Type == nil {
+		//		lx.Errorf("missing type for defined variable: %s", x.Text)
+		//	}
 		x.XType = x.XDecl.Type
 
 	case Not:
@@ -947,6 +982,7 @@ func (lx *lexer) typecheckExpr(x *Expr) {
 			_ = f // TODO use this
 			x.XType = DoubleType
 			switch suf {
+			case "":
 			case "f", "F":
 				x.XType = FloatType
 			default:

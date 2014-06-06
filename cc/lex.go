@@ -7,6 +7,7 @@ package cc
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -68,7 +69,9 @@ type lexer struct {
 	enumSeen map[interface{}]bool
 
 	// type checking state
-	scope *Scope
+	scope        *Scope
+	includeScope *Scope
+	includeSeen  map[string]bool
 
 	// output
 	errors []string
@@ -77,10 +80,17 @@ type lexer struct {
 }
 
 func (lx *lexer) parse() {
+	if lx.includeSeen == nil {
+		lx.includeSeen = make(map[string]bool)
+	}
 	if lx.wholeInput == "" {
 		lx.wholeInput = lx.input
 	}
-	lx.scope = &Scope{}
+	if lx.includeScope != nil {
+		lx.scope = lx.includeScope
+	} else {
+		lx.scope = &Scope{}
+	}
 	yyParse(lx)
 }
 
@@ -109,12 +119,30 @@ func (lx *lexer) pushInclude(includeLine string) {
 		return
 	}
 	i++
+
 	file := s[1:i]
+	origFile := file
 
 	file, data, err := lx.findInclude(file, s[0] == '<')
 	if err != nil {
 		lx.Errorf("#include %s: %v", s[:i+1], err)
 		return
+	}
+
+	if lx.includeSeen[file] {
+		return
+	}
+	lx.includeSeen[file] = true
+
+	if extraMap[origFile] != "" {
+		str := extraMap[origFile] + "\n"
+		lx.pushed = append(lx.pushed, lx.lexInput)
+		lx.lexInput = lexInput{
+			input:      str,
+			wholeInput: str,
+			file:       "internal/" + origFile,
+			lineno:     1,
+		}
 	}
 
 	if data == nil {
@@ -132,8 +160,19 @@ func (lx *lexer) pushInclude(includeLine string) {
 }
 
 var stdMap = map[string]string{
-	"u.h":    hdr_u_h,
-	"libc.h": hdr_libc_h,
+	"u.h":      hdr_u_h,
+	"libc.h":   hdr_libc_h,
+	"stdarg.h": "",
+}
+
+var extraMap = map[string]string{
+	"go.h": hdr_extra_go_h,
+}
+
+var includes []string
+
+func AddInclude(dir string) {
+	includes = append(includes, dir)
 }
 
 func (lx *lexer) findInclude(name string, std bool) (string, []byte, error) {
@@ -147,7 +186,17 @@ func (lx *lexer) findInclude(name string, std bool) (string, []byte, error) {
 		name = "/Users/rsc/g/go/include/" + name
 	}
 	if !filepath.IsAbs(name) {
-		name = filepath.Join(filepath.Dir(lx.file), name)
+		name1 := filepath.Join(filepath.Dir(lx.file), name)
+		if _, err := os.Stat(name1); err != nil {
+			for _, dir := range includes {
+				name2 := filepath.Join(dir, name)
+				if _, err := os.Stat(name2); err == nil {
+					name1 = name2
+					break
+				}
+			}
+		}
+		name = name1
 	}
 	data, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -256,6 +305,7 @@ Restart:
 	in := lx.input
 	if len(in) == 0 {
 		if lx.pop() {
+			lx.includeScope = lx.scope
 			goto Restart
 		}
 		return tokEOF
@@ -411,6 +461,9 @@ Restart:
 			}
 			yy.typ = &Type{Kind: TypedefType, Name: yy.str, Base: t}
 			return tokTypeName
+		}
+		if lx.tok == "EXTERN" {
+			goto Restart
 		}
 		return tokName
 	}

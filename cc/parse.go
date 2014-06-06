@@ -12,23 +12,38 @@ import (
 )
 
 func Read(name string, r io.Reader) (*Prog, error) {
-	data, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	data = append(data, '\n')
-	lx := &lexer{
-		start: startProg,
-		lexInput: lexInput{
+	return ReadMany([]string{name}, []io.Reader{r})
+}
+
+func ReadMany(names []string, readers []io.Reader) (*Prog, error) {
+	lx := &lexer{}
+	var prog *Prog
+	for i, name := range names {
+		r := readers[i]
+		data, err := ioutil.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, '\n')
+		lx.start = startProg
+		lx.lexInput = lexInput{
 			input:  string(data),
 			file:   name,
 			lineno: 1,
-		},
+		}
+		lx.parse()
+		if lx.errors != nil {
+			return nil, fmt.Errorf("%v", lx.errors[0])
+		}
+		if prog == nil {
+			prog = lx.prog
+		} else {
+			prog.Span.End = lx.prog.Span.End
+			prog.Decls = append(prog.Decls, lx.prog.Decls...)
+		}
+		lx.prog = nil
 	}
-	lx.parse()
-	if lx.errors != nil {
-		return nil, fmt.Errorf("%v", lx.errors[0])
-	}
+	lx.prog = prog
 	lx.assignComments()
 	lx.typecheck(lx.prog)
 	if lx.errors != nil {
