@@ -33,6 +33,7 @@ _current_thread:
 	.byte 0x90;
 
 .globl _bsd_ast
+.align 16
 _bsd_ast:
 // 0xffffff80005df3a0 <bsd_ast+0>:	push   %rbp
 	.byte 0x55;

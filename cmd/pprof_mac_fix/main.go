@@ -25,14 +25,17 @@
 //	OS X 10.6 Snow Leopard      / Darwin 10.8 / i386 only
 //	OS X 10.7 Lion              / Darwin 11.4 / i386 and x86_64
 //	OS X 10.8 Mountain Lion     / Darwin 12.4 / x86_64 only
+//	OS X 10.9 Mavericks         / Darwin 13.0 / x86_64 only
 //
 // Snow Leopard x86_64 may work too but is untried.
 //
-// This program has shipped in the past with a patch for
-// OS X 10.9 Mavericks/Darwin 13.0, but the patch can cause
-// rare system crashes during profiling and has been removed.
-// People who applied the 10.9 patch are encouraged to copy
-// the standard kernel back (cp /mach_kernel0 /mach_kernel).
+// An earlier version of this program shipped with a buggy patch
+// for OS X 10.9 Mavericks/Darwin 13.0. If you used the old patch
+// you are encouraged to restore your old kernel and patch using
+// an updated copy of this program.
+//
+// If running http://swtch.com/~rsc/macbug.c crashes your system,
+// you have the buggy patch applied.
 //
 // Installation
 //
@@ -479,7 +482,18 @@ func (f *fix) apply(current_thread []byte, bsd_ast []byte) error {
 		timers = append(timers, m)
 	}
 
-	if total != 2 {
+	var replace [][]byte
+	if f.version >= "13." {
+		if total != 3 || len(timers) != 2 || len(timers[0]) != 2 {
+			return fmt.Errorf("cannot match bsd_ast 13 timer call %d %d", total, len(timers[0]))
+		}
+		var err error
+		replace, err = f.apply13(tlsOff, bsd_ast, timers)
+		if err != nil {
+			return err
+		}
+		goto done
+	} else if total != 2 {
 		if total == 0 {
 			return fmt.Errorf("cannot match bsd_ast timer call")
 		}
@@ -487,16 +501,6 @@ func (f *fix) apply(current_thread []byte, bsd_ast []byte) error {
 			return fmt.Errorf("1 match for bsd_ast timer call %v, want 2", timers)
 		}
 		return fmt.Errorf("%d matches for bsd_ast timer call %v, want 2", total, timers)
-	}
-
-	var replace [][]byte
-	if f.version >= "13." {
-		var err error
-		replace, err = f.apply13(tlsOff, bsd_ast, timers)
-		if err != nil {
-			return err
-		}
-		goto done
 	}
 
 	for i, timer1 := range timers {
@@ -837,25 +841,20 @@ var fixes = []*fix{
 	&fix_11_4_2,
 	&fix_11_4_2_i386,
 	&fix_12_4_0,
-	// &fix_13_0_0, BUGGY!
+	&fix_13_0_0,
 }
 
 // Darwin 13.0.0 (Mavericks)
 //
-// Mavericks does not have the call to task_vtimer_clear so we cannot use the
-// usual space optimization. Instead, build a parameterized subroutine in the
-// middle of the SIGPROF and SIGVTALRM bodies and change them to call it.
-//
-// NOTE: This patch is buggy. It does work fairly reliably but on occasion
-// another section of the signal handler can try to jump into the middle
-// of the rewritten section, and of course it doesn't land where it expects
-// and things go south rather quickly.
-// This is disabled until it can be fixed.
+// Mavericks has the call to task_vtimer_clear at the end of the function,
+// not contiguous with the other code we need to rewrite.
+// To make room we have to build paramterized subroutines in the two sections
+// and call them.
 
 var fix_13_0_0 = fix{
 	"13.0.0",
 	current_thread_pop,
-	[]*pattern{bsd_ast_13_0_0},
+	[]*pattern{bsd_ast_13_0_0, bsd_ast_13_0_0_end},
 }
 
 var bsd_ast_13_0_0 = mustCompile(`
@@ -870,17 +869,31 @@ var bsd_ast_13_0_0 = mustCompile(`
     0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00 *  // 29 call psignal_internal
 `)
 
+var bsd_ast_13_0_0_end = mustCompile(`
+    * 0x49 0x8b 0x7f 0x18                           //  0 mov 0x18(%r15), %rdi
+    0xbe 0x01 0x00 0x00 0x00                        //  4 mov $0x1, %esi
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00 *  //  9 call task_vtimer_clear
+    0xe9 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00 *  // 14 jmp back
+    0x49 0x8b 0x7f 0x18                             //  0 mov 0x18(%r15), %rdi
+    0xbe 0x02 0x00 0x00 0x00                        //  4 mov $0x2, %esi
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00 *  //  9 call task_vtimer_clear
+    0xe9 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00 *  // 14 jmp back
+    0x66 0x66 0x66 0x66 0x66 0x2e                   // 19 14-byte-nop
+    0x0f 0x1f 0x84 0x00 0x00 0x00 0x00 0x00 *
+`)
+
 func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, error) {
 	p := f.bsd_ast[0]
 	match1 := p.matchStart(bsd_ast, timers[0][0])
 	match2 := p.matchStart(bsd_ast, timers[0][1])
-	if match1 == nil || match2 == nil {
+	match3 := f.bsd_ast[1].matchStart(bsd_ast, timers[1][0])
+	if match1 == nil || match2 == nil || match3 == nil {
 		// shouldn't happen - we found the offset above
 		return nil, fmt.Errorf("cannot re-match bsd_ast timer")
 	}
 
 	const asmLen = 34
-	if match1[0] != timers[0][0] || match2[0] != timers[0][1] || match1[4]-match1[0] != asmLen || match2[4]-match2[0] != asmLen {
+	if match1[0] != timers[0][0] || match2[0] != timers[0][1] || match3[0] != timers[1][0] || match1[4]-match1[0] != asmLen || match2[4]-match2[0] != asmLen {
 		return nil, fmt.Errorf("bsd_ast match mismatch")
 	}
 
@@ -927,7 +940,9 @@ func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, 
 		0xe8, 0x00, 0x00, 0x00, 0x00,
 	)
 	le.PutUint32(repl1[len(repl1)-4:], call1-uint32(match1[0]+len(repl1)))
+	l0 := uint32(match1[0] + len(repl1))
 	repl1 = append(repl1,
+		// L0:
 		// xor %edi, %edi
 		0x31, 0xff,
 		// xor %esi, %esi
@@ -981,5 +996,81 @@ func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, 
 		return nil, fmt.Errorf("bsd_ast repl1 bad math %d %d", len(repl2), asmLen)
 	}
 
-	return [][]byte{repl1, repl2}, nil
+	// call task_vtimer_clear
+	call3 := le.Uint32(bsd_ast[match3[1]-4:]) + uint32(match3[1])
+	call3a := le.Uint32(bsd_ast[match3[3]-4:]) + uint32(match3[3])
+	if call3 != call3a {
+		return nil, fmt.Errorf("bsd_ast call task_vtimer_clear mismatch %#x %#x", call3, call3a)
+	}
+
+	jmp1 := le.Uint32(bsd_ast[match3[2]-4:]) + uint32(match3[2])
+	jmp2 := le.Uint32(bsd_ast[match3[4]-4:]) + uint32(match3[4])
+	if jmp1 != uint32(match1[2]) {
+		return nil, fmt.Errorf("bsd_ast jmp1 mismatch %#x %#x", jmp1, match1[2])
+	}
+	if jmp2 != uint32(match2[2]) {
+		return nil, fmt.Errorf("bsd_ast jmp2 mismatch %#x %#x", jmp2, match2[2])
+	}
+
+	var repl3 []byte
+	repl3 = append(repl3,
+		// mov $1, %esi
+		0xbe, 0x01, 0x00, 0x00, 0x00,
+		// mov %esi, %ebx (caller save)
+		0x89, 0xf3,
+		// call L1
+		0xe8, 0x18, 0x00, 0x00, 0x00,
+		// jmp back
+		0xe9, 0x00, 0x00, 0x00, 0x00,
+	)
+	le.PutUint32(repl3[len(repl3)-4:], uint32(match1[0]+len(repl1))-uint32(match3[0]+len(repl3)))
+
+	repl3 = append(repl3,
+		// nop
+		0x90, 0x90,
+	)
+
+	if len(repl3) != match3[2]-match3[0] {
+		return nil, fmt.Errorf("bsd_ast bad repl3 half-len %d %d", len(repl3), match3[2]-match3[0])
+	}
+
+	repl3 = append(repl3,
+		// mov $2, %esi
+		0xbe, 0x02, 0x00, 0x00, 0x00,
+		// mov %esi, %ebx (caller save)
+		0x89, 0xf3,
+		// call L1
+		0xe8, 0x05, 0x00, 0x00, 0x00,
+		// jmp back
+		0xe9, 0x00, 0x00, 0x00, 0x00,
+	)
+	le.PutUint32(repl3[len(repl3)-4:], uint32(match2[0]+len(repl2))-uint32(match3[0]+len(repl3)))
+
+	repl3 = append(repl3,
+		// L1:
+		// mov 0x18(%r15), %rdi
+		0x49, 0x8b, 0x7f, 0x18,
+		// call task_vtimer_clear
+		0xe8, 0x00, 0x00, 0x00, 0x00,
+	)
+	le.PutUint32(repl3[len(repl3)-4:], call3-uint32(match3[0]+len(repl3)))
+
+	repl3 = append(repl3,
+		// call L0
+		0xe8, 0x00, 0x00, 0x00, 0x00,
+	)
+	le.PutUint32(repl3[len(repl3)-4:], l0-uint32(match3[0]+len(repl3)))
+
+	repl3 = append(repl3,
+		// ret
+		0xc3,
+		// nop
+		0x90,
+	)
+
+	if len(repl3) != match3[5]-match3[0] {
+		return nil, fmt.Errorf("bsd_ast bad repl3 len %d %d", len(repl3), match3[5]-match3[0])
+	}
+
+	return [][]byte{repl1, repl2, repl3}, nil
 }
