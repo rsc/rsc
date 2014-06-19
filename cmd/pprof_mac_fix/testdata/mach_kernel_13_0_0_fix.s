@@ -33,6 +33,7 @@ _current_thread:
 	.byte 0x90;
 
 .globl _bsd_ast
+.align 16
 _bsd_ast:
 // 0xffffff80005df3a0 <bsd_ast+0>:	push   %rbp
 	.byte 0x55;
@@ -124,9 +125,9 @@ _bsd_ast:
 	.byte 0x75; .byte 0x0e;
 // 0xffffff80005df450 <bsd_ast+176>:	cmpl   $0x0,0x1d0(%r15)
 	.byte 0x41; .byte 0x83; .byte 0xbf; .byte 0xd0; .byte 0x01; .byte 0x00; .byte 0x00; .byte 0x00;
-// 0xffffff80005df458 <bsd_ast+184>:	je     0xffffff80005df6fc <bsd_ast+860>
-	.byte 0x0f; .byte 0x84; .byte 0x9e; .byte 0x02; .byte 0x00; .byte 0x00;
-	
+
+	je	5f
+
 	mov $0x1, %esi
 0:
 	call 1f
@@ -135,6 +136,7 @@ _bsd_ast:
 	mov 0x18(%r15), %rdi
 	mov %esi, %ebx
 	call _task_vtimer_set
+10:
 	xor %edi, %edi
 	xor %esi, %esi
 	mov $4, %ecx
@@ -177,8 +179,8 @@ _bsd_ast:
 	.byte 0x75; .byte 0x0e;
 // 0xffffff80005df4c9 <bsd_ast+297>:	cmpl   $0x0,0x1f0(%r15)
 	.byte 0x41; .byte 0x83; .byte 0xbf; .byte 0xf0; .byte 0x01; .byte 0x00; .byte 0x00; .byte 0x00;
-// 0xffffff80005df4d1 <bsd_ast+305>:	je     0xffffff80005df70f <bsd_ast+879>
-	.byte 0x0f; .byte 0x84; .byte 0x38; .byte 0x02; .byte 0x00; .byte 0x00;
+	
+	je 6f
 
 	mov $0x2, %esi
 	call 1b
@@ -430,21 +432,25 @@ _bsd_ast:
 	.byte 0x5d;
 // 0xffffff80005df6fb <bsd_ast+859>:	retq   
 	.byte 0xc3;
-// 0xffffff80005df6fc <bsd_ast+860>:	mov    0x18(%r15),%rdi
-	.byte 0x49; .byte 0x8b; .byte 0x7f; .byte 0x18;
-// 0xffffff80005df700 <bsd_ast+864>:	mov    $0x1,%esi
-	.byte 0xbe; .byte 0x01; .byte 0x00; .byte 0x00; .byte 0x00;
-// 0xffffff80005df705 <bsd_ast+869>:	callq  0xffffff800023f7f0 <task_vtimer_clear>
+	
+5:
+	mov	$0x1, %esi
+	mov %esi, %ebx
+	call 7f
+	jmp 2b
+	nop
+	nop
+
+6:
+	mov $0x2, %esi
+	mov %esi, %ebx
+	call 7f
+	jmp 4b
+
+7:
+	mov 0x18(%r15), %rdi
 	call _task_vtimer_clear
-// 0xffffff80005df70a <bsd_ast+874>:	jmpq   0xffffff80005df46c <bsd_ast+204>
-	.byte 0xe9; .byte 0x5d; .byte 0xfd; .byte 0xff; .byte 0xff;
-// 0xffffff80005df70f <bsd_ast+879>:	mov    0x18(%r15),%rdi
-	.byte 0x49; .byte 0x8b; .byte 0x7f; .byte 0x18;
-// 0xffffff80005df713 <bsd_ast+883>:	mov    $0x2,%esi
-	.byte 0xbe; .byte 0x02; .byte 0x00; .byte 0x00; .byte 0x00;
-// 0xffffff80005df718 <bsd_ast+888>:	callq  0xffffff800023f7f0 <task_vtimer_clear>
-	call _task_vtimer_clear
-// 0xffffff80005df71d <bsd_ast+893>:	jmpq   0xffffff80005df4e5 <bsd_ast+325>
-	.byte 0xe9; .byte 0xc3; .byte 0xfd; .byte 0xff; .byte 0xff;
-// 0xffffff80005df722 <bsd_ast+898>:	nopw   %cs:0x0(%rax,%rax,1)
-	.byte 0x66; .byte 0x66; .byte 0x66; .byte 0x66; .byte 0x66; .byte 0x2e; .byte 0x0f; .byte 0x1f; .byte 0x84; .byte 0x00; .byte 0x00; .byte 0x00; .byte 0x00; .byte 0x00;
+	call 10b
+	ret
+	nop
+

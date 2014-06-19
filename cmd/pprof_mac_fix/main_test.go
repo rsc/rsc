@@ -18,7 +18,7 @@ var tests = []string{
 	"testdata/mach_kernel_10_8_0_i386",
 	"testdata/mach_kernel_11_4_2",
 	"testdata/mach_kernel_12_4_0",
-	// "testdata/mach_kernel_13_0_0",
+	"testdata/mach_kernel_13_0_0",
 }
 
 func TestAll(t *testing.T) {
@@ -35,6 +35,14 @@ func TestAll(t *testing.T) {
 		k1 := loadKernel(tt + "_fix")
 		if !bytes.Equal(k.bsd_ast, k1.bsd_ast) {
 			t.Errorf("%s: rewrite is incorrect\n", tt)
+			if len(k.bsd_ast) != len(k1.bsd_ast) {
+				t.Errorf("length mismatch %d vs %d", len(k.bsd_ast), len(k1.bsd_ast))
+				if len(k.bsd_ast) > len(k1.bsd_ast) {
+					k.bsd_ast = k.bsd_ast[:len(k1.bsd_ast)]
+				} else {
+					k1.bsd_ast = k1.bsd_ast[:len(k.bsd_ast)]
+				}
+			}
 			n := 0
 			for i := range k.bsd_ast {
 				if k.bsd_ast[i] != k1.bsd_ast[i] {
