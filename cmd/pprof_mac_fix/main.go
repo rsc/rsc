@@ -32,7 +32,9 @@
 // An earlier version of this program shipped with a buggy patch
 // for OS X 10.9 Mavericks/Darwin 13.0. If you used the old patch
 // you are encouraged to restore your old kernel and patch using
-// an updated copy of this program.
+// an updated copy of this program:
+//
+//	go get -u code.google.com/p/rsc/cmd/pprof_mac_fix
 //
 // If running http://swtch.com/~rsc/macbug.c crashes your system,
 // you have the buggy patch applied.
