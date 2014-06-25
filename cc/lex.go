@@ -449,6 +449,9 @@ Restart:
 			i++
 		}
 		lx.sym(i)
+		if lx.tok == "Adr" {
+			lx.tok = "Addr"
+		}
 		yy.str = lx.tok
 		if t := tokId[lx.tok]; t != 0 {
 			return int(t)
@@ -677,7 +680,7 @@ func (x byStart) Less(i, j int) bool {
 	if pi.Start.Byte != pj.Start.Byte {
 		return pi.Start.Byte < pj.Start.Byte
 	}
-	return pi.End.Byte > pi.End.Byte
+	return pi.End.Byte > pj.End.Byte
 }
 
 type byEnd []Syntax

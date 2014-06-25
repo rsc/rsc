@@ -75,6 +75,15 @@ type nestBlock struct {
 	more bool
 }
 
+type unnestBlock struct {
+	stmt *cc.Stmt
+}
+
+type typedInit struct {
+	typ  *cc.Type
+	init *cc.Init
+}
+
 var htmlEscaper = strings.NewReplacer("<", "&lt;", ">", "&gt;", "&", "&amp;")
 
 func (p *Printer) Print(args ...interface{}) {
@@ -95,7 +104,9 @@ func (p *Printer) Print(args ...interface{}) {
 		case *cc.Prefix:
 			p.printPrefix(arg)
 		case *cc.Init:
-			p.printInit(arg)
+			p.printInit(nil, arg)
+		case typedInit:
+			p.printInit(arg.typ, arg.init)
 		case *cc.Prog:
 			p.printProg(arg)
 		case *cc.Stmt:
@@ -124,6 +135,17 @@ func (p *Printer) Print(args ...interface{}) {
 				p.Print(" ", arg.stmt)
 			} else {
 				p.Print(" {", Indent, Newline, arg.stmt, Unindent, Newline, "}")
+			}
+		case unnestBlock:
+			if arg.stmt.Op == cc.Block {
+				for i, b := range arg.stmt.Block {
+					if i > 0 {
+						p.Print(Newline)
+					}
+					p.Print(b)
+				}
+			} else {
+				p.Print(arg.stmt)
 			}
 		case PrintSpecial:
 			switch arg {
@@ -261,7 +283,6 @@ var opStr = []string{
 	cc.Twid:       "^",
 	cc.Xor:        "^",
 	cc.XorEq:      "^=",
-	cc.SizeofExpr: "sizeof ",
 }
 
 func (p *Printer) printExpr(x *cc.Expr, prec int) {
@@ -313,7 +334,8 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		panic(fmt.Sprintf("printExpr missing case for %v", x.Op))
 
 	case cc.Arrow:
-		p.Print(exprPrec{x.Left, prec}, ".", x.Text)
+		name := x.XDecl.Name
+		p.Print(exprPrec{x.Left, prec}, ".", name)
 
 	case cc.Call:
 		p.Print(exprPrec{x.Left, precAddr}, "(")
@@ -326,35 +348,48 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		p.Print(")")
 
 	case cc.Cast:
-		p.Print("(", x.Type, ")", exprPrec{x.Left, prec})
+		p.Print("(", x.Type, ")(", exprPrec{x.Left, precLow}, ")")
 
 	case cc.CastInit:
 		p.Print("(", x.Type, ")", x.Init)
 
 	case cc.Comma:
+		p.Print("(func() {")
 		for i, y := range x.List {
 			if i > 0 {
-				p.Print(", ")
+				p.Print("; ")
 			}
-			p.printExpr(y, prec-1)
+			p.printExpr(y, precLow)
 		}
+		p.Print("}())")
 
 	case cc.Cond:
-		p.Print(exprPrec{x.List[0], prec - 1}, " ? ", exprPrec{x.List[1], prec}, " : ", exprPrec{x.List[2], prec})
+		p.Print("TERNARY(", exprPrec{x.List[0], prec - 1}, ", ", exprPrec{x.List[1], prec}, ", ", exprPrec{x.List[2], prec}, ")")
 
 	case cc.Dot:
-		p.Print(exprPrec{x.Left, prec}, ".", x.Text)
+		name := x.XDecl.Name
+		p.Print(exprPrec{x.Left, prec}, ".", name)
 
 	case cc.Index:
 		p.Print(exprPrec{x.Left, prec}, "[", exprPrec{x.Right, precLow}, "]")
 
-	case cc.Name, cc.Number:
-		p.Print(x.Text)
+	case cc.Name:
+		name := x.Text
+		if x.XDecl != nil {
+			name = x.XDecl.Name
+		}
+		p.Print(name)
+
+	case cc.Number:
+		p.Print(strings.TrimRight(x.Text, "LlUu"))
+
+	case cc.SizeofExpr:
+		p.Print("sizeof(", x.Left, ")")
 
 	case cc.String:
 		for i, str := range x.Texts {
 			if i > 0 {
-				p.Print(" ")
+				p.Print(" + ")
 			}
 			p.Print(str)
 		}
@@ -381,13 +416,13 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 
 func (p *Printer) printPrefix(x *cc.Prefix) {
 	if x.Dot != "" {
-		p.Print(".", x.Dot)
+		p.Print(x.Dot, ": ")
 	} else {
-		p.Print("[", x.Index, "]")
+		p.Print(x.Index, ": ")
 	}
 }
 
-func (p *Printer) printInit(x *cc.Init) {
+func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 	p.Print(x.Comments.Before)
 	defer p.Print(x.Comments.Suffix, x.Comments.After)
 
@@ -395,26 +430,25 @@ func (p *Printer) printInit(x *cc.Init) {
 		for _, pre := range x.Prefix {
 			p.Print(pre)
 		}
-		p.Print(" = ")
 	}
 	if x.Expr != nil {
 		p.printExpr(x.Expr, precComma)
 	} else {
 		nl := len(x.Braced) > 0 && x.Braced[0].Span.Start.Line != x.Braced[len(x.Braced)-1].Span.End.Line
+		if typ != nil {
+			p.printType(typ)
+		}
 		p.Print("{")
 		if nl {
 			p.Print(Indent)
 		}
 		for i, y := range x.Braced {
-			if i > 0 {
-				p.Print(",")
-			}
 			if nl {
 				p.Print(Newline)
 			} else if i > 0 {
 				p.Print(" ")
 			}
-			p.Print(y)
+			p.Print(y, ",")
 		}
 		if nl {
 			p.Print(Unindent, Newline)
@@ -431,6 +465,10 @@ func (p *Printer) printProg(x *cc.Prog) {
 		p.Print(decl, Newline)
 	}
 }
+
+const (
+	BlockNoBrace cc.StmtOp = 100000
+)
 
 func (p *Printer) printStmt(x *cc.Stmt) {
 	if len(x.Labels) > 0 {
@@ -463,6 +501,14 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 			p.Print(Newline, b)
 		}
 		p.Print(Unindent, Newline, "}")
+	
+	case BlockNoBrace:
+		for i, b := range x.Block {
+			if i > 0 {
+				p.Print(Newline)
+			}
+			p.Print(b)
+		}
 
 	case cc.Break:
 		p.Print("break")
@@ -471,7 +517,11 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 		p.Print("continue")
 
 	case cc.Do:
-		p.Print("do", nestBlock{x.Body, true}, " while(", x.Expr, ");")
+		p.Print("for ")
+		if x.Pre != nil {
+			p.Print(x.Pre, "; ; ", x.Pre, " ")
+		}
+		p.Print("{", Indent, Newline, unnestBlock{x.Body}, Newline, "if ", &cc.Expr{Op: cc.Not, Left: x.Expr}, " {", Indent, Newline, "break", Unindent, Newline, "}", Unindent, Newline, "}")
 
 	case cc.Empty:
 		// ok
@@ -480,7 +530,11 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 		p.Print("for ", x.Pre, "; ", x.Expr, "; ", x.Post, nestBlock{x.Body, false})
 
 	case cc.If:
-		p.Print("if ", x.Expr, nestBlock{x.Body, x.Else != nil})
+		p.Print("if ")
+		if x.Pre != nil {
+			p.Print(x.Pre, "; ")
+		}
+		p.Print(x.Expr, nestBlock{x.Body, x.Else != nil})
 		if x.Else != nil {
 			p.Print(" else", nestBlock{x.Else, false})
 		}
@@ -505,7 +559,15 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 		p.Print("switch ", x.Expr, nestBlock{x.Body, false})
 
 	case cc.While:
-		p.Print("for ", x.Expr, nestBlock{x.Body, false})
+		p.Print("for ")
+		if x.Pre != nil {
+			p.Print(x.Pre, "; ")
+		}
+		p.Print(x.Expr)
+		if x.Pre != nil {
+			p.Print("; ", x.Pre, " ")
+		}
+		p.Print(nestBlock{x.Body, false})
 	}
 }
 
@@ -526,7 +588,19 @@ func (p *Printer) printType(t *cc.Type) {
 	switch t.Kind {
 	default:
 		p.Print(t.String()) // hope for the best
+	
+	case cc.Struct:
+		p.Print("struct {", Indent)
+		p.printStructBody(t)
+		p.Print(Unindent, Newline, "}")
 
+	case cc.Enum:
+		if t.Tag != "" {
+			p.Print(t.Tag)
+		} else {
+			p.Print("enum")
+		}
+		
 	case cc.TypedefType:
 		if typemap[t.Base.Kind] != "" && strings.ToLower(t.Name) == t.Name {
 			p.Print(typemap[t.Base.Kind])
@@ -586,7 +660,7 @@ func (p *Printer) oldprintDecl(x *cc.Decl) {
 	if x.Storage != 0 {
 		p.Print(x.Storage, " ")
 	}
-	if x.Type == nil {
+	if x.Type == nil || x.Init != nil && len(x.Init.Braced) > 0 {
 		p.Print(x.Name)
 	} else {
 		name := x.Name
@@ -606,7 +680,7 @@ func (p *Printer) oldprintDecl(x *cc.Decl) {
 		}
 	}
 	if x.Init != nil {
-		p.Print(" = ", x.Init)
+		p.Print(" = ", typedInit{x.Type, x.Init})
 	}
 	if x.Body != nil {
 		p.Print(Newline, x.Body)
@@ -655,6 +729,11 @@ func (p *Printer) printDecl(decl *cc.Decl) {
 
 	if t.Kind == cc.Func {
 		p.printFuncDecl(decl)
+		return
+	}
+
+	if decl.Init != nil && len(decl.Init.Braced) > 0 {
+		p.Print("var ", decl.Name, " = ", typedInit{decl.Type, decl.Init})
 		return
 	}
 

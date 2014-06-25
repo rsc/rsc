@@ -290,7 +290,15 @@ func (t *Type) String() string {
 	case Array:
 		return t.Base.String() + "[]"
 	case Func:
-		return "func() " + t.Base.String()
+		s := "func("
+		for i, d := range t.Decls {
+			if i > 0 {
+				s += ", "
+			}
+			s += d.Name + " " + d.Type.String()
+		}
+		s += ") " + t.Base.String()
+		return s
 	}
 }
 
