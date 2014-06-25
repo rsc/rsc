@@ -186,6 +186,9 @@ func (lx *lexer) typecheckType(typ *Type) {
 		// Give enum type to the declared names.
 		// Perhaps should be done during parsing.
 		for _, decl := range typ.Decls {
+			if decl.Init != nil {
+				lx.typecheckInit(typ, decl.Init)
+			}
 			decl.Type = typ
 		}
 	}
@@ -426,6 +429,12 @@ func canAssign(l, r *Type, rx *Expr) bool {
 	case isPtr(l) && isCompat(ptrBase(l), r):
 		// ok
 	case isVoidPtr(l) && r.Is(Func), isVoidPtr(r) && l.Is(Func):
+		// ok
+	case isPtr(l) && ptrBase(l).Is(Func) && r.Is(Func): // && isCompat(ptrBase(l), r):
+		if !isCompat(ptrBase(l), r) {
+			fmt.Printf("not compat: %v and %v (%v)\n", ptrBase(l), r, rx)
+		}
+		// ok
 	default:
 		return false
 	}

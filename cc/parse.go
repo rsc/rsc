@@ -42,6 +42,13 @@ func ReadMany(names []string, readers []io.Reader) (*Prog, error) {
 			prog.Decls = append(prog.Decls, lx.prog.Decls...)
 		}
 		lx.prog = nil
+		for sc := lx.scope; sc != nil; sc=sc.Next {
+			for name, decl := range sc.Decl {
+				if decl.Storage&Static != 0 {
+					delete(sc.Decl, name)
+				}
+			}
+		}
 	}
 	lx.prog = prog
 	lx.assignComments()

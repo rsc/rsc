@@ -1741,7 +1741,7 @@ yydefault:
 			}
 			d := lx.lookupDecl(name)
 			if d == nil {
-				d = &Decl{Name: name, Type: typ}
+				d = &Decl{Name: name, Type: typ, Storage: yyS[yypt-2].tc.c}
 				lx.pushDecl(d)
 			} else {
 				d.Type = typ
@@ -1869,379 +1869,380 @@ yydefault:
 				x = &Init{SyntaxInfo: SyntaxInfo{Span: yyVAL.span}, Expr: yyS[yypt-0].expr}
 			}
 			yyVAL.decl = &Decl{SyntaxInfo: SyntaxInfo{Span: yyVAL.span}, Name: yyS[yypt-1].str, Init: x}
+			yylex.(*lexer).pushDecl(yyVAL.decl)
 		}
 	case 152:
-		//line cc.y:1149
+		//line cc.y:1150
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 153:
-		//line cc.y:1157
+		//line cc.y:1158
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.init = &Init{SyntaxInfo: SyntaxInfo{Span: yyVAL.span}, Expr: yyS[yypt-0].expr}
 		}
 	case 154:
-		//line cc.y:1162
+		//line cc.y:1163
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.init = &Init{SyntaxInfo: SyntaxInfo{Span: yyVAL.span}, Braced: yyS[yypt-0].inits}
 		}
 	case 155:
-		//line cc.y:1169
+		//line cc.y:1170
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.inits = []*Init{}
 		}
 	case 156:
-		//line cc.y:1174
+		//line cc.y:1175
 		{
 			yyVAL.span = span(yyS[yypt-3].span, yyS[yypt-0].span)
 			yyVAL.inits = append(yyS[yypt-2].inits, yyS[yypt-1].init)
 		}
 	case 157:
-		//line cc.y:1179
+		//line cc.y:1180
 		{
 			yyVAL.span = span(yyS[yypt-4].span, yyS[yypt-0].span)
 			yyVAL.inits = append(yyS[yypt-3].inits, yyS[yypt-2].init)
 		}
 	case 158:
-		//line cc.y:1185
+		//line cc.y:1186
 		{
 			yyVAL.span = Span{}
 			yyVAL.inits = nil
 		}
 	case 159:
-		//line cc.y:1190
+		//line cc.y:1191
 		{
 			yyVAL.span = span(yyS[yypt-2].span, yyS[yypt-0].span)
 			yyVAL.inits = append(yyS[yypt-2].inits, yyS[yypt-1].init)
 		}
 	case 160:
-		//line cc.y:1197
+		//line cc.y:1198
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.init = yyS[yypt-0].init
 		}
 	case 161:
-		//line cc.y:1202
+		//line cc.y:1203
 		{
 			yyVAL.span = span(yyS[yypt-2].span, yyS[yypt-0].span)
 			yyVAL.init = yyS[yypt-0].init
 			yyVAL.init.Prefix = yyS[yypt-2].prefixes
 		}
 	case 162:
-		//line cc.y:1210
+		//line cc.y:1211
 		{
 			yyVAL.span = span(yyS[yypt-2].span, yyS[yypt-0].span)
 			yyVAL.prefix = &Prefix{Span: yyVAL.span, Index: yyS[yypt-1].expr}
 		}
 	case 163:
-		//line cc.y:1216
+		//line cc.y:1217
 		{
 			yyVAL.span = Span{}
 		}
 	case 164:
-		//line cc.y:1220
+		//line cc.y:1221
 		{
 			yyVAL.span = yyS[yypt-0].span
 		}
 	case 165:
-		//line cc.y:1225
+		//line cc.y:1226
 		{
 			yyVAL.span = Span{}
 		}
 	case 166:
-		//line cc.y:1229
+		//line cc.y:1230
 		{
 			yyVAL.span = yyS[yypt-0].span
 		}
 	case 167:
-		//line cc.y:1238
+		//line cc.y:1239
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.prefixes = []*Prefix{yyS[yypt-0].prefix}
 		}
 	case 168:
-		//line cc.y:1243
+		//line cc.y:1244
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.prefixes = append(yyS[yypt-1].prefixes, yyS[yypt-0].prefix)
 		}
 	case 169:
-		//line cc.y:1249
+		//line cc.y:1250
 		{
 			yyVAL.span = Span{}
 			yyVAL.str = ""
 		}
 	case 170:
-		//line cc.y:1254
+		//line cc.y:1255
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.str = yyS[yypt-0].str
 		}
 	case 171:
-		//line cc.y:1260
+		//line cc.y:1261
 		{
 			yyVAL.span = Span{}
 			yyVAL.expr = nil
 		}
 	case 172:
-		//line cc.y:1265
+		//line cc.y:1266
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 173:
-		//line cc.y:1271
+		//line cc.y:1272
 		{
 			yyVAL.span = Span{}
 			yyVAL.expr = nil
 		}
 	case 174:
-		//line cc.y:1276
+		//line cc.y:1277
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 175:
-		//line cc.y:1283
+		//line cc.y:1284
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
 	case 176:
-		//line cc.y:1288
+		//line cc.y:1289
 		{
 			yyVAL.span = span(yyS[yypt-2].span, yyS[yypt-0].span)
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 177:
-		//line cc.y:1294
+		//line cc.y:1295
 		{
 			yyVAL.span = Span{}
 			yyVAL.exprs = nil
 		}
 	case 178:
-		//line cc.y:1299
+		//line cc.y:1300
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.exprs = yyS[yypt-0].exprs
 		}
 	case 179:
-		//line cc.y:1305
+		//line cc.y:1306
 		{
 			yyVAL.span = Span{}
 			yyVAL.decls = nil
 		}
 	case 180:
-		//line cc.y:1310
+		//line cc.y:1311
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.decls = append(yyS[yypt-1].decls, yyS[yypt-0].decls...)
 		}
 	case 181:
-		//line cc.y:1316
+		//line cc.y:1317
 		{
 			yyVAL.span = Span{}
 			yyVAL.labels = nil
 		}
 	case 182:
-		//line cc.y:1321
+		//line cc.y:1322
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.labels = append(yyS[yypt-1].labels, yyS[yypt-0].label)
 		}
 	case 183:
-		//line cc.y:1328
+		//line cc.y:1329
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.decls = []*Decl{yyS[yypt-0].decl}
 		}
 	case 184:
-		//line cc.y:1333
+		//line cc.y:1334
 		{
 			yyVAL.span = span(yyS[yypt-2].span, yyS[yypt-0].span)
 			yyVAL.decls = append(yyS[yypt-2].decls, yyS[yypt-0].decl)
 		}
 	case 185:
-		//line cc.y:1339
+		//line cc.y:1340
 		{
 			yyVAL.span = Span{}
 			yyVAL.decls = nil
 		}
 	case 186:
-		//line cc.y:1344
+		//line cc.y:1345
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.decls = yyS[yypt-0].decls
 		}
 	case 187:
-		//line cc.y:1351
+		//line cc.y:1352
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.idecs = []idecor{yyS[yypt-0].idec}
 		}
 	case 188:
-		//line cc.y:1356
+		//line cc.y:1357
 		{
 			yyVAL.span = span(yyS[yypt-2].span, yyS[yypt-0].span)
 			yyVAL.idecs = append(yyS[yypt-2].idecs, yyS[yypt-0].idec)
 		}
 	case 189:
-		//line cc.y:1362
+		//line cc.y:1363
 		{
 			yyVAL.span = Span{}
 			yyVAL.idecs = nil
 		}
 	case 190:
-		//line cc.y:1367
+		//line cc.y:1368
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.idecs = yyS[yypt-0].idecs
 		}
 	case 191:
-		//line cc.y:1374
+		//line cc.y:1375
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.strs = []string{yyS[yypt-0].str}
 		}
 	case 192:
-		//line cc.y:1379
+		//line cc.y:1380
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.strs = append(yyS[yypt-1].strs, yyS[yypt-0].str)
 		}
 	case 193:
-		//line cc.y:1385
+		//line cc.y:1386
 		{
 			yyVAL.span = Span{}
 			yyVAL.strs = nil
 		}
 	case 194:
-		//line cc.y:1390
+		//line cc.y:1391
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.strs = yyS[yypt-0].strs
 		}
 	case 195:
-		//line cc.y:1397
+		//line cc.y:1398
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.strs = []string{yyS[yypt-0].str}
 		}
 	case 196:
-		//line cc.y:1402
+		//line cc.y:1403
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.strs = append(yyS[yypt-1].strs, yyS[yypt-0].str)
 		}
 	case 197:
-		//line cc.y:1408
+		//line cc.y:1409
 		{
 			yyVAL.span = Span{}
 			yyVAL.strs = nil
 		}
 	case 198:
-		//line cc.y:1413
+		//line cc.y:1414
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.strs = yyS[yypt-0].strs
 		}
 	case 199:
-		//line cc.y:1420
+		//line cc.y:1421
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.strs = []string{yyS[yypt-0].str}
 		}
 	case 200:
-		//line cc.y:1425
+		//line cc.y:1426
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.strs = append(yyS[yypt-1].strs, yyS[yypt-0].str)
 		}
 	case 201:
-		//line cc.y:1431
+		//line cc.y:1432
 		{
 			yyVAL.span = Span{}
 			yyVAL.strs = nil
 		}
 	case 202:
-		//line cc.y:1436
+		//line cc.y:1437
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.strs = yyS[yypt-0].strs
 		}
 	case 203:
-		//line cc.y:1443
+		//line cc.y:1444
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.decors = nil
 			yyVAL.decors = append(yyVAL.decors, yyS[yypt-0].decor)
 		}
 	case 204:
-		//line cc.y:1449
+		//line cc.y:1450
 		{
 			yyVAL.span = span(yyS[yypt-2].span, yyS[yypt-0].span)
 			yyVAL.decors = append(yyS[yypt-2].decors, yyS[yypt-0].decor)
 		}
 	case 205:
-		//line cc.y:1455
+		//line cc.y:1456
 		{
 			yyVAL.span = Span{}
 			yyVAL.decors = nil
 		}
 	case 206:
-		//line cc.y:1460
+		//line cc.y:1461
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.decors = yyS[yypt-0].decors
 		}
 	case 207:
-		//line cc.y:1467
+		//line cc.y:1468
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.decls = yyS[yypt-0].decls
 		}
 	case 208:
-		//line cc.y:1472
+		//line cc.y:1473
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.decls = append(yyS[yypt-1].decls, yyS[yypt-0].decls...)
 		}
 	case 209:
-		//line cc.y:1478
+		//line cc.y:1479
 		{
 			yyVAL.span = Span{}
 			yyVAL.expr = nil
 		}
 	case 210:
-		//line cc.y:1483
+		//line cc.y:1484
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 211:
-		//line cc.y:1490
+		//line cc.y:1491
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.decls = []*Decl{yyS[yypt-0].decl}
 		}
 	case 212:
-		//line cc.y:1495
+		//line cc.y:1496
 		{
 			yyVAL.span = span(yyS[yypt-2].span, yyS[yypt-0].span)
 			yyVAL.decls = append(yyS[yypt-2].decls, yyS[yypt-0].decl)
 		}
 	case 213:
-		//line cc.y:1502
+		//line cc.y:1503
 		{
 			yyVAL.span = yyS[yypt-0].span
 			yyVAL.strs = []string{yyS[yypt-0].str}
 		}
 	case 214:
-		//line cc.y:1507
+		//line cc.y:1508
 		{
 			yyVAL.span = span(yyS[yypt-1].span, yyS[yypt-0].span)
 			yyVAL.strs = append(yyS[yypt-1].strs, yyS[yypt-0].str)

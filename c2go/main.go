@@ -10,8 +10,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -20,9 +22,11 @@ import (
 )
 
 var (
-	src = flag.String("src", "", "src of search")
-	dst = flag.String("dst", "", "dst of search")
-	inc = flag.String("I", "", "include directory")
+	src   = flag.String("src", "", "src of search")
+	dst   = flag.String("dst", "", "dst of search")
+	out   = flag.String("o", "/tmp/c2go", "output directory")
+	strip = flag.String("", "", "strip from input paths when writing in output directory")
+	inc   = flag.String("I", "", "include directory")
 )
 
 func main() {
@@ -49,6 +53,7 @@ func main() {
 			log.Fatal(err)
 		}
 		do(prog, args)
+		write(prog, args)
 	}
 }
 
@@ -64,7 +69,6 @@ func (x byLen) Less(i, j int) bool {
 }
 
 func do(prog *cc.Prog, files []string) {
-	return
 	for _, decl := range prog.Decls {
 		addDecl(decl)
 	}
@@ -107,7 +111,9 @@ func do(prog *cc.Prog, files []string) {
 		groups[tv.parent] = append(groups[tv.parent], tv)
 	}
 
-	fmt.Printf("groups:\n")
+	if false {
+		fmt.Printf("groups:\n")
+	}
 	var grps [][]*TypeVar
 	for _, list := range groups {
 		grps = append(grps, list)
@@ -159,7 +165,9 @@ func do(prog *cc.Prog, files []string) {
 	}
 
 	for _, list := range grps {
-		fmt.Printf("group(%d)\n", len(list))
+		if false {
+			fmt.Printf("group(%d)\n", len(list))
+		}
 		var types []string
 		var haveType = map[string]bool{}
 		var ops []string
@@ -187,7 +195,7 @@ func do(prog *cc.Prog, files []string) {
 					}
 					if x != nil && x.XType.Is(cc.Ptr) {
 						op = "ptr" + op
-						if op == "ptr--" {
+						if op == "ptr--" && false {
 							fmt.Println("ptr--: %s\n", x.GetSpan())
 						}
 					}
@@ -222,20 +230,22 @@ func do(prog *cc.Prog, files []string) {
 		}
 		sort.Strings(types)
 		sort.Strings(ops)
-		fmt.Printf("types: %s\n", strings.Join(types, ", "))
-		fmt.Printf("ops: %s\n", strings.Join(ops, ", "))
-		for _, tv := range list {
-			fmt.Printf("\t%s:", tv.Src)
-			if tv.UsedAsBool {
-				fmt.Printf(" bool")
+		if false {
+			fmt.Printf("types: %s\n", strings.Join(types, ", "))
+			fmt.Printf("ops: %s\n", strings.Join(ops, ", "))
+			for _, tv := range list {
+				fmt.Printf("\t%s:", tv.Src)
+				if tv.UsedAsBool {
+					fmt.Printf(" bool")
+				}
+				if tv.StmtExpr {
+					fmt.Printf(" stmt")
+				}
+				for _, x := range tv.Context {
+					fmt.Printf(" %s", x)
+				}
+				fmt.Printf("\n")
 			}
-			if tv.StmtExpr {
-				fmt.Printf(" stmt")
-			}
-			for _, x := range tv.Context {
-				fmt.Printf(" %s", x)
-			}
-			fmt.Printf("\n")
 		}
 	}
 
@@ -248,23 +258,6 @@ func do(prog *cc.Prog, files []string) {
 			fmt.Printf("\n")
 		}
 		return
-	}
-
-	if false {
-		var p c2go.Printer
-		p.Print("package main\n\nimport ( \"os\"; \"fmt\" )\n\n")
-		for _, decl := range prog.Decls {
-			//	if decl.Span.Start.File != file {
-			//		continue
-			//	}
-			fix(decl)
-			off := len(p.Bytes())
-			p.Print(decl)
-			if len(p.Bytes()) > off {
-				p.Print(c2go.Newline)
-			}
-		}
-		os.Stdout.Write(p.Bytes())
 	}
 }
 
@@ -644,6 +637,7 @@ func addBool(x *cc.Expr) {
 }
 
 func fix(decl *cc.Decl) {
+	fixDecl(decl)
 	fixStmt(decl.Body)
 }
 
@@ -652,6 +646,13 @@ func fixStmt(stmt *cc.Stmt) {
 		return
 	}
 	fixExpr(stmt.Pre)
+	switch stmt.Op {
+	case cc.If, cc.For, cc.Do, cc.While:
+		fixCond(stmt)
+	}
+	if stmt.Op == cc.StmtExpr || stmt.Op == cc.Return {
+		fixStmtExpr(stmt)
+	}
 	fixExpr(stmt.Expr)
 	fixExpr(stmt.Post)
 	fixStmt(stmt.Body)
@@ -659,17 +660,172 @@ func fixStmt(stmt *cc.Stmt) {
 	for _, s := range stmt.Block {
 		fixStmt(s)
 	}
+}
 
+func fixCond(stmt *cc.Stmt) {
+	cond := stmt.Expr
+	if cond == nil {
+		return
+	}
+	var before, after []*cc.Stmt
+	fixPlusPlus(cond, &before, &after, false)
+	if len(before) > 0 {
+		if len(before) == 1 {
+			stmt.Pre = before[0].Expr
+		} else {
+			println("too many before in cond")
+		}
+	}
+	if len(after) > 0 {
+		println("too many after in cond")
+	}
+	if stmt.Pre == nil && cond.Left != nil && cond.Left.Op == cc.PreInc {
+		stmt.Pre = &cc.Expr{Op: cc.PostInc, Left: cond.Left.Left}
+		cond.Left = cond.Left.Left
+	}
+}
+
+func fixStmtExpr(stmt *cc.Stmt) {
+	if stmt.Expr == nil {
+		return
+	}
+	var before, after []*cc.Stmt
+	fixPlusPlus(stmt.Expr, &before, &after, true)
+	if stmt.Op == cc.Return && len(after) > 0 {
+		println("after in return")
+	}
+	if len(before)+len(after) > 0 {
+		y := *stmt
+		stmt.Block = append(append(before, &y), after...)
+		stmt.Op = c2go.BlockNoBrace
+	}
+}
+
+func fixPlusPlus(x *cc.Expr, before, after *[]*cc.Stmt, top bool) {
+	if x.Left != nil {
+		fixPlusPlus(x.Left, before, after, false)
+	}
+	if x.Right != nil {
+		fixPlusPlus(x.Right, before, after, false)
+	}
+	for _, y := range x.List {
+		fixPlusPlus(y, before, after, false)
+	}
+
+	if top {
+		switch x.Op {
+		case cc.PreInc:
+			x.Op = cc.PostInc
+			return
+		case cc.PreDec:
+			x.Op = cc.PostDec
+			return
+		case cc.PostInc, cc.PostDec:
+			return
+		case cc.Eq:
+			return
+		}
+	}
+
+	var list *[]*cc.Stmt
+	var op cc.ExprOp
+
+	switch x.Op {
+	case cc.Eq:
+		list = before
+		*list = append(*list, &cc.Stmt{Op: cc.StmtExpr, Expr: &cc.Expr{Op: x.Op, Left: x.Left, Right: x.Right}})
+		*x = *x.Left
+		return
+	case cc.PreInc:
+		list = before
+		op = cc.PostInc
+	case cc.PreDec:
+		list = before
+		op = cc.PostDec
+	case cc.PostInc, cc.PostDec:
+		list = after
+		op = x.Op
+	}
+	if list != nil {
+		*list = append(*list, &cc.Stmt{Op: cc.StmtExpr, Expr: &cc.Expr{Op: op, Left: x.Left}})
+		*x = *x.Left
+	}
+}
+
+func fixDecl(x *cc.Decl) {
+	if x == nil || fixed[x] {
+		return
+	}
+	fixed[x] = true
+	fixName(&x.Name)
+	if x.Storage&cc.Static != 0 {
+		file := filepath.Base(x.Span.Start.File)
+		if i := strings.Index(file, "."); i >= 0 {
+			file = file[:i]
+		}
+		x.Name += "_" + file
+	}
+	if x.Init != nil {
+		fixInit(x.Init)
+	}
+	fixType(x.Type)
+}
+
+func fixInit(x *cc.Init) {
+	for _, pre := range x.Prefix {
+		fixName(&pre.Dot)
+	}
+	for _, b := range x.Braced {
+		fixInit(b)
+	}
+	if x.Expr != nil {
+		fixExpr(x.Expr)
+	}
+}
+
+func fixName(s *string) {
+	switch *s {
+	case "type":
+		*s = "typ"
+	case "func":
+		*s = "fun"
+	}
+}
+
+var fixed = map[interface{}]bool{}
+
+func fixType(x *cc.Type) {
+	if x == nil || fixed[x] {
+		return
+	}
+	fixed[x] = true
+	fixType(x.Base)
+	for _, d := range x.Decls {
+		fixDecl(d)
+	}
+	fixExpr(x.Width)
 }
 
 func fixExpr(x *cc.Expr) {
 	if x == nil {
 		return
 	}
+	if x.Init != nil {
+		fixInit(x.Init)
+	}
 	fixExpr(x.Left)
 	fixExpr(x.Right)
 	for _, y := range x.List {
 		fixExpr(y)
+	}
+	
+	switch x.Op {
+	case cc.Arrow, cc.Dot, cc.Name:
+		//fixName(&x.Text)
+	case cc.Number:
+		if x.Text == `'\0'` {
+			x.Text = `'\x00'`
+		}
 	}
 
 	if x.Op == cc.Call && x.Left.Op == cc.Name && x.Left.Text == "print" {
@@ -751,6 +907,44 @@ Search:
 		fmt.Fprintf(os.Stderr, "\t%s: %v [%d]\n", v.t.Src.GetSpan(), v.t.Src, v.n)
 		if v == (varLevel{v2, 0}) {
 			break
+		}
+	}
+}
+
+func write(prog *cc.Prog, files []string) {
+	for _, decl := range prog.Decls {
+		fix(decl)
+	}
+	for _, file := range files {
+		writeFile(prog, file)
+	}
+}
+
+func writeFile(prog *cc.Prog, file string) {
+	dstfile := strings.TrimSuffix(strings.TrimSuffix(file, ".c"), ".h") + ".go"
+	if *strip != "" {
+		dstfile = strings.TrimPrefix(dstfile, *strip)
+	} else if i := strings.LastIndex(dstfile, "/src/"); i >= 0 {
+		dstfile = dstfile[i+len("/src/"):]
+	}
+	dstfile = filepath.Join(*out, dstfile)
+
+	var p c2go.Printer
+	p.Print("package main\n\n")
+	for _, decl := range prog.Decls {
+		if decl.Span.Start.File != file {
+			continue
+		}
+		off := len(p.Bytes())
+		p.Print(decl)
+		if len(p.Bytes()) > off {
+			p.Print(c2go.Newline)
+		}
+		if err := os.MkdirAll(filepath.Dir(dstfile), 0777); err != nil {
+			log.Print(err)
+		}
+		if err := ioutil.WriteFile(dstfile, p.Bytes(), 0666); err != nil {
+			log.Print(err)
 		}
 	}
 }

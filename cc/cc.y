@@ -1010,7 +1010,7 @@ fndef:
 		}
 		d := lx.lookupDecl(name)
 		if d == nil {
-			d = &Decl{Name: name, Type: typ}
+			d = &Decl{Name: name, Type: typ, Storage: $1.c}
 			lx.pushDecl(d);
 		} else {
 			d.Type = typ
@@ -1142,6 +1142,7 @@ edecl:
 			x = &Init{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Expr: $2}
 		}
 		$$ = &Decl{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Name: $1, Init: x}
+		yylex.(*lexer).pushDecl($$);
 	}
 
 eqexpr:
