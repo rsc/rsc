@@ -123,7 +123,7 @@ type idecor struct {
 %type	<decl>	fnarg fndef edecl
 %type	<decls>	decl decl_list_opt
 %type	<decls>	fnarg_list fnarg_list_opt
-%type	<decls>	prog xdecl
+%type	<decls>	prog xdecl topdecl
 %type	<decls>	sudecl sudecl_list
 %type	<decls> edecl_list
 %type	<decor>	decor sudecor
@@ -966,25 +966,50 @@ abtype:
 decl:
 	typeclass idecor_list_opt ';'
 	{
+		lx := yylex.(*lexer)
 		$<span>$ = span($<span>1, $<span>3)
 		// TODO: use $1.q
 		$$ = nil
 		for _, idec := range $2 {
 			typ, name := idec.d($1.t)
-			decl := &Decl{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Name: name, Type: typ, Storage: $1.c, Init: idec.i}
-			yylex.(*lexer).pushDecl(decl);
-			$$ = append($$, decl);
+			d := &Decl{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Name: name, Type: typ, Storage: $1.c, Init: idec.i}
+			lx.pushDecl(d);
+			$$ = append($$, d);
 		}
 		if $2 == nil {
-			decl := &Decl{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Name: "", Type: $1.t, Storage: $1.c}
-			yylex.(*lexer).pushDecl(decl);
-			$$ = append($$, decl)
+			d := &Decl{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Name: "", Type: $1.t, Storage: $1.c}
+			lx.pushDecl(d);
+			$$ = append($$, d)
 		}
 	}
 
-// External (top-level) declaration
+topdecl:
+	typeclass idecor_list_opt ';'
+	{
+		lx := yylex.(*lexer)
+		$<span>$ = span($<span>1, $<span>3)
+		// TODO: use $1.q
+		$$ = nil
+		for _, idec := range $2 {
+			typ, name := idec.d($1.t)
+			d := lx.lookupDecl(name)
+			if d == nil {
+				d = &Decl{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Name: name, Type: typ, Storage: $1.c, Init: idec.i}
+				lx.pushDecl(d)
+			} else {
+				d.Span = $<span>$
+			}
+			$$ = append($$, d);
+		}
+		if $2 == nil {
+			d := &Decl{SyntaxInfo: SyntaxInfo{Span: $<span>$}, Name: "", Type: $1.t, Storage: $1.c}
+			lx.pushDecl(d);
+			$$ = append($$, d)
+		}
+	}
+
 xdecl:
-	decl
+	topdecl
 	{
 		$<span>$ = $<span>1
 		$$ = $1

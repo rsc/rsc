@@ -246,44 +246,48 @@ var opPrec = []int{
 }
 
 var opStr = []string{
-	cc.Add:        "+",
-	cc.AddEq:      "+=",
-	cc.Addr:       "&",
-	cc.And:        "&",
-	cc.AndAnd:     "&&",
-	cc.AndEq:      "&=",
-	cc.Div:        "/",
-	cc.DivEq:      "/=",
-	cc.Eq:         "=",
-	cc.EqEq:       "==",
-	cc.Gt:         ">",
-	cc.GtEq:       ">=",
-	cc.Indir:      "*",
-	cc.Lsh:        "<<",
-	cc.LshEq:      "<<=",
-	cc.Lt:         "<",
-	cc.LtEq:       "<=",
-	cc.Minus:      "-",
-	cc.Mod:        "%",
-	cc.ModEq:      "%=",
-	cc.Mul:        "*",
-	cc.MulEq:      "*=",
-	cc.Not:        "!",
-	cc.NotEq:      "!=",
-	cc.Or:         "|",
-	cc.OrEq:       "|=",
-	cc.OrOr:       "||",
-	cc.Plus:       "+",
-	cc.PreDec:     "--",
-	cc.PreInc:     "++",
-	cc.Rsh:        ">>",
-	cc.RshEq:      ">>=",
-	cc.Sub:        "-",
-	cc.SubEq:      "-=",
-	cc.Twid:       "^",
-	cc.Xor:        "^",
-	cc.XorEq:      "^=",
+	cc.Add:    "+",
+	cc.AddEq:  "+=",
+	cc.Addr:   "&",
+	cc.And:    "&",
+	cc.AndAnd: "&&",
+	cc.AndEq:  "&=",
+	cc.Div:    "/",
+	cc.DivEq:  "/=",
+	cc.Eq:     "=",
+	cc.EqEq:   "==",
+	cc.Gt:     ">",
+	cc.GtEq:   ">=",
+	cc.Indir:  "*",
+	cc.Lsh:    "<<",
+	cc.LshEq:  "<<=",
+	cc.Lt:     "<",
+	cc.LtEq:   "<=",
+	cc.Minus:  "-",
+	cc.Mod:    "%",
+	cc.ModEq:  "%=",
+	cc.Mul:    "*",
+	cc.MulEq:  "*=",
+	cc.Not:    "!",
+	cc.NotEq:  "!=",
+	cc.Or:     "|",
+	cc.OrEq:   "|=",
+	cc.OrOr:   "||",
+	cc.Plus:   "+",
+	cc.PreDec: "--",
+	cc.PreInc: "++",
+	cc.Rsh:    ">>",
+	cc.RshEq:  ">>=",
+	cc.Sub:    "-",
+	cc.SubEq:  "-=",
+	cc.Twid:   "^",
+	cc.Xor:    "^",
+	cc.XorEq:  "^=",
 }
+
+const (
+	ExprBlock cc.ExprOp = 100000 + iota
+)
 
 func (p *Printer) printExpr(x *cc.Expr, prec int) {
 	if x == nil {
@@ -332,6 +336,16 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 	switch x.Op {
 	default:
 		panic(fmt.Sprintf("printExpr missing case for %v", x.Op))
+
+	case ExprBlock:
+		p.Print("(func(){")
+		for i, stmt := range x.Block {
+			if i > 0 {
+				p.Print("; ")
+			}
+			p.Print(stmt)
+		}
+		p.Print("})()")
 
 	case cc.Arrow:
 		name := x.XDecl.Name
@@ -416,7 +430,7 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 
 func (p *Printer) printPrefix(x *cc.Prefix) {
 	if x.Dot != "" {
-		p.Print(x.Dot, ": ")
+		p.Print(x.XDecl.Name, ": ")
 	} else {
 		p.Print(x.Index, ": ")
 	}
@@ -432,29 +446,59 @@ func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 		}
 	}
 	if x.Expr != nil {
+		if x.Expr.Op == cc.Number && typ.Is(cc.Ptr) {
+			p.Print("nil")
+			return
+		}
 		p.printExpr(x.Expr, precComma)
-	} else {
-		nl := len(x.Braced) > 0 && x.Braced[0].Span.Start.Line != x.Braced[len(x.Braced)-1].Span.End.Line
-		if typ != nil {
-			p.printType(typ)
-		}
-		p.Print("{")
-		if nl {
-			p.Print(Indent)
-		}
-		for i, y := range x.Braced {
-			if nl {
-				p.Print(Newline)
-			} else if i > 0 {
-				p.Print(" ")
-			}
-			p.Print(y, ",")
-		}
-		if nl {
-			p.Print(Unindent, Newline)
-		}
-		p.Print("}")
+		return
 	}
+
+	nl := len(x.Braced) > 0 && x.Braced[0].Span.Start.Line != x.Braced[len(x.Braced)-1].Span.End.Line
+	if typ != nil {
+		p.printType(typ)
+	}
+	p.Print("{")
+	if nl {
+		p.Print(Indent)
+	}
+	for i, y := range x.Braced {
+		if nl {
+			p.Print(Newline)
+		} else if i > 0 {
+			p.Print(" ")
+		}
+		var subtyp *cc.Type
+		if typ != nil {
+			if typ.Is(cc.Struct) && i < len(typ.Def().Decls) && len(y.Prefix) == 0 {
+				subtyp = typ.Def().Decls[i].Type
+			} else if typ.Is(cc.Struct) && len(y.Prefix) == 1 && y.Prefix[0].XDecl != nil {
+				subtyp = y.Prefix[0].XDecl.Type
+			} else if typ.Is(cc.Array) {
+				subtyp = typ.Def().Base
+			} else {
+				fprintf(x.Span, "too many fields braced initializer of %s", typ)
+			}
+		}
+		p.printInit(subtyp, y)
+		p.Print(",")
+	}
+	if typ != nil && typ.Is(cc.Struct) && len(x.Braced) > 0 && len(x.Braced[0].Prefix) == 0 && len(x.Braced) < len(typ.Def().Decls) {
+		for i := len(x.Braced); i < len(typ.Def().Decls); i++ {
+			subtyp := typ.Def().Decls[i].Type
+			if subtyp.Is(cc.Ptr) {
+				p.Print(" nil,")
+			} else if subtyp.Is(cc.Array) {
+				p.Print(" ", subtyp, "{},")
+			} else {
+				p.Print(" 0,")
+			}
+		}
+	}
+	if nl {
+		p.Print(Unindent, Newline)
+	}
+	p.Print("}")
 }
 
 func (p *Printer) printProg(x *cc.Prog) {
@@ -467,7 +511,7 @@ func (p *Printer) printProg(x *cc.Prog) {
 }
 
 const (
-	BlockNoBrace cc.StmtOp = 100000
+	BlockNoBrace cc.StmtOp = 100000 + iota
 )
 
 func (p *Printer) printStmt(x *cc.Stmt) {
@@ -501,7 +545,7 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 			p.Print(Newline, b)
 		}
 		p.Print(Unindent, Newline, "}")
-	
+
 	case BlockNoBrace:
 		for i, b := range x.Block {
 			if i > 0 {
@@ -588,7 +632,7 @@ func (p *Printer) printType(t *cc.Type) {
 	switch t.Kind {
 	default:
 		p.Print(t.String()) // hope for the best
-	
+
 	case cc.Struct:
 		p.Print("struct {", Indent)
 		p.printStructBody(t)
@@ -600,7 +644,7 @@ func (p *Printer) printType(t *cc.Type) {
 		} else {
 			p.Print("enum")
 		}
-		
+
 	case cc.TypedefType:
 		if typemap[t.Base.Kind] != "" && strings.ToLower(t.Name) == t.Name {
 			p.Print(typemap[t.Base.Kind])
@@ -613,6 +657,10 @@ func (p *Printer) printType(t *cc.Type) {
 			p.Print(t.Base)
 			return
 		}
+		if t.Base.Is(cc.Void) {
+			p.Print("*[0]byte")
+			return
+		}
 		p.Print("*", t.Base)
 
 	case cc.Func:
@@ -623,6 +671,9 @@ func (p *Printer) printType(t *cc.Type) {
 			}
 			if arg.Name == "..." {
 				p.Print("...interface{}")
+				continue
+			}
+			if arg.Name == "" && arg.Type.Is(cc.Void) {
 				continue
 			}
 			p.Print(arg.Type)
@@ -775,8 +826,9 @@ func (p *Printer) printEnumDecl(t *cc.Type) {
 	typeSuffix := ""
 	if t.Tag != "" {
 		typeSuffix = " " + t.Tag
-		fprintf(t.Span, "cannot handle enum tags")
-		return
+		p.Print("type ", t.Tag, " int", Newline)
+		//	fprintf(t.Span, "cannot handle enum tags")
+		//	return
 	}
 	p.Print("const (", Indent)
 	for i, decl := range t.Decls {

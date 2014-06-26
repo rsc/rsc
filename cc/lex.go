@@ -449,8 +449,11 @@ Restart:
 			i++
 		}
 		lx.sym(i)
-		if lx.tok == "Adr" {
+		switch lx.tok {
+		case "Adr":
 			lx.tok = "Addr"
+		case "union":
+			lx.tok = "struct"
 		}
 		yy.str = lx.tok
 		if t := tokId[lx.tok]; t != 0 {

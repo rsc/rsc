@@ -69,9 +69,7 @@ func (x byLen) Less(i, j int) bool {
 }
 
 func do(prog *cc.Prog, files []string) {
-	for _, decl := range prog.Decls {
-		addDecl(decl)
-	}
+	add(prog)
 
 	groups := map[*TypeVar][]*TypeVar{}
 	for _, tv := range typeVars {
@@ -278,113 +276,76 @@ var typeVars = map[cc.Syntax]*TypeVar{}
 var typeVarsIndir = map[cc.Syntax]*TypeVar{}
 var typeVarsAddr = map[cc.Syntax]*TypeVar{}
 
-var curFn *cc.Decl
-var seen = map[cc.Syntax]bool{}
-
 func add(x cc.Syntax) {
-	switch x := x.(type) {
-	case *cc.Decl:
-		addDecl(x)
-	case *cc.Init:
-		addInit(x)
-	case *cc.Type:
-		addType(x, nil)
-	case *cc.Expr:
-		addExpr(x)
-	case *cc.Stmt:
-		addStmt(x)
-	default:
-		panic(fmt.Sprintf("unexpected type %T in add", x))
-	}
-}
+	var curFn *cc.Decl
+	before := func(cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Decl:
+			// Note:
+			// For function declarations, the typeVar represents
+			// the of the function's result (the type of a call to the function).
+			// For other declarations, the typeVar represents the
+			// type of the declared variable.
+			if x.Storage&cc.Typedef == 0 {
+				tv := &TypeVar{Src: x}
+				switch x.Name {
+				case "nil", "N", "L", "S", "T", "C", "...", "bval", "vval", "mpgetfix", "smprint", "namebuf":
+					tv.NoLink = true
+				}
+				if x.Type != nil && x.Type.Is(cc.Ptr) && x.Type.Base.Is(cc.Void) {
+					tv.NoLink = true
+				}
+				typeVars[x] = tv
+			}
 
-func addDecl(x *cc.Decl) {
-	if x == nil || typeVars[x] != nil {
-		return
-	}
+			//	if x.Type != nil && x.Type.Kind == cc.Enum {
+			//		addLink(x, x.Type)
+			//	}
 
-	// Note:
-	// For function declarations, the typeVar represents
-	// the of the function's result (the type of a call to the function).
-	// For other declarations, the typeVar represents the
-	// type of the declared variable.
-	if x.Storage&cc.Typedef == 0 {
-		tv := &TypeVar{Src: x}
-		switch x.Name {
-		case "nil", "N", "L", "S", "T", "C", "...", "bval", "vval", "mpgetfix", "smprint", "namebuf":
-			tv.NoLink = true
+			if x.Storage&cc.Static != 0 && curFn != nil {
+				fmt.Printf("func-static variable %s\n", x.Name)
+			}
+
+			if x.Body != nil {
+				curFn = x
+			}
+
+			if x.Type != nil {
+				for _, decl := range x.Type.Decls {
+					decl.XOuter = x
+				}
+			}
+
+		case *cc.Type:
+			//	if x.Kind == cc.Enum {
+			//		typeVars[x] = &TypeVar{Src: x}
+			//	}
+
+		case *cc.Expr:
+			addExpr(x)
+
+		case *cc.Stmt:
+			addStmt(x, curFn)
 		}
-		if x.Type != nil && x.Type.Is(cc.Ptr) && x.Type.Base.Is(cc.Void) {
-			tv.NoLink = true
+	}
+	after := func(cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Decl:
+			if x.Body != nil {
+				curFn = nil
+			}
 		}
-		typeVars[x] = tv
 	}
-
-	addInit(x.Init)
-	addType(x.Type, x)
-
-	//	if x.Type != nil && x.Type.Kind == cc.Enum {
-	//		addLink(x, x.Type)
-	//	}
-
-	if x.Body != nil {
-		curFn = x
-		addStmt(x.Body)
-		curFn = nil
-	}
-}
-
-func addInit(x *cc.Init) {
-	if x == nil {
-		return
-	}
-
-	addExpr(x.Expr)
-	for _, init := range x.Braced {
-		addInit(init)
-	}
-	for _, pre := range x.Prefix {
-		addExpr(pre.Index)
-	}
-}
-
-func addType(x *cc.Type, d *cc.Decl) {
-	if x == nil || seen[x] {
-		return
-	}
-	seen[x] = true
-
-	//	if x.Kind == cc.Enum {
-	//		typeVars[x] = &TypeVar{Src: x}
-	//	}
-
-	addType(x.Base, nil)
-
-	addExpr(x.Width)
-	for _, decl := range x.Decls {
-		decl.XOuter = d
-		addDecl(decl)
-	}
+	cc.Walk(x, before, after)
 }
 
 func addExpr(x *cc.Expr) {
-	if x == nil || typeVars[x] != nil {
-		return
-	}
 	tv := &TypeVar{Src: x}
 	typeVars[x] = tv
 
 	if x.XType != nil && x.XType.Kind == cc.Ptr && x.XType.Base.Is(cc.Void) {
 		tv.NoLink = true
 	}
-
-	addExpr(x.Left)
-	addExpr(x.Right)
-	for _, y := range x.List {
-		addExpr(y)
-	}
-	addType(x.Type, nil)
-	addInit(x.Init)
 
 	if x.Left != nil {
 		addContext(x.Left, x)
@@ -568,25 +529,7 @@ func merge(tx, ty *TypeVar) bool {
 	return true
 }
 
-func addStmt(x *cc.Stmt) {
-	if x == nil || seen[x] {
-		return
-	}
-	seen[x] = true
-
-	addExpr(x.Pre)
-	addExpr(x.Expr)
-	addExpr(x.Post)
-	addDecl(x.Decl)
-	addStmt(x.Body)
-	addStmt(x.Else)
-	for _, stmt := range x.Block {
-		addStmt(stmt)
-	}
-	for _, label := range x.Labels {
-		addExpr(label.Expr)
-	}
-
+func addStmt(x *cc.Stmt, curFn *cc.Decl) {
 	switch x.Op {
 	case cc.StmtDecl:
 
@@ -634,222 +577,6 @@ func addBool(x *cc.Expr) {
 	}
 	tv := typeVars[x]
 	tv.UsedAsBool = true
-}
-
-func fix(decl *cc.Decl) {
-	fixDecl(decl)
-	fixStmt(decl.Body)
-}
-
-func fixStmt(stmt *cc.Stmt) {
-	if stmt == nil {
-		return
-	}
-	fixExpr(stmt.Pre)
-	switch stmt.Op {
-	case cc.If, cc.For, cc.Do, cc.While:
-		fixCond(stmt)
-	}
-	if stmt.Op == cc.StmtExpr || stmt.Op == cc.Return {
-		fixStmtExpr(stmt)
-	}
-	fixExpr(stmt.Expr)
-	fixExpr(stmt.Post)
-	fixStmt(stmt.Body)
-	fixStmt(stmt.Else)
-	for _, s := range stmt.Block {
-		fixStmt(s)
-	}
-}
-
-func fixCond(stmt *cc.Stmt) {
-	cond := stmt.Expr
-	if cond == nil {
-		return
-	}
-	var before, after []*cc.Stmt
-	fixPlusPlus(cond, &before, &after, false)
-	if len(before) > 0 {
-		if len(before) == 1 {
-			stmt.Pre = before[0].Expr
-		} else {
-			println("too many before in cond")
-		}
-	}
-	if len(after) > 0 {
-		println("too many after in cond")
-	}
-	if stmt.Pre == nil && cond.Left != nil && cond.Left.Op == cc.PreInc {
-		stmt.Pre = &cc.Expr{Op: cc.PostInc, Left: cond.Left.Left}
-		cond.Left = cond.Left.Left
-	}
-}
-
-func fixStmtExpr(stmt *cc.Stmt) {
-	if stmt.Expr == nil {
-		return
-	}
-	var before, after []*cc.Stmt
-	fixPlusPlus(stmt.Expr, &before, &after, true)
-	if stmt.Op == cc.Return && len(after) > 0 {
-		println("after in return")
-	}
-	if len(before)+len(after) > 0 {
-		y := *stmt
-		stmt.Block = append(append(before, &y), after...)
-		stmt.Op = c2go.BlockNoBrace
-	}
-}
-
-func fixPlusPlus(x *cc.Expr, before, after *[]*cc.Stmt, top bool) {
-	if x.Left != nil {
-		fixPlusPlus(x.Left, before, after, false)
-	}
-	if x.Right != nil {
-		fixPlusPlus(x.Right, before, after, false)
-	}
-	for _, y := range x.List {
-		fixPlusPlus(y, before, after, false)
-	}
-
-	if top {
-		switch x.Op {
-		case cc.PreInc:
-			x.Op = cc.PostInc
-			return
-		case cc.PreDec:
-			x.Op = cc.PostDec
-			return
-		case cc.PostInc, cc.PostDec:
-			return
-		case cc.Eq:
-			return
-		}
-	}
-
-	var list *[]*cc.Stmt
-	var op cc.ExprOp
-
-	switch x.Op {
-	case cc.Eq:
-		list = before
-		*list = append(*list, &cc.Stmt{Op: cc.StmtExpr, Expr: &cc.Expr{Op: x.Op, Left: x.Left, Right: x.Right}})
-		*x = *x.Left
-		return
-	case cc.PreInc:
-		list = before
-		op = cc.PostInc
-	case cc.PreDec:
-		list = before
-		op = cc.PostDec
-	case cc.PostInc, cc.PostDec:
-		list = after
-		op = x.Op
-	}
-	if list != nil {
-		*list = append(*list, &cc.Stmt{Op: cc.StmtExpr, Expr: &cc.Expr{Op: op, Left: x.Left}})
-		*x = *x.Left
-	}
-}
-
-func fixDecl(x *cc.Decl) {
-	if x == nil || fixed[x] {
-		return
-	}
-	fixed[x] = true
-	fixName(&x.Name)
-	if x.Storage&cc.Static != 0 {
-		file := filepath.Base(x.Span.Start.File)
-		if i := strings.Index(file, "."); i >= 0 {
-			file = file[:i]
-		}
-		x.Name += "_" + file
-	}
-	if x.Init != nil {
-		fixInit(x.Init)
-	}
-	fixType(x.Type)
-}
-
-func fixInit(x *cc.Init) {
-	for _, pre := range x.Prefix {
-		fixName(&pre.Dot)
-	}
-	for _, b := range x.Braced {
-		fixInit(b)
-	}
-	if x.Expr != nil {
-		fixExpr(x.Expr)
-	}
-}
-
-func fixName(s *string) {
-	switch *s {
-	case "type":
-		*s = "typ"
-	case "func":
-		*s = "fun"
-	}
-}
-
-var fixed = map[interface{}]bool{}
-
-func fixType(x *cc.Type) {
-	if x == nil || fixed[x] {
-		return
-	}
-	fixed[x] = true
-	fixType(x.Base)
-	for _, d := range x.Decls {
-		fixDecl(d)
-	}
-	fixExpr(x.Width)
-}
-
-func fixExpr(x *cc.Expr) {
-	if x == nil {
-		return
-	}
-	if x.Init != nil {
-		fixInit(x.Init)
-	}
-	fixExpr(x.Left)
-	fixExpr(x.Right)
-	for _, y := range x.List {
-		fixExpr(y)
-	}
-	
-	switch x.Op {
-	case cc.Arrow, cc.Dot, cc.Name:
-		//fixName(&x.Text)
-	case cc.Number:
-		if x.Text == `'\0'` {
-			x.Text = `'\x00'`
-		}
-	}
-
-	if x.Op == cc.Call && x.Left.Op == cc.Name && x.Left.Text == "print" {
-		// TODO insert fmt import
-		x.Left.Text = "fmt.Printf"
-	}
-	if x.Op == cc.Call && x.Left.Op == cc.Name && x.Left.Text == "exits" {
-		// TODO insert os import
-		x.Left.Text = "os.Exit"
-		if len(x.List) == 1 {
-			arg := x.List[0]
-			if arg.Op == cc.Name && arg.Text == "nil" {
-				arg.Text = "0"
-			} else if arg.Op == cc.String && len(arg.Texts) == 1 {
-				arg.Op = cc.Name
-				if arg.Texts[0] == `""` {
-					arg.Text = "0"
-				} else {
-					arg.Text = "1"
-					x.Comments.Suffix = append(x.Comments.Suffix, cc.Comment{Text: " // " + arg.Texts[0]})
-				}
-			}
-		}
-	}
 }
 
 type varLevel struct {
@@ -911,21 +638,344 @@ Search:
 	}
 }
 
-func write(prog *cc.Prog, files []string) {
-	for _, decl := range prog.Decls {
-		fix(decl)
-	}
-	for _, file := range files {
-		writeFile(prog, file)
+// Rewrite from C constructs to Go constructs.
+
+func fix(x cc.Syntax) {
+	cc.Preorder(x, func(x cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Stmt:
+			fixStmt(x)
+
+		case *cc.Expr:
+			switch x.Op {
+			case cc.Number:
+				// Rewrite char literal \0 to \x00.
+				// In general we'd need to rewrite all string and char literals
+				// but this is the only form that comes up.
+				if x.Text == `'\0'` {
+					x.Text = `'\x00'`
+				}
+			}
+
+		case *cc.Decl:
+			// Rewrite declaration names to avoid Go keywords.
+			switch x.Name {
+			case "type":
+				x.Name = "typ"
+			case "func":
+				x.Name = "fun"
+			}
+
+			// Add file name to file-static variables to avoid conflicts.
+			// TODO: Don't do this when there's no conflict?
+			if x.Storage&cc.Static != 0 || x.Name != "" && x.Type != nil && x.Type.Kind == cc.Enum && !strings.Contains(x.Span.Start.File, "/include/") {
+				file := filepath.Base(x.Span.Start.File)
+				if i := strings.Index(file, "."); i >= 0 {
+					file = file[:i]
+				}
+				x.Name += "_" + file
+			}
+		}
+	})
+}
+
+func fixStmt(stmt *cc.Stmt) {
+	// TODO: Double-check stmt.Labels
+
+	switch stmt.Op {
+	case cc.ARGBEGIN:
+		panic(fmt.Sprintf("unexpected ARGBEGIN"))
+
+	case cc.Do:
+		// Rewrite do { ... } while(x)
+		// to for(;;) { ... if(!x) break }
+		// Since fixStmt is called in a preorder traversal,
+		// the recursion into the children will clean up x
+		// in the if condition as needed.
+		stmt.Op = cc.For
+		x := stmt.Expr
+		stmt.Expr = nil
+		stmt.Body = forceBlock(stmt.Body)
+		stmt.Body.Block = append(stmt.Body.Block, &cc.Stmt{
+			Op:   cc.If,
+			Expr: &cc.Expr{Op: cc.Not, Left: x},
+			Body: &cc.Stmt{Op: cc.Break},
+		})
+
+	case cc.While:
+		stmt.Op = cc.For
+		fallthrough
+
+	case cc.For:
+		before1, _ := extractSideEffects(stmt.Pre, sideStmt|sideNoAfter)
+		before2, _ := extractSideEffects(stmt.Expr, sideNoAfter)
+		if len(before2) > 0 {
+			x := stmt.Expr
+			stmt.Expr = nil
+			stmt.Body = forceBlock(stmt.Body)
+			top := &cc.Stmt{
+				Op:   cc.If,
+				Expr: &cc.Expr{Op: cc.Not, Left: x},
+				Body: &cc.Stmt{Op: cc.Break},
+			}
+			stmt.Body.Block = append(append(before2, top), stmt.Body.Block...)
+		}
+		if len(before1) > 0 {
+			old := copyStmt(stmt)
+			stmt.Pre = nil
+			stmt.Expr = nil
+			stmt.Post = nil
+			stmt.Body = nil
+			stmt.Op = c2go.BlockNoBrace
+			stmt.Block = append(before1, old)
+		}
+		before, after := extractSideEffects(stmt.Post, sideStmt)
+		if len(before)+len(after) > 0 {
+			all := append(append(before, &cc.Stmt{Op: cc.StmtExpr, Expr: stmt.Post}), after...)
+			stmt.Post = &cc.Expr{Op: c2go.ExprBlock, Block: all}
+		}
+
+	case cc.If, cc.Return:
+		before, _ := extractSideEffects(stmt.Expr, sideNoAfter)
+		if len(before) > 0 {
+			old := copyStmt(stmt)
+			stmt.Expr = nil
+			stmt.Body = nil
+			stmt.Else = nil
+			stmt.Op = c2go.BlockNoBrace
+			stmt.Block = append(before, old)
+		}
+
+	case cc.StmtExpr:
+		before, after := extractSideEffects(stmt.Expr, sideStmt)
+		if len(before)+len(after) > 0 {
+			old := copyStmt(stmt)
+			stmt.Expr = nil
+			stmt.Op = c2go.BlockNoBrace
+			stmt.Block = append(append(before, old), after...)
+		}
+
+	case cc.Goto:
+		// TODO: Figure out where the goto goes and maybe rewrite
+		// to labeled break/continue.
+		// Otherwise move code or something.
+
+	case cc.Switch:
+		// TODO: Change default fallthrough to default break.
 	}
 }
 
-func writeFile(prog *cc.Prog, file string) {
-	dstfile := strings.TrimSuffix(strings.TrimSuffix(file, ".c"), ".h") + ".go"
-	if *strip != "" {
-		dstfile = strings.TrimPrefix(dstfile, *strip)
-	} else if i := strings.LastIndex(dstfile, "/src/"); i >= 0 {
-		dstfile = dstfile[i+len("/src/"):]
+func forceBlock(x *cc.Stmt) *cc.Stmt {
+	if x.Op != cc.Block {
+		x = &cc.Stmt{Op: cc.Block, Block: []*cc.Stmt{x}}
+	}
+	return x
+}
+
+const (
+	sideStmt = 1 << iota
+	sideNoAfter
+)
+
+func extractSideEffects(x *cc.Expr, mode int) (before, after []*cc.Stmt) {
+	doSideEffects(x, &before, &after, mode)
+	return
+}
+
+func doSideEffects(x *cc.Expr, before, after *[]*cc.Stmt, mode int) {
+	if x == nil {
+		return
+	}
+
+	// Cannot hoist side effects from conditionally evaluated expressions
+	// into unconditionally evaluated statement lists.
+	// For now, detect but do not handle.
+	switch x.Op {
+	case cc.Cond:
+		doSideEffects(x.List[0], before, after, mode&^sideStmt|sideNoAfter)
+		checkNoSideEffects(x.List[1], 0)
+		checkNoSideEffects(x.List[2], 0)
+
+	case cc.AndAnd, cc.OrOr:
+		doSideEffects(x.Left, before, after, mode&^sideStmt|sideNoAfter)
+		checkNoSideEffects(x.Right, 0)
+
+	default:
+		doSideEffects(x.Left, before, after, mode&^sideStmt)
+		doSideEffects(x.Right, before, after, mode&^sideStmt)
+		for _, y := range x.List {
+			doSideEffects(y, before, after, mode&^sideStmt)
+		}
+	}
+
+	if mode&sideStmt != 0 {
+		// Expression as statement.
+		// Can leave x++ alone, can rewrite ++x to x++, can leave x [op]= y alone.
+		switch x.Op {
+		case cc.PreInc:
+			x.Op = cc.PostInc
+			return
+		case cc.PreDec:
+			x.Op = cc.PostDec
+			return
+		case cc.PostInc, cc.PostDec:
+			return
+		case cc.Eq, cc.AddEq, cc.SubEq, cc.MulEq, cc.DivEq, cc.ModEq, cc.XorEq, cc.OrEq, cc.AndEq, cc.LshEq, cc.RshEq:
+			return
+		}
+	}
+
+	switch x.Op {
+	case cc.Eq, cc.AddEq, cc.SubEq, cc.MulEq, cc.DivEq, cc.ModEq, cc.XorEq, cc.OrEq, cc.AndEq, cc.LshEq, cc.RshEq:
+		x.Left = forceCheap(before, x.Left)
+		old := copyExpr(x)
+		*before = append(*before, &cc.Stmt{Op: cc.StmtExpr, Expr: old})
+		fixMerge(x, x.Left)
+
+	case cc.PreInc, cc.PreDec:
+		x.Left = forceCheap(before, x.Left)
+		old := copyExpr(x)
+		old.SyntaxInfo = cc.SyntaxInfo{}
+		if old.Op == cc.PreInc {
+			old.Op = cc.PostInc
+		} else {
+			old.Op = cc.PostDec
+		}
+		*before = append(*before, &cc.Stmt{Op: cc.StmtExpr, Expr: old})
+		fixMerge(x, x.Left)
+
+	case cc.PostInc, cc.PostDec:
+		x.Left = forceCheap(before, x.Left)
+		if mode&sideNoAfter != 0 {
+			// Not allowed to generate fixups afterward.
+			d := &cc.Decl{
+				Name: "tmp",
+				Type: x.XType,
+				Init: &cc.Init{Expr: x.Left},
+			}
+			old := copyExpr(x.Left)
+			old.SyntaxInfo = cc.SyntaxInfo{}
+			*before = append(*before,
+				&cc.Stmt{Op: cc.StmtDecl, Decl: d},
+				&cc.Stmt{Op: cc.StmtExpr, Expr: &cc.Expr{Op: x.Op, Left: old}},
+			)
+			x.Op = cc.Name
+			x.Text = d.Name
+			x.XDecl = d
+			x.Left = nil
+			break
+		}
+		old := copyExpr(x)
+		old.SyntaxInfo = cc.SyntaxInfo{}
+		*after = append(*after, &cc.Stmt{Op: cc.StmtExpr, Expr: old})
+		fixMerge(x, x.Left)
+
+	case cc.Cond:
+		// Rewrite c ? y : z into tmp with initialization:
+		//	var tmp typeof(c?y:z)
+		//	if c {
+		//		tmp = y
+		//	} else {
+		//		tmp = z
+		//	}
+		d := &cc.Decl{
+			Name: "tmp",
+			Type: x.XType,
+		}
+		*before = append(*before,
+			&cc.Stmt{Op: cc.StmtDecl, Decl: d},
+			&cc.Stmt{Op: cc.If, Expr: x.List[0],
+				Body: &cc.Stmt{
+					Op: cc.StmtExpr,
+					Expr: &cc.Expr{
+						Op:    cc.Eq,
+						Left:  &cc.Expr{Op: cc.Name, Text: d.Name, XDecl: d},
+						Right: x.List[1],
+					},
+				},
+				Else: &cc.Stmt{
+					Op: cc.StmtExpr,
+					Expr: &cc.Expr{
+						Op:    cc.Eq,
+						Left:  &cc.Expr{Op: cc.Name, Text: d.Name, XDecl: d},
+						Right: x.List[2],
+					},
+				},
+			},
+		)
+		x.Op = cc.Name
+		x.Text = d.Name
+		x.XDecl = d
+		x.List = nil
+	}
+}
+
+func copyExpr(x *cc.Expr) *cc.Expr {
+	old := *x
+	old.SyntaxInfo = cc.SyntaxInfo{}
+	return &old
+}
+
+func copyStmt(x *cc.Stmt) *cc.Stmt {
+	old := *x
+	old.SyntaxInfo = cc.SyntaxInfo{}
+	old.Labels = nil
+	return &old
+}
+
+func forceCheap(before *[]*cc.Stmt, x *cc.Expr) *cc.Expr {
+	// TODO
+	return x
+}
+
+func fixMerge(dst, src *cc.Expr) {
+	syn := dst.SyntaxInfo
+	syn.Comments.Before = append(syn.Comments.Before, src.Comments.Before...)
+	syn.Comments.After = append(syn.Comments.After, src.Comments.After...)
+	syn.Comments.Suffix = append(syn.Comments.Suffix, src.Comments.Suffix...)
+	*dst = *src
+	dst.SyntaxInfo = syn
+}
+
+func checkNoSideEffects(x *cc.Expr, mode int) {
+	var before, after []*cc.Stmt
+	old := x.String()
+	doSideEffects(x, &before, &after, mode)
+	if len(before)+len(after) > 0 {
+		fmt.Printf("cannot handle side effects in %s\n", old)
+	}
+}
+
+func write(prog *cc.Prog, files []string) {
+	fix(prog)
+	for _, file := range files {
+		writeFile(prog, file, "")
+	}
+	writeFile(prog, "/Users/rsc/g/go/include/fmt.h", "liblink/fmt_h.go")
+	writeFile(prog, "/Users/rsc/g/go/include/bio.h", "liblink/bio_h.go")
+	writeFile(prog, "/Users/rsc/g/go/include/link.h", "liblink/link_h.go")
+	writeFile(prog, "/Users/rsc/g/go/src/cmd/5l/5.out.h", "liblink/5.out.go")
+	writeFile(prog, "/Users/rsc/g/go/src/cmd/6l/6.out.h", "liblink/6.out.go")
+	writeFile(prog, "/Users/rsc/g/go/src/cmd/8l/8.out.h", "liblink/8.out.go")
+
+	ioutil.WriteFile(filepath.Join(*out, "liblink/zzz.go"), []byte(zzzExtra), 0666)
+}
+
+var zzzExtra = `
+package main
+
+type Rune rune
+type va_list struct{}
+`
+
+func writeFile(prog *cc.Prog, file, dstfile string) {
+	if dstfile == "" {
+		dstfile = strings.TrimSuffix(strings.TrimSuffix(file, ".c"), ".h") + ".go"
+		if *strip != "" {
+			dstfile = strings.TrimPrefix(dstfile, *strip)
+		} else if i := strings.LastIndex(dstfile, "/src/"); i >= 0 {
+			dstfile = dstfile[i+len("/src/"):]
+		}
 	}
 	dstfile = filepath.Join(*out, dstfile)
 
@@ -938,6 +988,7 @@ func writeFile(prog *cc.Prog, file string) {
 		off := len(p.Bytes())
 		p.Print(decl)
 		if len(p.Bytes()) > off {
+			p.Print(c2go.Newline)
 			p.Print(c2go.Newline)
 		}
 		if err := os.MkdirAll(filepath.Dir(dstfile), 0777); err != nil {
