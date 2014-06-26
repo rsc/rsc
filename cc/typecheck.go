@@ -300,6 +300,7 @@ func (lx *lexer) typecheckInit(typ *Type, x *Init) {
 			lx.Errorf("type %v has no field .%v", typ, pre.Dot)
 			continue
 		}
+		pre.XDecl = decl
 		lx.typecheckInit(decl.Type, elem)
 	}
 }
@@ -353,6 +354,10 @@ func isScalar(t *Type) bool {
 func (t *Type) Is(k TypeKind) bool {
 	t = stripTypedef(t)
 	return t != nil && t.Kind == k
+}
+
+func (t *Type) Def() *Type {
+	return stripTypedef(t)
 }
 
 func isNull(x *Expr) bool {
