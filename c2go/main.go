@@ -677,6 +677,48 @@ func fix(x cc.Syntax) {
 			}
 		}
 	})
+
+	cc.Preorder(x, func(x cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Stmt:
+			switch x.Op {
+			case cc.If, cc.For:
+				x.Expr = forceBool(x.Expr)
+			}
+
+		case *cc.Expr:
+			switch x.Op {
+			case cc.Eq, cc.AddEq, cc.SubEq, cc.MulEq, cc.DivEq, cc.ModEq, cc.XorEq, cc.OrEq, cc.AndEq, cc.LshEq, cc.RshEq:
+				if x.Left.XType != nil && x.Right.XType != nil && x.Left.XType.Def().Kind != x.Right.XType.Def().Kind {
+					x.Right = &cc.Expr{Op: cc.Cast, Type: x.Left.XType, Left: x.Right}
+				}
+
+			case cc.AndAnd, cc.OrOr:
+				x.Left = forceBool(x.Left)
+				x.Right = forceBool(x.Right)
+			}
+		}
+	})
+}
+
+func forceBool(x *cc.Expr) *cc.Expr {
+	if x != nil && !isBoolOp(x.Op) {
+		t := x.XType.Def()
+		if t.Kind == cc.Ptr {
+			x = &cc.Expr{Op: cc.NotEq, Left: x, Right: &cc.Expr{Op: cc.Name, Text: "nil"}}
+		} else {
+			x = &cc.Expr{Op: cc.NotEq, Left: x, Right: &cc.Expr{Op: cc.Name, Text: "0"}}
+		}
+	}
+	return x
+}
+
+func isBoolOp(op cc.ExprOp) bool {
+	switch op {
+	case cc.Not, cc.AndAnd, cc.OrOr, cc.Lt, cc.LtEq, cc.Gt, cc.GtEq, cc.EqEq, cc.NotEq:
+		return true
+	}
+	return false
 }
 
 func fixStmt(stmt *cc.Stmt) {
