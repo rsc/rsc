@@ -462,6 +462,7 @@ func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 	if nl {
 		p.Print(Indent)
 	}
+	warned := false
 	for i, y := range x.Braced {
 		if nl {
 			p.Print(Newline)
@@ -474,9 +475,10 @@ func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 				subtyp = typ.Def().Decls[i].Type
 			} else if typ.Is(cc.Struct) && len(y.Prefix) == 1 && y.Prefix[0].XDecl != nil {
 				subtyp = y.Prefix[0].XDecl.Type
-			} else if typ.Is(cc.Array) {
+			} else if typ.Is(cc.Array) || typ.Is(Slice) {
 				subtyp = typ.Def().Base
-			} else {
+			} else if !warned {
+				warned = true
 				fprintf(x.Span, "too many fields braced initializer of %s", typ)
 			}
 		}
@@ -615,6 +617,10 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 	}
 }
 
+const (
+	Slice cc.TypeKind = 100000 + iota
+)
+
 func (p *Printer) printType(t *cc.Type) {
 	// Shouldn't happen but handle in case it does.
 	p.Print(t.Comments.Before)
@@ -633,6 +639,9 @@ func (p *Printer) printType(t *cc.Type) {
 	default:
 		p.Print(t.String()) // hope for the best
 
+	case Slice:
+		p.Print("[]", t.Base)
+
 	case cc.Struct:
 		p.Print("struct {", Indent)
 		p.printStructBody(t)
@@ -646,7 +655,7 @@ func (p *Printer) printType(t *cc.Type) {
 		}
 
 	case cc.TypedefType:
-		if typemap[t.Base.Kind] != "" && strings.ToLower(t.Name) == t.Name {
+		if t.Base != nil && typemap[t.Base.Kind] != "" && strings.ToLower(t.Name) == t.Name {
 			p.Print(typemap[t.Base.Kind])
 			return
 		}
