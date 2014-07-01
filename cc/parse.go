@@ -42,10 +42,15 @@ func ReadMany(names []string, readers []io.Reader) (*Prog, error) {
 			prog.Decls = append(prog.Decls, lx.prog.Decls...)
 		}
 		lx.prog = nil
-		for sc := lx.scope; sc != nil; sc=sc.Next {
+		for sc := lx.scope; sc != nil; sc = sc.Next {
 			for name, decl := range sc.Decl {
-				if decl.Storage&Static != 0 {
+				if decl.Storage&Static != 0 || (decl.Storage&Typedef != 0 && strings.HasSuffix(decl.Span.Start.File, ".c")) {
 					delete(sc.Decl, name)
+				}
+			}
+			for name, typ := range sc.Tag {
+				if strings.HasSuffix(typ.Span.Start.File, ".c") {
+					delete(sc.Tag, name)
 				}
 			}
 		}

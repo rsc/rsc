@@ -292,7 +292,8 @@ func (lx *lexer) setEnd(yy *yySymType) {
 	yy.span.End = lx.pos()
 }
 
-func (lx *lexer) Lex(yy *yySymType) int {
+func (lx *lexer) Lex(yy *yySymType) (yyt int) {
+	//defer func() { println("tok", yy.str, yyt) }()
 	if lx.start != 0 {
 		tok := lx.start
 		lx.start = 0
