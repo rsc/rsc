@@ -693,7 +693,7 @@ abdec1:
 
 // Concrete declarator
 decor:
-	tokName
+	tag
 	{
 		$<span>$ = $<span>1
 		name := $1

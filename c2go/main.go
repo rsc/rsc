@@ -29,6 +29,8 @@ var (
 	inc   = flag.String("I", "", "include directory")
 )
 
+const showGroups = true
+
 func main() {
 	log.SetFlags(0)
 	flag.Parse()
@@ -37,24 +39,26 @@ func main() {
 		cc.AddInclude(*inc)
 	}
 	if len(args) == 0 {
-		cc.Read("<stdin>", os.Stdin)
-	} else {
-		var r []io.Reader
-		for _, arg := range args {
-			f, err := os.Open(arg)
-			if err != nil {
-				log.Fatal(err)
-			}
-			r = append(r, f)
-			defer f.Close()
-		}
-		prog, err := cc.ReadMany(args, r)
+		flag.Usage()
+	}
+	var r []io.Reader
+	files := args
+	for _, file := range files {
+		f, err := os.Open(file)
 		if err != nil {
 			log.Fatal(err)
 		}
-		do(prog, args)
-		write(prog, args)
+		r = append(r, f)
+		defer f.Close()
 	}
+	prog, err := cc.ReadMany(files, r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	inferTypes(prog)
+	return
+	fix(prog)
+	write(prog, files)
 }
 
 type byLen [][]*TypeVar
@@ -68,7 +72,7 @@ func (x byLen) Less(i, j int) bool {
 	return fmt.Sprint(x[i][0].Src) < fmt.Sprint(x[j][0].Src)
 }
 
-func do(prog *cc.Prog, files []string) {
+func inferTypes(prog *cc.Prog) {
 	add(prog)
 
 	groups := map[*TypeVar][]*TypeVar{}
@@ -109,7 +113,7 @@ func do(prog *cc.Prog, files []string) {
 		groups[tv.parent] = append(groups[tv.parent], tv)
 	}
 
-	if false {
+	if showGroups && *src == "" && *dst == "" {
 		fmt.Printf("groups:\n")
 	}
 	var grps [][]*TypeVar
@@ -163,7 +167,7 @@ func do(prog *cc.Prog, files []string) {
 	}
 
 	for _, list := range grps {
-		if false {
+		if showGroups && *src == "" && *dst == "" {
 			fmt.Printf("group(%d)\n", len(list))
 		}
 		var types []string
@@ -228,11 +232,11 @@ func do(prog *cc.Prog, files []string) {
 		}
 		sort.Strings(types)
 		sort.Strings(ops)
-		if false {
+		if showGroups && *src == "" && *dst == "" {
 			fmt.Printf("types: %s\n", strings.Join(types, ", "))
 			fmt.Printf("ops: %s\n", strings.Join(ops, ", "))
 			for _, tv := range list {
-				fmt.Printf("\t%s:", tv.Src)
+				fmt.Printf("\t%s (%d):", tv.Src, len(tv.Link))
 				if tv.UsedAsBool {
 					fmt.Printf(" bool")
 				}
@@ -278,7 +282,7 @@ var typeVarsAddr = map[cc.Syntax]*TypeVar{}
 
 func add(x cc.Syntax) {
 	var curFn *cc.Decl
-	before := func(cc.Syntax) {
+	before := func(x cc.Syntax) {
 		switch x := x.(type) {
 		case *cc.Decl:
 			// Note:
@@ -298,10 +302,6 @@ func add(x cc.Syntax) {
 				typeVars[x] = tv
 			}
 
-			//	if x.Type != nil && x.Type.Kind == cc.Enum {
-			//		addLink(x, x.Type)
-			//	}
-
 			if x.Storage&cc.Static != 0 && curFn != nil {
 				fmt.Printf("func-static variable %s\n", x.Name)
 			}
@@ -315,31 +315,62 @@ func add(x cc.Syntax) {
 					decl.XOuter = x
 				}
 			}
+		}
+	}
+	after := func(x cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Decl:
+			addDecl(x)
+
+			//	if x.Type != nil && x.Type.Kind == cc.Enum {
+			//		addLink(x, x.Type)
+			//	}
+			if x.Body != nil {
+				curFn = nil
+			}
+
+		case *cc.Expr:
+			addDecl(x.XDecl)
+			addType(x.XType)
+			addExpr(x)
+
+		case *cc.Stmt:
+			addStmt(x, curFn)
 
 		case *cc.Type:
 			//	if x.Kind == cc.Enum {
 			//		typeVars[x] = &TypeVar{Src: x}
 			//	}
 
-		case *cc.Expr:
-			addExpr(x)
-
-		case *cc.Stmt:
-			addStmt(x, curFn)
-		}
-	}
-	after := func(cc.Syntax) {
-		switch x := x.(type) {
-		case *cc.Decl:
-			if x.Body != nil {
-				curFn = nil
-			}
 		}
 	}
 	cc.Walk(x, before, after)
 }
 
+func addDecl(x *cc.Decl) {
+	if x == nil || typeVars[x] != nil {
+		return
+	}
+	tv := &TypeVar{Src: x}
+	typeVars[x] = tv
+	addType(x.Type)
+}
+
+func addType(x *cc.Type) {
+	if x == nil || typeVars[x] != nil {
+		return
+	}
+	tv := &TypeVar{Src: x}
+	typeVars[x] = tv
+	for _, d := range x.Decls {
+		addDecl(d)
+	}
+}
+
 func addExpr(x *cc.Expr) {
+	if x == nil || typeVars[x] != nil {
+		return
+	}
 	tv := &TypeVar{Src: x}
 	typeVars[x] = tv
 
@@ -367,12 +398,16 @@ func addExpr(x *cc.Expr) {
 		addBool(x.Right)
 	case cc.Arrow, cc.Dot:
 		if x.XDecl != nil {
+			switch x.XDecl.Name {
+			case "andptr", "add", "offset", "siz":
+				return
+			}
 			addLink(x, x.XDecl)
 		}
 	case cc.Call:
 		if x.Left.Op == cc.Name {
 			switch x.Left.Text {
-			case "duintptr", "nodconst", "duintxx", "duint32", "duint8", "duint16", "duint64", "nodintconst", "mpmovecfix", "strcmp", "memcmp", "memmove", "strcpy", "strlen", "strncmp", "strstr", "strchr", "strrchr":
+			case "duintptr", "nodconst", "duintxx", "duint32", "duint8", "duint16", "duint64", "nodintconst", "mpmovecfix", "strcmp", "memcmp", "memmove", "strcpy", "strlen", "strncmp", "strstr", "strchr", "strrchr", "erealloc", "malloc", "emalloc", "mal", "wrint", "rdint", "mediaop":
 				return
 			}
 		}
@@ -400,11 +435,11 @@ func addExpr(x *cc.Expr) {
 	case cc.Div, cc.Mul:
 	case cc.DivEq, cc.MulEq:
 
-	case cc.Eq, cc.AndEq, cc.OrEq, cc.XorEq:
+	case cc.Eq, cc.AndEq, cc.XorEq:
 		addLink(x, x.Left)
 		addLink(x.Left, x.Right)
 
-	case cc.EqEq, cc.NotEq, cc.And, cc.Or, cc.Xor:
+	case cc.EqEq, cc.NotEq, cc.And, cc.Xor:
 		addLink(x.Left, x.Right)
 
 	case cc.Gt, cc.GtEq, cc.Lt, cc.LtEq:
@@ -424,6 +459,10 @@ func addExpr(x *cc.Expr) {
 
 	case cc.Name:
 		if x.XDecl != nil && x.XType != nil && x.XType.Kind != cc.Func {
+			switch x.XDecl.Name {
+			case "o1", "o2", "o3", "o4", "op":
+				return
+			}
 			addLink(x, x.XDecl)
 		}
 
@@ -460,17 +499,16 @@ func addContext(x, y cc.Syntax) {
 }
 
 func addIndirLink(x, y cc.Syntax) {
-	add(x)
-	add(y)
-
 	tx := typeVars[x]
 	ty := typeVars[y]
 	if tx == nil {
 		fmt.Fprintf(os.Stderr, "addLink: missing typeVar for %s %T %s %p\n", x.GetSpan(), x, x, x)
+		panic("missing")
 		return
 	}
 	if ty == nil {
 		fmt.Fprintf(os.Stderr, "addLink: missing typeVar for %s %T %s %p\n", y.GetSpan(), y, y, y)
+		panic("missing")
 		return
 	}
 
@@ -478,17 +516,16 @@ func addIndirLink(x, y cc.Syntax) {
 }
 
 func addAddrLink(x, y cc.Syntax) {
-	add(x)
-	add(y)
-
 	tx := typeVars[x]
 	ty := typeVars[y]
 	if tx == nil {
 		fmt.Fprintf(os.Stderr, "addLink: missing typeVar for %s %T %s %p\n", x.GetSpan(), x, x, x)
+		panic("missing")
 		return
 	}
 	if ty == nil {
 		fmt.Fprintf(os.Stderr, "addLink: missing typeVar for %s %T %s %p\n", y.GetSpan(), y, y, y)
+		panic("missing")
 		return
 	}
 
@@ -496,17 +533,16 @@ func addAddrLink(x, y cc.Syntax) {
 }
 
 func addLink(x, y cc.Syntax) {
-	add(x)
-	add(y)
-
 	tx := typeVars[x]
 	ty := typeVars[y]
 	if tx == nil {
 		fmt.Fprintf(os.Stderr, "addLink: missing typeVar for %s %T %s %p\n", x.GetSpan(), x, x, x)
+		panic("missing")
 		return
 	}
 	if ty == nil {
 		fmt.Fprintf(os.Stderr, "addLink: missing typeVar for %s %T %s %p\n", y.GetSpan(), y, y, y)
+		panic("missing")
 		return
 	}
 	if tx.NoLink || ty.NoLink {
@@ -989,7 +1025,6 @@ func checkNoSideEffects(x *cc.Expr, mode int) {
 }
 
 func write(prog *cc.Prog, files []string) {
-	fix(prog)
 	for _, file := range files {
 		writeFile(prog, file, "")
 	}
