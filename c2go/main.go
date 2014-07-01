@@ -22,14 +22,13 @@ import (
 )
 
 var (
-	src   = flag.String("src", "", "src of search")
-	dst   = flag.String("dst", "", "dst of search")
-	out   = flag.String("o", "/tmp/c2go", "output directory")
-	strip = flag.String("", "", "strip from input paths when writing in output directory")
-	inc   = flag.String("I", "", "include directory")
+	src        = flag.String("src", "", "src of search")
+	dst        = flag.String("dst", "", "dst of search")
+	out        = flag.String("o", "/tmp/c2go", "output directory")
+	strip      = flag.String("", "", "strip from input paths when writing in output directory")
+	inc        = flag.String("I", "", "include directory")
+	showGroups = flag.Bool("groups", false, "show groups")
 )
-
-const showGroups = true
 
 func main() {
 	log.SetFlags(0)
@@ -56,7 +55,9 @@ func main() {
 		log.Fatal(err)
 	}
 	inferTypes(prog)
-	return
+	if *showGroups {
+		return
+	}
 	fix(prog)
 	write(prog, files)
 }
@@ -113,7 +114,7 @@ func inferTypes(prog *cc.Prog) {
 		groups[tv.parent] = append(groups[tv.parent], tv)
 	}
 
-	if showGroups && *src == "" && *dst == "" {
+	if *showGroups && *src == "" && *dst == "" {
 		fmt.Printf("groups:\n")
 	}
 	var grps [][]*TypeVar
@@ -167,16 +168,20 @@ func inferTypes(prog *cc.Prog) {
 	}
 
 	for _, list := range grps {
-		if showGroups && *src == "" && *dst == "" {
+		if *showGroups && *src == "" && *dst == "" {
 			fmt.Printf("group(%d)\n", len(list))
 		}
 		var types []string
 		var haveType = map[string]bool{}
 		var ops []string
 		var haveOp = map[string]bool{"": true}
+		var oneType *cc.Type
 		for _, tv := range list {
 			x, ok := tv.Src.(*cc.Expr)
 			if ok && x.XType != nil {
+				if oneType == nil {
+					oneType = x.XType
+				}
 				str := x.XType.String()
 				if !haveType[str] {
 					haveType[str] = true
@@ -232,7 +237,53 @@ func inferTypes(prog *cc.Prog) {
 		}
 		sort.Strings(types)
 		sort.Strings(ops)
-		if showGroups && *src == "" && *dst == "" {
+
+		if len(types) > 0 {
+			best := ""
+			for _, typ := range types {
+				switch typ {
+				case "enum", "int", "uchar", "short", "int8":
+					if best == "" {
+						best = "int"
+					}
+				case "int32":
+					if best != "int64" && best != "uint64" && best != "uint32" {
+						best = "int32"
+					}
+				case "long", "longlong", "vlong":
+					if best != "uint64" {
+						best = "int64"
+					}
+				case "char[]", "char*":
+					best = "string"
+				}
+			}
+			var target *cc.Type
+			for _, op := range ops {
+				if op == "ptr+" && oneType != nil && oneType.Kind == cc.Ptr {
+					t := *oneType
+					t.Kind = c2go.Slice
+					target = &t
+				}
+			}
+			if best != "" && target == nil {
+				target = &cc.Type{Kind: cc.TypedefType, Name: best}
+			}
+			if target != nil {
+				for _, tv := range list {
+					if tv.TypePtr != nil {
+						typ := *tv.TypePtr
+						if typ != nil && typ.Kind == cc.Func {
+							typ.Base = target
+							continue
+						}
+					}
+					tv.TargetType = target
+				}
+			}
+		}
+
+		if *showGroups && *src == "" && *dst == "" {
 			fmt.Printf("types: %s\n", strings.Join(types, ", "))
 			fmt.Printf("ops: %s\n", strings.Join(ops, ", "))
 			for _, tv := range list {
@@ -274,6 +325,9 @@ type TypeVar struct {
 	Context    []cc.Syntax
 
 	parent *TypeVar
+
+	TargetType *cc.Type
+	TypePtr    **cc.Type
 }
 
 var typeVars = map[cc.Syntax]*TypeVar{}
@@ -291,7 +345,7 @@ func add(x cc.Syntax) {
 			// For other declarations, the typeVar represents the
 			// type of the declared variable.
 			if x.Storage&cc.Typedef == 0 {
-				tv := &TypeVar{Src: x}
+				tv := &TypeVar{Src: x, TypePtr: &x.Type}
 				switch x.Name {
 				case "nil", "N", "L", "S", "T", "C", "...", "bval", "vval", "mpgetfix", "smprint", "namebuf":
 					tv.NoLink = true
@@ -351,7 +405,7 @@ func addDecl(x *cc.Decl) {
 	if x == nil || typeVars[x] != nil {
 		return
 	}
-	tv := &TypeVar{Src: x}
+	tv := &TypeVar{Src: x, TypePtr: &x.Type}
 	typeVars[x] = tv
 	addType(x.Type)
 }
@@ -371,7 +425,7 @@ func addExpr(x *cc.Expr) {
 	if x == nil || typeVars[x] != nil {
 		return
 	}
-	tv := &TypeVar{Src: x}
+	tv := &TypeVar{Src: x, TypePtr: &x.Type}
 	typeVars[x] = tv
 
 	if x.XType != nil && x.XType.Kind == cc.Ptr && x.XType.Base.Is(cc.Void) {
@@ -733,8 +787,27 @@ func fix(x cc.Syntax) {
 				x.Left = forceBool(x.Left)
 				x.Right = forceBool(x.Right)
 			}
+
+			x.Type = fixType(x, x.Type)
+
+		case *cc.Decl:
+			x.Type = fixType(x, x.Type)
+
+		case *cc.Type:
+			x.Base = fixType(x.Base, x.Base)
 		}
 	})
+}
+
+func fixType(x cc.Syntax, typ *cc.Type) *cc.Type {
+	tv := typeVars[x]
+	if tv == nil || tv.TargetType == nil {
+		if typ.String() == "char*" || typ.String() == "char[]" {
+			return &cc.Type{Kind: cc.TypedefType, Name: "string"}
+		}
+		return typ
+	}
+	return tv.TargetType
 }
 
 func forceBool(x *cc.Expr) *cc.Expr {
