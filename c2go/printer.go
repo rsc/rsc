@@ -187,7 +187,7 @@ const (
 	precLow
 )
 
-var opPrec = []int{
+var opPrec = map[cc.ExprOp]int{
 	cc.Add:        precAdd,
 	cc.AddEq:      precLow,
 	cc.Addr:       precAddr,
@@ -243,9 +243,12 @@ var opPrec = []int{
 	cc.VaArg:      precAddr,
 	cc.Xor:        precAdd,
 	cc.XorEq:      precLow,
+
+	AndNot:   precMul,
+	AndNotEq: precLow,
 }
 
-var opStr = []string{
+var opStr = map[cc.ExprOp]string{
 	cc.Add:    "+",
 	cc.AddEq:  "+=",
 	cc.Addr:   "&",
@@ -283,11 +286,16 @@ var opStr = []string{
 	cc.Twid:   "^",
 	cc.Xor:    "^",
 	cc.XorEq:  "^=",
+
+	AndNot:   "&^",
+	AndNotEq: "&^=",
 }
 
 const (
 	ExprBlock cc.ExprOp = 100000 + iota
 	ExprSlice
+	AndNot
+	AndNotEq
 )
 
 func (p *Printer) printExpr(x *cc.Expr, prec int) {
@@ -302,20 +310,14 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 	p.Print(x.Comments.Before)
 	defer p.Print(x.Comments.Suffix, x.Comments.After)
 
-	var newPrec int
-	if 0 <= int(x.Op) && int(x.Op) < len(opPrec) {
-		newPrec = opPrec[x.Op]
-	}
+	newPrec := opPrec[x.Op]
 	if prec < newPrec {
 		p.Print("(")
 		defer p.Print(")")
 	}
 	prec = newPrec
 
-	var str string
-	if 0 <= int(x.Op) && int(x.Op) < len(opStr) {
-		str = opStr[x.Op]
-	}
+	str := opStr[x.Op]
 	if str != "" {
 		if x.Right != nil {
 			// binary operator
@@ -339,6 +341,9 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		panic(fmt.Sprintf("printExpr missing case for %v", x.Op))
 
 	case ExprBlock:
+		if len(x.Block) == 0 {
+			break
+		}
 		p.Print("(func(){")
 		for i, stmt := range x.Block {
 			if i > 0 {
@@ -384,6 +389,9 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		p.Print("(", x.Type, ")", x.Init)
 
 	case cc.Comma:
+		if len(x.List) == 0 {
+			break
+		}
 		p.Print("(func() {")
 		for i, y := range x.List {
 			if i > 0 {

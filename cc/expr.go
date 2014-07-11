@@ -232,6 +232,9 @@ func walk(x Syntax, before, after func(Syntax), seen map[Syntax]bool) {
 		}
 		walk(x.Type, before, after, seen)
 		walk(x.Init, before, after, seen)
+		for _, y := range x.Block {
+			walk(y, before, after, seen)
+		}
 
 	case *Stmt:
 		walk(x.Pre, before, after, seen)
