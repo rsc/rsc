@@ -62,14 +62,36 @@ func rewriteSyntax(x cc.Syntax) {
 	})
 
 	// Apply changed struct tags to typedefs.
+	// Excise dead pieces.
 	cc.Postorder(x, func(x cc.Syntax) {
 		switch x := x.(type) {
 		case *cc.Type:
 			if x.Kind == cc.TypedefType && x.Base != nil && x.Base.Tag != "" {
 				x.Name = x.Base.Tag
 			}
+
+		case *cc.Stmt:
+			if x.Op == cc.StmtExpr && x.Expr.Op == cc.Comma && len(x.Expr.List) == 0 {
+				x.Op = cc.Empty
+			}
+			x.Block = filterBlock(x.Block)
+
+		case *cc.Expr:
+			if x.Op == c2go.ExprBlock {
+				x.Block = filterBlock(x.Block)
+			}
 		}
 	})
+}
+
+func filterBlock(x []*cc.Stmt) []*cc.Stmt {
+	all := x[:0]
+	for _, stmt := range x {
+		if stmt.Op != cc.Empty {
+			all = append(all, stmt)
+		}
+	}
+	return all
 }
 
 func fixStmt(stmt *cc.Stmt) {
@@ -192,6 +214,23 @@ func doSideEffects(x *cc.Expr, before, after *[]*cc.Stmt, mode int) {
 	case cc.AndAnd, cc.OrOr:
 		doSideEffects(x.Left, before, after, mode&^sideStmt|sideNoAfter)
 		checkNoSideEffects(x.Right, 0)
+
+	case cc.Comma:
+		var leftover []*cc.Expr
+		for i, y := range x.List {
+			m := mode | sideNoAfter
+			if i+1 < len(x.List) {
+				m |= sideStmt
+			}
+			doSideEffects(y, before, after, m)
+			switch y.Op {
+			case cc.PostInc, cc.PostDec, cc.Eq, cc.AddEq, cc.SubEq, cc.MulEq, cc.DivEq, cc.ModEq, cc.XorEq, cc.OrEq, cc.AndEq, cc.LshEq, cc.RshEq:
+				*before = append(*before, &cc.Stmt{Op: cc.StmtExpr, Expr: y})
+			default:
+				leftover = append(leftover, y)
+			}
+		}
+		x.List = leftover
 
 	default:
 		doSideEffects(x.Left, before, after, mode&^sideStmt)

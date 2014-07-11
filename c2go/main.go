@@ -360,6 +360,12 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	case cc.Add, cc.And, cc.Div, cc.Mod, cc.Mul, cc.Or, cc.Sub, cc.Xor:
 		left := fixGoTypesExpr(fn, x.Left, targ)
+
+		if x.Op == cc.And && x.Right.Op == cc.Twid {
+			x.Op = c2go.AndNot
+			x.Right = x.Right.Left
+		}
+
 		right := fixGoTypesExpr(fn, x.Right, targ)
 
 		if x.Op == cc.Add && isSliceOrString(left) {
@@ -374,6 +380,12 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	case cc.AddEq, cc.AndEq, cc.DivEq, cc.Eq, cc.ModEq, cc.MulEq, cc.OrEq, cc.SubEq, cc.XorEq:
 		left := fixGoTypesExpr(fn, x.Left, nil)
+
+		if x.Op == cc.AndEq && x.Right.Op == cc.Twid {
+			x.Op = c2go.AndNotEq
+			x.Right = x.Right.Left
+		}
+
 		forceGoType(fn, x.Right, left)
 
 		if x.Op == cc.AddEq && isSliceOrString(left) {
