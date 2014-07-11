@@ -5,7 +5,9 @@ LINK=$(echo ~/g/go/src/liblink/{anames5.c,anames6.c,anames8.c,asm5.c,asm6.c,asm8
 GC=$(echo ~/g/go/src/cmd/gc/{align.c,array.c,bits.c,builtin.c,bv.c,closure.c,const.c,dcl.c,esc.c,export.c,fmt.c,gen.c,init.c,inl.c,lex.c,md5.c,mparith[123].c,obj.c,order.c,racewalk.c,range.c,reflect.c,select.c,sinit.c,subr.c,swt.c,typecheck.c,unsafe.c,walk.c,pgen.c,plive.c,popt.c})
 
 rm -rf /tmp/c2go
-go run main.go "$@" $LINK
+go install ../cc
+go install .
+go run main.go infer.go syntax.go write.go "$@" $LINK
 gofmt -l /tmp/c2go/liblink/*.go
 go build -gcflags -e /tmp/c2go/liblink/*.go 2>&1 | tee errors
 wc errors

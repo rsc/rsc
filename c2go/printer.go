@@ -287,6 +287,7 @@ var opStr = []string{
 
 const (
 	ExprBlock cc.ExprOp = 100000 + iota
+	ExprSlice
 )
 
 func (p *Printer) printExpr(x *cc.Expr, prec int) {
@@ -347,6 +348,17 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		}
 		p.Print("})()")
 
+	case ExprSlice:
+		p.Print(x.List[0], "[")
+		if x.List[1] != nil {
+			p.Print(x.List[1])
+		}
+		p.Print(":")
+		if x.List[2] != nil {
+			p.Print(x.List[2])
+		}
+		p.Print("]")
+
 	case cc.Arrow:
 		name := x.XDecl.Name
 		p.Print(exprPrec{x.Left, prec}, ".", name)
@@ -362,7 +374,11 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		p.Print(")")
 
 	case cc.Cast:
-		p.Print("(", x.Type, ")(", exprPrec{x.Left, precLow}, ")")
+		if x.Type.Kind == cc.Ptr || x.Type.Kind == cc.Func {
+			p.Print("(", x.Type, ")(", exprPrec{x.Left, precLow}, ")")
+		} else {
+			p.Print(x.Type, "(", exprPrec{x.Left, precLow}, ")")
+		}
 
 	case cc.CastInit:
 		p.Print("(", x.Type, ")", x.Init)
@@ -412,7 +428,7 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		p.Print("offsetof(", x.Type, ", ", exprPrec{x.Left, precComma}, ")")
 
 	case cc.Paren:
-		p.Print("(", exprPrec{x.Left, prec}, ")")
+		p.Print(exprPrec{x.Left, prec})
 
 	case cc.PostDec:
 		p.Print(exprPrec{x.Left, prec}, "--")
@@ -436,6 +452,8 @@ func (p *Printer) printPrefix(x *cc.Prefix) {
 	}
 }
 
+var debugPrintInit = false
+
 func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 	p.Print(x.Comments.Before)
 	defer p.Print(x.Comments.Suffix, x.Comments.After)
@@ -446,9 +464,18 @@ func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 		}
 	}
 	if x.Expr != nil {
-		if x.Expr.Op == cc.Number && typ.Is(cc.Ptr) {
+		if x.Expr.Op == cc.Number && (typ.Is(cc.Ptr) || typ.Is(Slice)) {
 			p.Print("nil")
 			return
+		}
+		if x.Expr.String() == "ANAME" {
+			debugPrintInit = true
+		}
+		if debugPrintInit {
+			println("INIT", x.Expr.Op, x.Expr.String(), typ.String())
+		}
+		if x.Expr.String() == "ANEGB" {
+			debugPrintInit = false
 		}
 		p.printExpr(x.Expr, precComma)
 		return
@@ -488,7 +515,7 @@ func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 	if typ != nil && typ.Is(cc.Struct) && len(x.Braced) > 0 && len(x.Braced[0].Prefix) == 0 && len(x.Braced) < len(typ.Def().Decls) {
 		for i := len(x.Braced); i < len(typ.Def().Decls); i++ {
 			subtyp := typ.Def().Decls[i].Type
-			if subtyp.Is(cc.Ptr) {
+			if subtyp.Is(cc.Ptr) || subtyp.Is(Slice) {
 				p.Print(" nil,")
 			} else if subtyp.Is(cc.Array) {
 				p.Print(" ", subtyp, "{},")
@@ -618,7 +645,24 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 }
 
 const (
-	Slice cc.TypeKind = 100000 + iota
+	Bool cc.TypeKind = 100000 + iota
+	Int8
+	Uint8
+	Byte
+	Int16
+	Uint16
+	Int
+	Uint
+	Int32
+	Rune
+	Uint32
+	Uintptr
+	Int64
+	Uint64
+	Float32
+	Float64
+	String
+	Slice
 )
 
 func (p *Printer) printType(t *cc.Type) {
@@ -642,7 +686,14 @@ func (p *Printer) printType(t *cc.Type) {
 	case Slice:
 		p.Print("[]", t.Base)
 
+	case String:
+		p.Print("string")
+
 	case cc.Struct:
+		if len(t.Decls) == 0 {
+			p.Print("struct{}")
+			break
+		}
 		p.Print("struct {", Indent)
 		p.printStructBody(t)
 		p.Print(Unindent, Newline, "}")
@@ -651,7 +702,7 @@ func (p *Printer) printType(t *cc.Type) {
 		if t.Tag != "" {
 			p.Print(t.Tag)
 		} else {
-			p.Print("enum")
+			p.Print("int")
 		}
 
 	case cc.TypedefType:
@@ -694,6 +745,7 @@ func (p *Printer) printType(t *cc.Type) {
 
 	case cc.Array:
 		if t.Width == nil {
+			println("missed width-less array", t.String())
 			p.Print("[]", t.Base) // TODO
 			return
 		}
@@ -702,18 +754,22 @@ func (p *Printer) printType(t *cc.Type) {
 }
 
 var typemap = map[cc.TypeKind]string{
-	cc.Char:      "int8",
-	cc.Uchar:     "uint8",
-	cc.Short:     "int16",
-	cc.Ushort:    "uint16",
-	cc.Int:       "int",
-	cc.Uint:      "uint",
-	cc.Long:      "int32",
-	cc.Ulong:     "uint32",
-	cc.Longlong:  "int64",
-	cc.Ulonglong: "uint64",
-	cc.Float:     "float32",
-	cc.Double:    "float64",
+	Bool:    "bool",
+	Int8:    "int8",
+	Uint8:   "uint8",
+	Int16:   "int16",
+	Uint16:  "uint16",
+	Rune:    "rune",
+	Byte:    "byte",
+	Int:     "int",
+	Uint:    "uint",
+	Uintptr: "uintptr",
+	Int32:   "int32",
+	Uint32:  "uint32",
+	Int64:   "int64",
+	Uint64:  "uint64",
+	Float32: "float32",
+	Float64: "float64",
 }
 
 func (p *Printer) oldprintDecl(x *cc.Decl) {
@@ -783,7 +839,12 @@ func (p *Printer) printDecl(decl *cc.Decl) {
 			p.printEnumDecl(t)
 			return
 		}
-		fprintf(decl.Span, "empty declaration")
+		if Bool <= t.Kind && t.Kind <= Float64 && t.Decls != nil {
+			// was an enum
+			p.printEnumDecl(t)
+			return
+		}
+		fprintf(decl.Span, "empty declaration of type %s", t)
 		return
 	}
 

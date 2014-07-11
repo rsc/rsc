@@ -16,6 +16,7 @@ type Stmt struct {
 	Block  []*Stmt
 	Labels []*Label
 	Text   string
+	Type   *Type
 }
 
 type StmtOp int
