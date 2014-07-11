@@ -314,7 +314,7 @@ func (p *Printer) printExpr(x *Expr, prec int) {
 	// special cases
 	switch x.Op {
 	default:
-		panic(fmt.Sprintf("printExpr missing case for %v", x.Op))
+		p.Print(fmt.Sprintf("Expr(Op=%d)", x.Op))
 
 	case Arrow:
 		p.Print(exprPrec{x.Left, prec}, "->", x.Text)

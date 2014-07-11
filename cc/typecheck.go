@@ -197,6 +197,7 @@ func (lx *lexer) typecheckType(typ *Type) {
 func (lx *lexer) typecheckInit(typ *Type, x *Init) {
 	// TODO: Type check initializers (ugh).
 
+	x.XType = typ
 	typ = stripTypedef(typ)
 	lx.setSpan(x.Span)
 	if x.Braced == nil {

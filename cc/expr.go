@@ -171,6 +171,8 @@ type Init struct {
 	Prefix []*Prefix // list of prefixes
 	Expr   *Expr     // Expr
 	Braced []*Init   // {Braced}
+
+	XType *Type // derived type
 }
 
 // Walk traverses the syntax x, calling before and after on entry to and exit from
