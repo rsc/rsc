@@ -50,7 +50,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//forceTypes(prog)
+	forceTypes(prog)
 	inferTypes(prog)
 	if *showGroups {
 		return
@@ -66,9 +66,14 @@ func forceTypes(x cc.Syntax) {
 		switch x := x.(type) {
 		case *cc.Decl:
 			switch x.Name {
-			case "o1":
-				println("fixed o1")
+			case "o1", "h":
 				x.Type = &cc.Type{Kind: cc.Ulong}
+			case "oprrr", "opbra", "olr", "olhr", "olrr", "olhrr", "osr", "oshr", "ofsr", "osrr", "oshrr", "omvl", "ocmp":
+				x.Type.Base = &cc.Type{Kind: cc.Ulong}
+			case "out":
+				if x.Type != nil && x.Type.Base != nil && (x.Type.Base.Kind == cc.Long || x.Type.Base.Kind == cc.Int) {
+					x.Type.Base.Kind++
+				}
 			}
 
 		case *cc.Expr:
@@ -284,11 +289,14 @@ func fixGoTypesStmt(fn *cc.Decl, x *cc.Stmt) {
 	}
 
 	switch x.Op {
-	case cc.StmtDecl:
-	case cc.StmtExpr:
+	case cc.StmtDecl, cc.StmtExpr:
 		fixGoTypesExpr(fn, x.Expr, nil)
+
 	case cc.If, cc.For:
+		fixGoTypesExpr(fn, x.Pre, nil)
+		fixGoTypesExpr(fn, x.Post, nil)
 		fixGoTypesExpr(fn, x.Expr, boolType)
+
 	case cc.Return:
 		if x.Expr != nil {
 			forceGoType(fn, x.Expr, fn.Type.Base)
@@ -302,20 +310,29 @@ func fixGoTypesStmt(fn *cc.Decl, x *cc.Stmt) {
 	}
 	fixGoTypesStmt(fn, x.Body)
 	fixGoTypesStmt(fn, x.Else)
+
+	for _, lab := range x.Labels {
+		// TODO: use correct type
+		fixGoTypesExpr(fn, lab.Expr, nil)
+	}
 }
 
 func zeroFor(targ *cc.Type) *cc.Expr {
 	if targ != nil {
-		switch targ.Kind {
+		switch targ.Def().Kind {
 		case c2go.String:
 			return &cc.Expr{Op: cc.String, Texts: []string{`""`}}
 
 		case c2go.Slice, cc.Ptr:
 			return &cc.Expr{Op: cc.Name, Text: "nil"}
+
+		case cc.Struct, cc.Array:
+			return &cc.Expr{Op: cc.CastInit, Type: targ, Init: &cc.Init{}}
 		}
+		return &cc.Expr{Op: cc.Number, Text: "0 /*" + targ.String() + "*/"}
 	}
 
-	return &cc.Expr{Op: cc.Number, Text: "0"}
+	return &cc.Expr{Op: cc.Number, Text: "0 /*untyped*/"}
 }
 
 func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
@@ -356,7 +373,23 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	switch x.Op {
 	default:
-		panic(fmt.Sprintf("unexpected construct %v in fixGoTypesExpr - %v - %v", x, x.List, x.Span))
+		panic(fmt.Sprintf("unexpected construct %v in fixGoTypesExpr - %v - %v", x, x.Op, x.Span))
+
+	case cc.Comma:
+		for i, y := range x.List {
+			t := targ
+			if i+1 < len(x.List) {
+				t = nil
+			}
+			fixGoTypesExpr(fn, y, t)
+		}
+		return nil
+
+	case c2go.ExprBlock:
+		for _, stmt := range x.Block {
+			fixGoTypesStmt(fn, stmt)
+		}
+		return nil
 
 	case cc.Add, cc.And, cc.Div, cc.Mod, cc.Mul, cc.Or, cc.Sub, cc.Xor:
 		left := fixGoTypesExpr(fn, x.Left, targ)
@@ -417,6 +450,9 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		return x.XDecl.Type
 
 	case cc.Call:
+		if fixSpecialCall(fn, x) {
+			return x.XType
+		}
 		left := fixGoTypesExpr(fn, x.Left, nil)
 		for i, y := range x.List {
 			if left != nil && left.Kind == cc.Func && i < len(left.Decls) {
@@ -537,6 +573,7 @@ var (
 	byteType   = &cc.Type{Kind: c2go.Byte}
 	intType    = &cc.Type{Kind: c2go.Int}
 	uintType   = &cc.Type{Kind: c2go.Uint}
+	uint32Type = &cc.Type{Kind: c2go.Uint32}
 	uint64Type = &cc.Type{Kind: c2go.Uint64}
 )
 
@@ -656,4 +693,143 @@ func sameType(t, u *cc.Type) bool {
 
 func isSliceOrString(typ *cc.Type) bool {
 	return typ != nil && (typ.Kind == c2go.Slice || typ.Kind == c2go.String)
+}
+
+func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
+	if x.Left.Op != cc.Name {
+		return false
+	}
+	switch x.Left.Text {
+	case "memset":
+		if len(x.List) != 3 || x.List[1].Op != cc.Number || x.List[1].Text != "0" {
+			fprintf(x.Span, "unsupported memset - nonzero")
+			return false
+		}
+		obj, objType := objIndir(fn, x.List[0])
+		if !matchSize(fn, obj, objType, x.List[2]) {
+			fprintf(x.Span, "unsupported memset - wrong size")
+			return true
+		}
+
+		x.Op = cc.Eq
+		x.Left = obj
+		x.Right = zeroFor(objType)
+		x.List = nil
+		return true
+
+	case "memmove":
+		if len(x.List) != 3 {
+			fprintf(x.Span, "unsupported %v", x)
+			return false
+		}
+		obj1, obj1Type := objIndir(fn, x.List[0])
+		obj2, obj2Type := objIndir(fn, x.List[1])
+		if obj1Type == nil || obj2Type == nil {
+			fprintf(x.Span, "unsupported %v - missing types", x)
+			return true
+		}
+
+		siz := x.List[2]
+		if siz.Op == cc.Number && siz.Text == "4" {
+			if (obj1Type.Kind == c2go.Uint32 || obj1Type.Kind == c2go.Int32) && obj2Type.Kind == c2go.Float32 {
+				x.Op = cc.Eq
+				x.Left = obj1
+				x.Right = &cc.Expr{
+					Op: cc.Call,
+					Left: &cc.Expr{Op: cc.Name,
+						Text: "math.Float32bits",
+					},
+					List: []*cc.Expr{obj2},
+				}
+				x.XType = uint32Type
+				return true
+			}
+			fprintf(x.Span, "unsupported %v - size 8 type %v %v", x, obj1Type, obj2Type)
+		}
+		if siz.Op == cc.Number && siz.Text == "8" {
+			if (obj1Type.Kind == c2go.Uint64 || obj1Type.Kind == c2go.Int64) && obj2Type.Kind == c2go.Float64 {
+				x.Op = cc.Eq
+				x.Left = obj1
+				x.Right = &cc.Expr{
+					Op: cc.Call,
+					Left: &cc.Expr{Op: cc.Name,
+						Text: "math.Float64bits",
+					},
+					List: []*cc.Expr{obj2},
+				}
+				x.XType = uint64Type
+				return true
+			}
+			fprintf(x.Span, "unsupported %v - size 8 type %v %v", x, obj1Type, obj2Type)
+		}
+		fprintf(x.Span, "unsupported %v", x)
+		return true
+
+	case "memcmp":
+		if len(x.List) != 3 {
+			fprintf(x.Span, "unsupported %v", x)
+			return false
+		}
+		obj1, obj1Type := objIndir(fn, x.List[0])
+		obj2, obj2Type := objIndir(fn, x.List[1])
+		if obj1Type == nil || !sameType(obj1Type, obj2Type) {
+			fprintf(x.Span, "unsupported %v", x)
+			return true
+		}
+
+		if !matchSize(fn, obj1, obj1Type, x.List[2]) && !matchSize(fn, obj2, obj2Type, x.List[2]) {
+			fprintf(x.Span, "unsupported %v - wrong size", x)
+			return true
+		}
+
+		x.Op = cc.EqEq
+		x.Left = obj1
+		x.Right = obj2
+		x.List = nil
+		x.XType = boolType
+		return true
+	}
+
+	return false
+}
+
+func objIndir(fn *cc.Decl, x *cc.Expr) (*cc.Expr, *cc.Type) {
+	objType := fixGoTypesExpr(fn, x, nil)
+	obj := x
+	if obj.XType != nil && obj.XType.Kind == cc.Array {
+		// obj stays as is
+	} else if obj.Op == cc.Addr {
+		obj = obj.Left
+		if objType != nil {
+			objType = objType.Base
+		}
+	} else {
+		obj = &cc.Expr{Op: cc.Indir, Left: obj}
+		if objType != nil {
+			objType = objType.Base
+		}
+	}
+	if objType == nil {
+		objType = obj.XType
+	}
+	return obj, objType
+}
+
+func matchSize(fn *cc.Decl, obj *cc.Expr, objType *cc.Type, siz *cc.Expr) bool {
+	switch siz.Op {
+	default:
+		return false
+
+	case cc.SizeofType:
+		// ok if sizeof type of first arg
+		return sameType(siz.Type, objType)
+
+	case cc.SizeofExpr:
+		// ok if sizeof *firstarg
+		y := siz.Left
+		if y.Op == cc.Paren {
+			y = y.Left
+		}
+		return obj.String() == y.String()
+	}
 }
