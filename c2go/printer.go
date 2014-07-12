@@ -386,7 +386,11 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		}
 
 	case cc.CastInit:
-		p.Print("(", x.Type, ")", x.Init)
+		if x.Type.Kind == cc.Ptr || x.Type.Kind == cc.Func {
+			p.Print("(", x.Type, ")", x.Init)
+		} else {
+			p.Print(x.Type, x.Init)
+		}
 
 	case cc.Comma:
 		if len(x.List) == 0 {
