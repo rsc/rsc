@@ -51,7 +51,7 @@ func span5(ctxt *Link, cursym *LSym) {
 			o = oplook_asm5(ctxt, p) // asmoutnacl might change p in rare cases
 		}
 		if m%4 != 0 || p.pc%4 != 0 {
-			ctxt.diag("!pc invalid: %P size=%d", p, m)
+			ctxt.diag("!pc invalid: %v size=%d", Pconv_list5(ctxt, p), m)
 		}
 		// must check literal pool here in case p generates many instructions
 		if ctxt.blitrl != nil {
@@ -67,7 +67,7 @@ func span5(ctxt *Link, cursym *LSym) {
 			}
 		}
 		if m == 0 && (p.as != int(AFUNCDATA_5) && p.as != int(APCDATA_5) && p.as != int(ADATABUNDLEEND_5)) {
-			ctxt.diag("zero-width instruction\n%P", p)
+			ctxt.diag("zero-width instruction\n%v", Pconv_list5(ctxt, p))
 			continue
 		}
 		switch o.flag & int(LFROM_asm5|LTO_asm5|LPOOL_asm5) {
@@ -142,10 +142,10 @@ func span5(ctxt *Link, cursym *LSym) {
 			if p.pc != opc {
 				bflag = 1
 			}
-			//print("%P pc changed %d to %d in iter. %d\n", p, opc, (int32)p->pc, times);
+			//print("%v pc changed %d to %d in iter. %d\n", Pconv_list5(ctxt, p), opc, (int32)p->pc, times);
 			c = p.pc + m
 			if m%4 != 0 || p.pc%4 != 0 {
-				ctxt.diag("pc invalid: %P size=%d", p, m)
+				ctxt.diag("pc invalid: %v size=%d", Pconv_list5(ctxt, p), m)
 			}
 			if m > len(out)*4 {
 				ctxt.diag("instruction size too large: %d > %d", m, len(out)*4)
@@ -155,7 +155,7 @@ func span5(ctxt *Link, cursym *LSym) {
 					ctxt.autosize = int32(p.to.offset + 4)
 					continue
 				}
-				ctxt.diag("zero-width instruction\n%P", p)
+				ctxt.diag("zero-width instruction\n%v", Pconv_list5(ctxt, p))
 				continue
 			}
 		}
@@ -194,14 +194,14 @@ func span5(ctxt *Link, cursym *LSym) {
 		} else {
 			m = asmoutnacl_asm5(ctxt, int32(c), p, o, out[:])
 			if opc != p.pc {
-				ctxt.diag("asmoutnacl broken: pc changed (%d->%d) in last stage: %P", opc, int32(p.pc), p)
+				ctxt.diag("asmoutnacl broken: pc changed (%d->%d) in last stage: %v", opc, int32(p.pc), Pconv_list5(ctxt, p))
 			}
 		}
 		if m%4 != 0 || p.pc%4 != 0 {
-			ctxt.diag("final stage: pc invalid: %P size=%d", p, m)
+			ctxt.diag("final stage: pc invalid: %v size=%d", Pconv_list5(ctxt, p), m)
 		}
 		if c > p.pc {
-			ctxt.diag("PC padding invalid: want %#lld, has %#d: %P", p.pc, c, p)
+			ctxt.diag("PC padding invalid: want %#d, has %#d: %v", p.pc, c, Pconv_list5(ctxt, p))
 		}
 		for c != p.pc {
 			// emit 0xe1a00000 (MOVW R0, R0)
@@ -261,7 +261,7 @@ func chipfloat5(ctxt *Link, e float64) int {
 	}
 	// rest of exp and mantissa (cd-efgh)
 	n |= int((h >> 16) & 0x3f)
-	//print("match %.8lux %.8lux %d\n", l, h, n);
+	//print("match %.8x %.8x %d\n", l, h, n);
 	return n
 no:
 	return -1
@@ -561,7 +561,7 @@ func flushpool_asm5(ctxt *Link, p *Prog, skip int, force int) int {
 	if ctxt.blitrl != nil {
 		if skip != 0 {
 			if false && skip == 1 {
-				print("note: flush literal pool at %llux: len=%ud ref=%ux\n", p.pc+4, pool_asm5.size, pool_asm5.start)
+				print("note: flush literal pool at %x: len=%d ref=%x\n", p.pc+4, pool_asm5.size, pool_asm5.start)
 			}
 			q = ctxt.arch.prg()
 			q.as = int(AB_5)
@@ -688,16 +688,16 @@ func asmout_asm5(ctxt *Link, p *Prog, o *Optab_asm5, out []uint32) {
 	o6 = 0
 	ctxt.armsize += int32(o.size)
 	if false { /*debug['P']*/
-		print("%ux: %P	type %d\n", uint32(p.pc), p, o.typ)
+		print("%x: %v	type %d\n", uint32(p.pc), Pconv_list5(ctxt, p), o.typ)
 	}
 	switch o.typ {
 	default:
 		ctxt.diag("unknown asm %d", o.typ)
-		prasm_asm5(p)
+		prasm_asm5(ctxt, p)
 		break
 	case 0: /* pseudo ops */
 		if false { /*debug['G']*/
-			print("%ux: %s: arm %d\n", uint32(p.pc), p.from.sym.name, p.from.sym.fnptr)
+			print("%x: %s: arm %d\n", uint32(p.pc), p.from.sym.name, p.from.sym.fnptr)
 		}
 		break
 	case 1: /* op R,[R],R */
@@ -777,7 +777,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o *Optab_asm5, out []uint32) {
 	case 7: /* bl (R) -> blx R */
 		aclass_asm5(ctxt, &p.to)
 		if ctxt.instoffset != 0 {
-			ctxt.diag("%P: doesn't support BL offset(REG) where offset != 0", p)
+			ctxt.diag("%v: doesn't support BL offset(REG) where offset != 0", Pconv_list5(ctxt, p))
 		}
 		o1 = oprrr_asm5(ctxt, int(ABL_5), p.scond)
 		o1 |= uint32(p.to.reg)
@@ -906,7 +906,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o *Optab_asm5, out []uint32) {
 		if false {
 			if rt == r || rf == int(REGPC_5) || r == int(REGPC_5) || rt == int(REGPC_5) {
 				ctxt.diag("bad registers in MUL")
-				prasm_asm5(p)
+				prasm_asm5(ctxt, p)
 			}
 		}
 		o1 |= (uint32(rf) << 8) | uint32(r) | (uint32(rt) << 16)
@@ -1026,7 +1026,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o *Optab_asm5, out []uint32) {
 			aclass_asm5(ctxt, &p.from)
 		}
 		if ctxt.instoffset != 0 {
-			ctxt.diag("offset must be zero in MOVM; %P", p)
+			ctxt.diag("offset must be zero in MOVM; %v", Pconv_list5(ctxt, p))
 		}
 		o1 |= (uint32(p.scond) & uint32(C_SCOND_5)) << 28
 		if p.scond&int(C_PBIT_5) != 0 {
@@ -1601,7 +1601,7 @@ func asmoutnacl_asm5(ctxt *Link, origPC int32, p *Prog, o *Optab_asm5, out []uin
 			}
 		} else {
 			if p.to.offset != 0 || size != 4 || p.to.reg >= 16 || p.to.reg < 0 {
-				ctxt.diag("unsupported instruction: %P", p)
+				ctxt.diag("unsupported instruction: %v", Pconv_list5(ctxt, p))
 			}
 			if (p.pc & 15) == 12 {
 				p.pc += 4
@@ -1677,7 +1677,7 @@ func asmoutnacl_asm5(ctxt *Link, origPC int32, p *Prog, o *Optab_asm5, out []uin
 			}
 		}
 		if p.to.typ == int(D_REG_5) && p.to.reg == 15 {
-			ctxt.diag("unsupported instruction (move to another register and use indirect jump instead): %P", p)
+			ctxt.diag("unsupported instruction (move to another register and use indirect jump instead): %v", Pconv_list5(ctxt, p))
 		}
 		if p.to.typ == int(D_OREG_5) && p.to.reg == 13 && (p.scond&int(C_WBIT_5) != 0) && size > 4 {
 			// function prolog with very large frame size: MOVW.W R14,-100004(R13)
@@ -1750,7 +1750,7 @@ func asmoutnacl_asm5(ctxt *Link, origPC int32, p *Prog, o *Optab_asm5, out []uin
 				// 2. load/store from R11.
 				// This won't handle .W/.P, so we should reject such code.
 				if p.scond&int(C_PBIT_5|C_WBIT_5) != 0 {
-					ctxt.diag("unsupported instruction (.P/.W): %P", p)
+					ctxt.diag("unsupported instruction (.P/.W): %v", Pconv_list5(ctxt, p))
 				}
 				q = ctxt.arch.prg()
 				*q = *p
@@ -1792,7 +1792,7 @@ func asmoutnacl_asm5(ctxt *Link, origPC int32, p *Prog, o *Optab_asm5, out []uin
 	if p.to.typ == int(D_REG_5) {
 		switch p.to.reg {
 		case 9:
-			ctxt.diag("invalid instruction, cannot write to R9: %P", p)
+			ctxt.diag("invalid instruction, cannot write to R9: %v", Pconv_list5(ctxt, p))
 			break
 		case 13:
 			if out != nil {
@@ -1864,9 +1864,9 @@ func oplook_asm5(ctxt *Link, p *Prog) *Optab_asm5 {
 			}
 		}
 	}
-	ctxt.diag("illegal combination %P; %d %d %d, %d %d", p, a1, a2, a3, p.from.typ, p.to.typ)
+	ctxt.diag("illegal combination %v; %d %d %d, %d %d", Pconv_list5(ctxt, p), a1, a2, a3, p.from.typ, p.to.typ)
 	ctxt.diag("from %d %d to %d %d\n", p.from.typ, p.from.name, p.to.typ, p.to.name)
-	prasm_asm5(p)
+	prasm_asm5(ctxt, p)
 	if o == nil {
 		o = optab_asm5[0:]
 	}
@@ -2015,7 +2015,7 @@ func oprrr_asm5(ctxt *Link, a int, sc int) uint32 {
 		return (uint32(o) & (0xf << 28)) | (0x12fff3 << 4)
 	}
 	ctxt.diag("bad rrr %d", a)
-	prasm_asm5(ctxt.curp)
+	prasm_asm5(ctxt, ctxt.curp)
 	return 0
 }
 
@@ -2043,7 +2043,7 @@ func olr_asm5(ctxt *Link, v int, b int, r int, sc int) uint32 {
 		o ^= 1 << 23
 	}
 	if v >= (1<<12) || v < 0 {
-		ctxt.diag("literal span too large: %d (R%d)\n%P", v, b, ctxt.printp)
+		ctxt.diag("literal span too large: %d (R%d)\n%v", v, b, Pconv_list5(ctxt, ctxt.printp))
 	}
 	o |= uint32(v)
 	o |= uint32(b) << 16
@@ -2069,7 +2069,7 @@ func olhr_asm5(ctxt *Link, v int, b int, r int, sc int) uint32 {
 		o ^= 1 << 23
 	}
 	if v >= (1<<8) || v < 0 {
-		ctxt.diag("literal span too large: %d (R%d)\n%P", v, b, ctxt.printp)
+		ctxt.diag("literal span too large: %d (R%d)\n%v", v, b, Pconv_list5(ctxt, ctxt.printp))
 	}
 	o |= (uint32(v) & 0xf) | ((uint32(v) >> 4) << 8) | (1 << 22)
 	o |= uint32(b) << 16
@@ -2118,10 +2118,10 @@ func ofsr_asm5(ctxt *Link, a int, r int, v int32, b int, sc int, p *Prog) uint32
 		o ^= 1 << 23
 	}
 	if v&3 != 0 /*untyped*/ {
-		ctxt.diag("odd offset for floating point op: %d\n%P", v, p)
+		ctxt.diag("odd offset for floating point op: %d\n%v", v, Pconv_list5(ctxt, p))
 	} else {
 		if v >= (1<<10) || v < 0 {
-			ctxt.diag("literal span too large: %d\n%P", v, p)
+			ctxt.diag("literal span too large: %d\n%v", v, Pconv_list5(ctxt, p))
 		}
 	}
 	o |= (uint32(v) >> 2) & 0xFF
@@ -2154,7 +2154,7 @@ func omvl_asm5(ctxt *Link, p *Prog, a *Addr, dr int) uint32 {
 		v = int(immrot_asm5(uint32(^ctxt.instoffset)))
 		if v == 0 {
 			ctxt.diag("missing literal")
-			prasm_asm5(p)
+			prasm_asm5(ctxt, p)
 			return 0
 		}
 		o1 = int32(oprrr_asm5(ctxt, int(AMVN_5), p.scond&int(C_SCOND_5)))
@@ -2401,7 +2401,7 @@ func opbra_asm5(ctxt *Link, a int, sc int) uint32 {
 		return (0xe << 28) | (0x5 << 25)
 	}
 	ctxt.diag("bad bra %A", a)
-	prasm_asm5(ctxt.curp)
+	prasm_asm5(ctxt, ctxt.curp)
 	return 0
 }
 
@@ -2638,8 +2638,8 @@ func immhalf_asm5(v int32) int {
 	return 0
 }
 
-func prasm_asm5(p *Prog) {
-	print("%P\n", p)
+func prasm_asm5(ctxt *Link, p *Prog) {
+	print("%v\n", Pconv_list5(ctxt, p))
 }
 
 func cmp_asm5(a int, b int) bool {

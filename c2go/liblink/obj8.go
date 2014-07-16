@@ -182,7 +182,7 @@ func progedit_obj8(ctxt *Link, p *Prog) {
 			var f32 float32
 			f32 = float32(p.from.u.dval)
 			i32 = int32(math.Float32bits(f32))
-			literal = fmt.Sprintf("$f32.%08ux", uint32(i32))
+			literal = fmt.Sprintf("$f32.%08x", uint32(i32))
 			s = linklookup(ctxt, string(literal), 0)
 			if s.typ == 0 {
 				s.typ = int(SRODATA)
@@ -213,7 +213,7 @@ func progedit_obj8(ctxt *Link, p *Prog) {
 		if p.from.typ == int(D_FCONST_8) {
 			var i64 int64
 			i64 = int64(math.Float64bits(p.from.u.dval))
-			literal = fmt.Sprintf("$f64.%016llux", uint64(i64))
+			literal = fmt.Sprintf("$f64.%016x", uint64(i64))
 			s = linklookup(ctxt, string(literal), 0)
 			if s.typ == 0 {
 				s.typ = int(SRODATA)

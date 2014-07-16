@@ -43,7 +43,7 @@ func ldobjfile(ctxt *Link, f *Biobuf, pkg string, len int64, pn string) {
 		sysfatal("%s: invalid file end", pn)
 	}
 	if Boffset(f) != start+len {
-		sysfatal("%s: unexpected end at %lld, want %lld", pn, int64(Boffset(f)), int64(start+len))
+		sysfatal("%s: unexpected end at %d, want %d", pn, int64(Boffset(f)), int64(start+len))
 	}
 }
 
@@ -203,7 +203,7 @@ func writeobj(ctxt *Link, b *Biobuf) {
 				var tmp uint8 = s.seenglobl
 				s.seenglobl++
 				if tmp != 0 {
-					print("duplicate %P\n", p)
+					print("duplicate %v\n", ctxt.Pconv(p))
 				}
 				if s.onlist != 0 {
 					sysfatal("symbol %s listed multiple times", s.name)
@@ -345,21 +345,21 @@ func writesym_objfile(ctxt *Link, b *Biobuf, s *LSym) {
 		if s.nosplit != 0 {
 			Bprint(ctxt.bso, "nosplit ")
 		}
-		Bprint(ctxt.bso, "size=%lld value=%lld", int64(s.size), int64(s.value))
+		Bprint(ctxt.bso, "size=%d value=%d", int64(s.size), int64(s.value))
 		if s.typ == int(STEXT) {
-			Bprint(ctxt.bso, " args=%#llux locals=%#llux", uint64(s.args), uint64(s.locals))
+			Bprint(ctxt.bso, " args=%#x locals=%#x", uint64(s.args), uint64(s.locals))
 			if s.leaf != 0 {
 				Bprint(ctxt.bso, " leaf")
 			}
 		}
 		Bprint(ctxt.bso, "\n")
 		for p = s.text; p != nil; p = p.link {
-			Bprint(ctxt.bso, "\t%#06ux %P\n", int(p.pc), p)
+			Bprint(ctxt.bso, "\t%#06x %v\n", int(p.pc), ctxt.Pconv(p))
 		}
 		for i = 0; i < len(s.p); {
-			Bprint(ctxt.bso, "\t%#06ux", i)
+			Bprint(ctxt.bso, "\t%#06x", i)
 			for j = i; j < i+16 && j < len(s.p); j++ {
-				Bprint(ctxt.bso, " %02ux", s.p[j])
+				Bprint(ctxt.bso, " %02x", s.p[j])
 			}
 			for ; j < i+16; j++ {
 				Bprint(ctxt.bso, "   ")
@@ -382,7 +382,7 @@ func writesym_objfile(ctxt *Link, b *Biobuf, s *LSym) {
 			if r.sym != nil {
 				name = r.sym.name
 			}
-			Bprint(ctxt.bso, "\trel %d+%d t=%d %s+%lld\n", int(r.off), r.siz, r.typ, name, int64(r.add))
+			Bprint(ctxt.bso, "\trel %d+%d t=%d %s+%d\n", int(r.off), r.siz, r.typ, name, int64(r.add))
 		}
 	}
 	Bputc(b, 0xfe)
@@ -661,15 +661,15 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 		if s.nosplit != 0 {
 			Bprint(ctxt.bso, "nosplit ")
 		}
-		Bprint(ctxt.bso, "size=%lld value=%lld", int64(s.size), int64(s.value))
+		Bprint(ctxt.bso, "size=%d value=%d", int64(s.size), int64(s.value))
 		if s.typ == int(STEXT) {
-			Bprint(ctxt.bso, " args=%#llux locals=%#llux", uint64(s.args), uint64(s.locals))
+			Bprint(ctxt.bso, " args=%#x locals=%#x", uint64(s.args), uint64(s.locals))
 		}
 		Bprint(ctxt.bso, "\n")
 		for i = 0; i < len(s.p); {
-			Bprint(ctxt.bso, "\t%#06ux", i)
+			Bprint(ctxt.bso, "\t%#06x", i)
 			for j = i; j < i+16 && j < len(s.p); j++ {
-				Bprint(ctxt.bso, " %02ux", s.p[j])
+				Bprint(ctxt.bso, " %02x", s.p[j])
 			}
 			for ; j < i+16; j++ {
 				Bprint(ctxt.bso, "   ")
@@ -688,7 +688,7 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 		}
 		for i = range s.r {
 			r = &s.r[i]
-			Bprint(ctxt.bso, "\trel %d+%d t=%d %s+%lld\n", int(r.off), r.siz, r.typ, r.sym.name, int64(r.add))
+			Bprint(ctxt.bso, "\trel %d+%d t=%d %s+%d\n", int(r.off), r.siz, r.typ, r.sym.name, int64(r.add))
 		}
 	}
 }

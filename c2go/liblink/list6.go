@@ -155,9 +155,9 @@ func Rconv_list6(r int) string {
 //	%A int		Opcodes (instruction mnemonics)
 //
 //	%s Addr*	Addresses (instruction operands)
-//		Flags: "%lD": seperate the high and low words of a constant by "-"
+//		Flags: "%D": seperate the high and low words of a constant by "-"
 //
-//	%P Prog*	Instructions
+//	%v Prog*	Instructions
 //
 //	%R int		Registers
 //

@@ -187,7 +187,7 @@ func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
 				o = p.to.offset
 				switch siz {
 				default:
-					ctxt.diag("bad nuxi %d\n%P", siz, p)
+					ctxt.diag("bad nuxi %d\n%v", siz, ctxt.Pconv(p))
 					break
 				case 1:
 					s.p[off] = byte(o)
@@ -207,7 +207,7 @@ func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
 					r.typ = int(R_ADDR)
 					r.add = p.to.offset
 				} else {
-					ctxt.diag("bad data: %P", p)
+					ctxt.diag("bad data: %v", ctxt.Pconv(p))
 				}
 			}
 		out:
@@ -281,7 +281,7 @@ func symgrow(ctxt *Link, s *LSym, lsiz int64) {
 	var siz int
 	siz = int(lsiz)
 	if int64(siz) != lsiz {
-		sysfatal("symgrow size %lld too long", lsiz)
+		sysfatal("symgrow size %d too long", lsiz)
 	}
 	if len(s.p) >= siz {
 		return
