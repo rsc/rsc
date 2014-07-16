@@ -49,6 +49,10 @@ func Bprint(b *Biobuf, format string, args ...interface{}) {
 	b.written += int64(n)
 }
 
+func print(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
+}
+
 func Bflush(b *Biobuf) {
 	b.w.Flush()
 }
