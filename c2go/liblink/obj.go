@@ -251,7 +251,7 @@ func linkprfile(ctxt *Link, l int) {
 		n = int(HISTSZ_obj)
 	}
 	for i = 0; i < n; i++ {
-		print("%s:%ld ", a[i].name, int32(int32(l-a[i].line)+a[i].offset+1))
+		print("%s:%d ", a[i].name, int32(int32(l-a[i].line)+a[i].offset+1))
 	}
 }
 

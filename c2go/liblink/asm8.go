@@ -160,11 +160,11 @@ func span8(ctxt *Link, s *LSym) {
 	c += -c & int(FuncAlign_asm8-1)
 	s.size = c
 	if false { /* debug['a'] > 1 */
-		print("span1 %s %lld (%d tries)\n %.6ux", s.name, s.size, n, 0)
+		print("span1 %s %d (%d tries)\n %.6x", s.name, s.size, n, 0)
 		for i = range s.p {
-			print(" %.2ux", s.p[i])
+			print(" %.2x", s.p[i])
 			if i%16 == 15 {
-				print("\n  %.6ux", i+1)
+				print("\n  %.6x", i+1)
 			}
 		}
 		if i%16 != 0 /*untyped*/ {
@@ -173,7 +173,7 @@ func span8(ctxt *Link, s *LSym) {
 		for i = range s.r {
 			var r *Reloc
 			r = &s.r[i]
-			print(" rel %#.4ux/%d %s%+lld\n", r.off, r.siz, r.sym.name, r.add)
+			print(" rel %#.4x/%d %s%+d\n", r.off, r.siz, r.sym.name, r.add)
 		}
 	}
 }
@@ -3737,9 +3737,9 @@ func byteswapreg_asm8(ctxt *Link, a *Addr) int {
 	return 0
 }
 
-func subreg_asm8(p *Prog, from int, to int) {
+func subreg_asm8(ctxt *Link, p *Prog, from int, to int) {
 	if false { /* debug['Q'] */
-		print("\n%P	s/%R/%R/\n", p, from, to)
+		print("\n%v	s/%R/%R/\n", Pconv_list8(ctxt, p), from, to)
 	}
 	if p.from.typ == from {
 		p.from.typ = to
@@ -3767,7 +3767,7 @@ func subreg_asm8(p *Prog, from int, to int) {
 		p.tt = 0
 	}
 	if false { /* debug['Q'] */
-		print("%P\n", p)
+		print("%v\n", Pconv_list8(ctxt, p))
 	}
 }
 
@@ -3837,7 +3837,7 @@ func doasm_asm8(ctxt *Link, p *Prog) {
 	o = &optab_asm8[p.as]
 	t = o.ytab
 	if t == nil {
-		ctxt.diag("asmins: noproto %P", p)
+		ctxt.diag("asmins: noproto %v", Pconv_list8(ctxt, p))
 		return
 	}
 	for z = 0; t[0] != 0; (func() { z += int(t[3]); t = t[4:] })() {
@@ -3877,7 +3877,7 @@ found:
 	op = int(o.op[z])
 	switch t[2] {
 	default:
-		ctxt.diag("asmins: unknown z %d %P", t[2], p)
+		ctxt.diag("asmins: unknown z %d %v", t[2], Pconv_list8(ctxt, p))
 		return
 	case Zpseudo_asm8:
 		break
@@ -4157,7 +4157,7 @@ found:
 				ctxt.andptr = ctxt.andptr[1:]
 			} else {
 				if int(t[2]) == Zloop_asm8 {
-					ctxt.diag("loop too far: %P", p)
+					ctxt.diag("loop too far: %v", Pconv_list8(ctxt, p))
 				} else {
 					v -= 5 - 2
 					if int(t[2]) == Zbr_asm8 {
@@ -4193,7 +4193,7 @@ found:
 			ctxt.andptr = ctxt.andptr[1:]
 		} else {
 			if int(t[2]) == Zloop_asm8 {
-				ctxt.diag("loop too far: %P", p)
+				ctxt.diag("loop too far: %v", Pconv_list8(ctxt, p))
 			} else {
 				if int(t[2]) == Zbr_asm8 {
 					ctxt.andptr[0] = 0x0f
@@ -4292,7 +4292,7 @@ bad:
 			ctxt.andptr[0] = 0x87
 			ctxt.andptr = ctxt.andptr[1:] /* xchg lhs,bx */
 			asmand_asm8(ctxt, &p.from, int(reg_asm8[breg]))
-			subreg_asm8(&pp, z, breg)
+			subreg_asm8(ctxt, &pp, z, breg)
 			doasm_asm8(ctxt, &pp)
 			ctxt.andptr[0] = 0x87
 			ctxt.andptr = ctxt.andptr[1:] /* xchg lhs,bx */
@@ -4300,7 +4300,7 @@ bad:
 		} else {
 			ctxt.andptr[0] = uint8(0x90 + int(reg_asm8[z]))
 			ctxt.andptr = ctxt.andptr[1:] /* xchg lsh,ax */
-			subreg_asm8(&pp, z, int(D_AX_8))
+			subreg_asm8(ctxt, &pp, z, int(D_AX_8))
 			doasm_asm8(ctxt, &pp)
 			ctxt.andptr[0] = uint8(0x90 + int(reg_asm8[z]))
 			ctxt.andptr = ctxt.andptr[1:] /* xchg lsh,ax */
@@ -4314,7 +4314,7 @@ bad:
 			ctxt.andptr[0] = 0x87
 			ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
 			asmand_asm8(ctxt, &p.to, int(reg_asm8[breg]))
-			subreg_asm8(&pp, z, breg)
+			subreg_asm8(ctxt, &pp, z, breg)
 			doasm_asm8(ctxt, &pp)
 			ctxt.andptr[0] = 0x87
 			ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
@@ -4322,19 +4322,19 @@ bad:
 		} else {
 			ctxt.andptr[0] = uint8(0x90 + int(reg_asm8[z]))
 			ctxt.andptr = ctxt.andptr[1:] /* xchg rsh,ax */
-			subreg_asm8(&pp, z, int(D_AX_8))
+			subreg_asm8(ctxt, &pp, z, int(D_AX_8))
 			doasm_asm8(ctxt, &pp)
 			ctxt.andptr[0] = uint8(0x90 + int(reg_asm8[z]))
 			ctxt.andptr = ctxt.andptr[1:] /* xchg rsh,ax */
 		}
 		return
 	}
-	ctxt.diag("doasm: notfound t2=%ux from=%ux to=%ux %P", t[2], p.from.typ, p.to.typ, p)
+	ctxt.diag("doasm: notfound t2=%x from=%x to=%x %v", t[2], p.from.typ, p.to.typ, Pconv_list8(ctxt, p))
 	return
 mfound:
 	switch t[3] {
 	default:
-		ctxt.diag("asmins: unknown mov %d %P", t[3], p)
+		ctxt.diag("asmins: unknown mov %d %v", t[3], Pconv_list8(ctxt, p))
 		break
 	case 0: /* lit */
 		for z = 4; int(t[z]) != E_asm6; z++ {

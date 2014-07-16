@@ -11,6 +11,9 @@ func main() {
 		log.Fatal(err)
 	}
 	ctxt := linknew(&linkamd64)
+	ctxt.debugasm = 1
+	ctxt.bso = Binitw(os.Stderr)
+	defer Bflush(ctxt.bso)
 	ctxt.diag = log.Fatalf
 	obuf := Binitw(f)
 	Bprint(obuf, "go object %s %s %s\n", getgoos(), getgoarch(), getgoversion())

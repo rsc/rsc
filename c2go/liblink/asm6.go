@@ -170,11 +170,11 @@ func span6(ctxt *Link, s *LSym) {
 	c += -c & int(FuncAlign_asm6-1)
 	s.size = c
 	if false { /* debug['a'] > 1 */
-		print("span1 %s %lld (%d tries)\n %.6ux", s.name, s.size, n, 0)
+		print("span1 %s %d (%d tries)\n %.6x", s.name, s.size, n, 0)
 		for i = range s.p {
-			print(" %.2ux", s.p[i])
+			print(" %.2x", s.p[i])
 			if i%16 == 15 {
-				print("\n  %.6ux", i+1)
+				print("\n  %.6x", i+1)
 			}
 		}
 		if i%16 != 0 /*untyped*/ {
@@ -183,7 +183,7 @@ func span6(ctxt *Link, s *LSym) {
 		for i = range s.r {
 			var r *Reloc
 			r = &s.r[i]
-			print(" rel %#.4ux/%d %s%+lld\n", r.off, r.siz, r.sym.name, r.add)
+			print(" rel %#.4x/%d %s%+d\n", r.off, r.siz, r.sym.name, r.add)
 		}
 	}
 }
@@ -473,7 +473,7 @@ func asmins_asm6(ctxt *Link, p *Prog) {
 		 * note that the handbook often misleadingly shows 66/f2/f3 in `opcode'.
 		 */
 		if p.mode != 64 {
-			ctxt.diag("asmins: illegal in mode %d: %P", p.mode, p)
+			ctxt.diag("asmins: illegal in mode %d: %v", p.mode, Pconv_list6(ctxt, p))
 		}
 		n = -cap(ctxt.andptr) + cap(and0)
 		for np = 0; np < n; np++ {
@@ -3238,9 +3238,9 @@ func isax_asm6(a *Addr) int {
 	return 0
 }
 
-func subreg_asm6(p *Prog, from int, to int) {
+func subreg_asm6(ctxt *Link, p *Prog, from int, to int) {
 	if false { /*debug['Q']*/
-		print("\n%P	s/%R/%R/\n", p, from, to)
+		print("\n%v	s/%R/%R/\n", Pconv_list6(ctxt, p), from, to)
 	}
 	if p.from.typ == from {
 		p.from.typ = to
@@ -3262,7 +3262,7 @@ func subreg_asm6(p *Prog, from int, to int) {
 		p.to.typ = to + int(D_INDIR_6)
 	}
 	if false { /*debug['Q']*/
-		print("%P\n", p)
+		print("%v\n", Pconv_list6(ctxt, p))
 	}
 }
 
@@ -3312,7 +3312,7 @@ func doasm_asm6(ctxt *Link, p *Prog) {
 	ctxt.curp = p // TODO
 	o = opindex_asm6[p.as]
 	if o == nil {
-		ctxt.diag("asmins: missing op %P", p)
+		ctxt.diag("asmins: missing op %v", Pconv_list6(ctxt, p))
 		return
 	}
 	pre = prefixof_asm6(ctxt, &p.from)
@@ -3335,7 +3335,7 @@ func doasm_asm6(ctxt *Link, p *Prog) {
 	tt = p.tt * int(Ymax_asm6)
 	t = o.ytab
 	if t == nil {
-		ctxt.diag("asmins: noproto %P", p)
+		ctxt.diag("asmins: noproto %v", Pconv_list6(ctxt, p))
 		return
 	}
 	xo = o.op[0] == 0x0f
@@ -3380,7 +3380,7 @@ found:
 		break
 	case Pw_asm6: /* 64-bit escape */
 		if p.mode != 64 {
-			ctxt.diag("asmins: illegal 64: %P", p)
+			ctxt.diag("asmins: illegal 64: %v", Pconv_list6(ctxt, p))
 		}
 		ctxt.rexflag |= int(Pw_asm6)
 		break
@@ -3390,17 +3390,17 @@ found:
 		break
 	case P32_asm6: /* 32 bit but illegal if 64-bit mode */
 		if p.mode == 64 {
-			ctxt.diag("asmins: illegal in 64-bit mode: %P", p)
+			ctxt.diag("asmins: illegal in 64-bit mode: %v", Pconv_list6(ctxt, p))
 		}
 		break
 	case Py_asm6: /* 64-bit only, no prefix */
 		if p.mode != 64 {
-			ctxt.diag("asmins: illegal in %d-bit mode: %P", p.mode, p)
+			ctxt.diag("asmins: illegal in %d-bit mode: %v", p.mode, Pconv_list6(ctxt, p))
 		}
 		break
 	}
 	if z >= len(o.op) {
-		sysfatal("asmins bad table %P", p)
+		sysfatal("asmins bad table %v", Pconv_list6(ctxt, p))
 	}
 	op = int(o.op[z])
 	if op == 0x0f {
@@ -3411,7 +3411,7 @@ found:
 	}
 	switch t[2] {
 	default:
-		ctxt.diag("asmins: unknown z %d %P", t[2], p)
+		ctxt.diag("asmins: unknown z %d %v", t[2], Pconv_list6(ctxt, p))
 		return
 	case Zpseudo_asm6:
 		break
@@ -3611,7 +3611,7 @@ found:
 		l = int(v >> 32)
 		if l == 0 && rel.siz != 8 {
 			//p->mark |= 0100;
-			//print("zero: %llux %P\n", v, p);
+			//print("zero: %x %v\n", v, Pconv_list6(ctxt, p));
 			ctxt.rexflag &^= (0x40 | int(Rxw_asm6))
 			ctxt.rexflag |= regrex_asm6[p.to.typ] & int(Rxb_asm6)
 			ctxt.andptr[0] = uint8(0xb8 + reg_asm6[p.to.typ])
@@ -3625,13 +3625,13 @@ found:
 		} else {
 			if l == -1 && (uint64(v)&(uint64(1)<<31)) != 0 { /* sign extend */
 				//p->mark |= 0100;
-				//print("sign: %llux %P\n", v, p);
+				//print("sign: %x %v\n", v, Pconv_list6(ctxt, p));
 				ctxt.andptr[0] = 0xc7
 				ctxt.andptr = ctxt.andptr[1:]
 				asmando_asm6(ctxt, &p.to, 0)
 				put4_asm6(ctxt, int32(v)) /* need all 8 */
 			} else {
-				//print("all: %llux %P\n", v, p);
+				//print("all: %x %v\n", v, Pconv_list6(ctxt, p));
 				ctxt.rexflag |= regrex_asm6[p.to.typ] & int(Rxb_asm6)
 				ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
 				ctxt.andptr = ctxt.andptr[1:]
@@ -3771,7 +3771,7 @@ found:
 				ctxt.andptr = ctxt.andptr[1:]
 			} else {
 				if int(t[2]) == Zloop_asm6 {
-					ctxt.diag("loop too far: %P", p)
+					ctxt.diag("loop too far: %v", Pconv_list6(ctxt, p))
 				} else {
 					v -= 5 - 2
 					if int(t[2]) == Zbr_asm6 {
@@ -3807,7 +3807,7 @@ found:
 			ctxt.andptr = ctxt.andptr[1:]
 		} else {
 			if int(t[2]) == Zloop_asm6 {
-				ctxt.diag("loop too far: %P", p)
+				ctxt.diag("loop too far: %v", Pconv_list6(ctxt, p))
 			} else {
 				if int(t[2]) == Zbr_asm6 {
 					ctxt.andptr[0] = 0x0f
@@ -3907,7 +3907,7 @@ bad:
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg lhs,bx */
 				asmando_asm6(ctxt, &p.from, reg_asm6[D_BX_6])
-				subreg_asm6(&pp, z, int(D_BX_6))
+				subreg_asm6(ctxt, &pp, z, int(D_BX_6))
 				doasm_asm6(ctxt, &pp)
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg lhs,bx */
@@ -3915,7 +3915,7 @@ bad:
 			} else {
 				ctxt.andptr[0] = uint8(0x90 + reg_asm6[z])
 				ctxt.andptr = ctxt.andptr[1:] /* xchg lsh,ax */
-				subreg_asm6(&pp, z, int(D_AX_6))
+				subreg_asm6(ctxt, &pp, z, int(D_AX_6))
 				doasm_asm6(ctxt, &pp)
 				ctxt.andptr[0] = uint8(0x90 + reg_asm6[z])
 				ctxt.andptr = ctxt.andptr[1:] /* xchg lsh,ax */
@@ -3928,7 +3928,7 @@ bad:
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
 				asmando_asm6(ctxt, &p.to, reg_asm6[D_BX_6])
-				subreg_asm6(&pp, z, int(D_BX_6))
+				subreg_asm6(ctxt, &pp, z, int(D_BX_6))
 				doasm_asm6(ctxt, &pp)
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
@@ -3936,7 +3936,7 @@ bad:
 			} else {
 				ctxt.andptr[0] = uint8(0x90 + reg_asm6[z])
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rsh,ax */
-				subreg_asm6(&pp, z, int(D_AX_6))
+				subreg_asm6(ctxt, &pp, z, int(D_AX_6))
 				doasm_asm6(ctxt, &pp)
 				ctxt.andptr[0] = uint8(0x90 + reg_asm6[z])
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rsh,ax */
@@ -3949,7 +3949,7 @@ bad:
 mfound:
 	switch mo[0].code {
 	default:
-		ctxt.diag("asmins: unknown mov %d %P", mo[0].code, p)
+		ctxt.diag("asmins: unknown mov %d %v", mo[0].code, Pconv_list6(ctxt, p))
 		break
 	case 0: /* lit */
 		for z = 0; int(t[z]) != E_asm6; z++ {
@@ -4023,7 +4023,7 @@ mfound:
 	case 6: /* double shift */
 		if int(t[0]) == Pw_asm6 {
 			if p.mode != 64 {
-				ctxt.diag("asmins: illegal 64: %P", p)
+				ctxt.diag("asmins: illegal 64: %v", Pconv_list6(ctxt, p))
 			}
 			ctxt.rexflag |= int(Pw_asm6)
 			t = t[1:]

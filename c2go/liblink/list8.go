@@ -128,7 +128,7 @@ func Dconv_list8(p *Prog, isSplitConst bool, a *Addr) string {
 	str := ""
 	if isSplitConst {
 		if i == int(D_CONST2_8) {
-			str = fmt.Sprintf("$%lld-%d", a.offset, a.offset2)
+			str = fmt.Sprintf("$%d-%d", a.offset, a.offset2)
 		} else {
 			// ATEXT dst is not constant
 			str = fmt.Sprintf("!!%s", Dconv_list8(p, false, a))
@@ -137,7 +137,7 @@ func Dconv_list8(p *Prog, isSplitConst bool, a *Addr) string {
 	}
 	if i >= int(D_INDIR_8) {
 		if a.offset != 0 {
-			str = fmt.Sprintf("%lld(%R)", a.offset, i-int(D_INDIR_8))
+			str = fmt.Sprintf("%d(%R)", a.offset, i-int(D_INDIR_8))
 		} else {
 			str = fmt.Sprintf("(%R)", i-int(D_INDIR_8))
 		}
@@ -146,7 +146,7 @@ func Dconv_list8(p *Prog, isSplitConst bool, a *Addr) string {
 	switch i {
 	default:
 		if a.offset != 0 {
-			str = fmt.Sprintf("$%lld,%R", a.offset, i)
+			str = fmt.Sprintf("$%d,%R", a.offset, i)
 		} else {
 			str = fmt.Sprintf("%R", i)
 		}
@@ -159,43 +159,43 @@ func Dconv_list8(p *Prog, isSplitConst bool, a *Addr) string {
 			str = fmt.Sprintf("%s(SB)", a.sym.name)
 		} else {
 			if bigP_list8 != nil && bigP_list8.pcond != nil {
-				str = fmt.Sprintf("%lld", bigP_list8.pcond.pc)
+				str = fmt.Sprintf("%d", bigP_list8.pcond.pc)
 			} else {
 				if a.u.branch != nil {
-					str = fmt.Sprintf("%lld", a.u.branch.pc)
+					str = fmt.Sprintf("%d", a.u.branch.pc)
 				} else {
-					str = fmt.Sprintf("%lld(PC)", a.offset)
+					str = fmt.Sprintf("%d(PC)", a.offset)
 				}
 			}
 		}
 		break
 	case D_EXTERN_8:
-		str = fmt.Sprintf("%s+%lld(SB)", a.sym.name, a.offset)
+		str = fmt.Sprintf("%s+%d(SB)", a.sym.name, a.offset)
 		break
 	case D_STATIC_8:
-		str = fmt.Sprintf("%s<>+%lld(SB)", a.sym.name, a.offset)
+		str = fmt.Sprintf("%s<>+%d(SB)", a.sym.name, a.offset)
 		break
 	case D_AUTO_8:
 		if a.sym != nil {
-			str = fmt.Sprintf("%s+%lld(SP)", a.sym.name, a.offset)
+			str = fmt.Sprintf("%s+%d(SP)", a.sym.name, a.offset)
 		} else {
-			str = fmt.Sprintf("%lld(SP)", a.offset)
+			str = fmt.Sprintf("%d(SP)", a.offset)
 		}
 		break
 	case D_PARAM_8:
 		if a.sym != nil {
-			str = fmt.Sprintf("%s+%lld(FP)", a.sym.name, a.offset)
+			str = fmt.Sprintf("%s+%d(FP)", a.sym.name, a.offset)
 		} else {
-			str = fmt.Sprintf("%lld(FP)", a.offset)
+			str = fmt.Sprintf("%d(FP)", a.offset)
 		}
 		break
 	case D_CONST_8:
-		str = fmt.Sprintf("$%lld", a.offset)
+		str = fmt.Sprintf("$%d", a.offset)
 		break
 	case D_CONST2_8:
 		if !isSplitConst {
 			// D_CONST2 outside of ATEXT should not happen
-			str = fmt.Sprintf("!!$%lld-%d", a.offset, a.offset2)
+			str = fmt.Sprintf("!!$%d-%d", a.offset, a.offset2)
 		}
 		break
 	case D_FCONST_8:
@@ -221,17 +221,17 @@ conv:
 	return str
 } /* [D_AL] */ /* [D_AX] */ /* [D_F0] */ /* [D_CS] */ /* [D_GDTR] */ /* [D_IDTR] */ /* [D_LDTR] */ /* [D_MSW] */ /* [D_TASK] */ /* [D_CR] */ /* [D_DR] */ /* [D_TR] */ /* [D_X0] */ /* [D_TLS] */ /* [D_NONE] */
 
-func Pconv_list8(p *Prog) string {
+func Pconv_list8(ctxt *Link, p *Prog) string {
 	switch p.as {
 	case ADATA_8:
-		return fmt.Sprintf("%.5lld (%L)	%A	%s/%d,%s", p.pc, p.lineno, Aconv_list8(p.as), Dconv_list8(p, false, &p.from), p.from.scale, Dconv_list8(p, false, &p.to))
+		return fmt.Sprintf("%.5d (%L)	%A	%s/%d,%s", p.pc, p.lineno, Aconv_list8(p.as), Dconv_list8(p, false, &p.from), p.from.scale, Dconv_list8(p, false, &p.to))
 	case ATEXT_8:
 		if p.from.scale != 0 {
-			return fmt.Sprintf("%.5lld (%L)	%A	%s,%d,%s", p.pc, p.lineno, Aconv_list8(p.as), Dconv_list8(p, false, &p.from), p.from.scale, Dconv_list8(p, true, &p.to))
+			return fmt.Sprintf("%.5d (%L)	%A	%s,%d,%s", p.pc, p.lineno, Aconv_list8(p.as), Dconv_list8(p, false, &p.from), p.from.scale, Dconv_list8(p, true, &p.to))
 		}
-		return fmt.Sprintf("%.5lld (%L)	%A	%s,%s", p.pc, p.lineno, Aconv_list8(p.as), Dconv_list8(p, false, &p.from), Dconv_list8(p, true, &p.to))
+		return fmt.Sprintf("%.5d (%L)	%A	%s,%s", p.pc, p.lineno, Aconv_list8(p.as), Dconv_list8(p, false, &p.from), Dconv_list8(p, true, &p.to))
 	default:
-		return fmt.Sprintf("%.5lld (%L)	%A	%s,%s", p.pc, p.lineno, Aconv_list8(p.as), Dconv_list8(p, false, &p.from), Dconv_list8(p, false, &p.to))
+		return fmt.Sprintf("%.5d (%L)	%A	%s,%s", p.pc, p.lineno, Aconv_list8(p.as), Dconv_list8(p, false, &p.from), Dconv_list8(p, false, &p.to))
 	}
 }
 

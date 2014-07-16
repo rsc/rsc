@@ -20,6 +20,7 @@ var linkamd64 = LinkArch{
 	settextflag:   settextflag_obj6,
 	symtype:       symtype_obj6,
 	textflag:      textflag_obj6,
+	Pconv:         Pconv_list6,
 
 	minlc:   1,
 	ptrsize: 8,
@@ -134,7 +135,7 @@ func nacladdr_obj6(ctxt *Link, p *Prog, a *Addr) {
 		return
 	}
 	if a.typ == int(D_BP_6) || a.typ == int(D_INDIR_6+D_BP_6) {
-		ctxt.diag("invalid address: %P", p)
+		ctxt.diag("invalid address: %v", ctxt.Pconv(p))
 		return
 	}
 	if a.typ == int(D_INDIR_6+D_TLS_6) {
@@ -153,7 +154,7 @@ func nacladdr_obj6(ctxt *Link, p *Prog, a *Addr) {
 			break
 		default:
 			if a.index != int(D_NONE_6) {
-				ctxt.diag("invalid address %P", p)
+				ctxt.diag("invalid address %v", ctxt.Pconv(p))
 			}
 			a.index = a.typ - int(D_INDIR_6)
 			if a.index != int(D_NONE_6) {
@@ -321,7 +322,7 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 			var f32 float32
 			f32 = float32(p.from.u.dval)
 			i32 = int32(math.Float32bits(f32))
-			literal = fmt.Sprintf("$f32.%08ux", uint32(i32))
+			literal = fmt.Sprintf("$f32.%08x", uint32(i32))
 			s = linklookup(ctxt, string(literal), 0)
 			if s.typ == 0 {
 				s.typ = int(SRODATA)
@@ -352,7 +353,7 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 		if p.from.typ == int(D_FCONST_6) {
 			var i64 int64
 			i64 = int64(math.Float64bits(p.from.u.dval))
-			literal = fmt.Sprintf("$f64.%016llux", uint64(i64))
+			literal = fmt.Sprintf("$f64.%016x", uint64(i64))
 			s = linklookup(ctxt, string(literal), 0)
 			if s.typ == 0 {
 				s.typ = int(SRODATA)

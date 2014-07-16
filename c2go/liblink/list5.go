@@ -58,7 +58,7 @@ func Dconv_list5(p *Prog, a *Addr) string {
 			return fmt.Sprintf("$%s", Mconv_list5(a))
 		}
 	case D_CONST2_8:
-		return fmt.Sprintf("$%lld-%d", a.offset, a.offset2)
+		return fmt.Sprintf("$%d-%d", a.offset, a.offset2)
 	case D_SHIFT_5:
 		v = int(a.offset)
 		op := "<<>>->@>"[((v>>5)&3)<<1:]
@@ -96,11 +96,11 @@ func Dconv_list5(p *Prog, a *Addr) string {
 		if a.sym != nil {
 			return fmt.Sprintf("%s(SB)", a.sym.name)
 		} else if p != nil && p.pcond != nil {
-			return fmt.Sprintf("%lld", p.pcond.pc)
+			return fmt.Sprintf("%d", p.pcond.pc)
 		} else if a.u.branch != nil {
-			return fmt.Sprintf("%lld", a.u.branch.pc)
+			return fmt.Sprintf("%d", a.u.branch.pc)
 		} else {
-			return fmt.Sprintf("%lld(PC)", a.offset) /*-pc*/
+			return fmt.Sprintf("%d(PC)", a.offset) /*-pc*/
 		}
 	case D_FCONST_8:
 		return fmt.Sprintf("$%.17g", a.u.dval)
@@ -121,7 +121,7 @@ func Mconv_list5(a *Addr) string {
 		return fmt.Sprintf("GOK-name(%d)", a.name)
 		break
 	case D_NONE_8:
-		return fmt.Sprintf("%lld", a.offset)
+		return fmt.Sprintf("%d", a.offset)
 		break
 	case D_EXTERN_8:
 		return fmt.Sprintf("%s+%d(SB)", s.name, int(a.offset))
@@ -139,7 +139,7 @@ func Mconv_list5(a *Addr) string {
 	return ""
 }
 
-func Pconv_list5(p *Prog) string {
+func Pconv_list5(ctxt *Link, p *Prog) string {
 	var a int
 	var s int
 	a = p.as
@@ -159,22 +159,22 @@ func Pconv_list5(p *Prog) string {
 	}
 	if a == int(AMOVM_5) {
 		if p.from.typ == int(D_CONST_8) {
-			return fmt.Sprintf("%.5lld (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, RAconv_list5(&p.from), Dconv_list5(p, &p.to))
+			return fmt.Sprintf("%.5d (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, RAconv_list5(&p.from), Dconv_list5(p, &p.to))
 		} else if p.to.typ == int(D_CONST_8) {
-			return fmt.Sprintf("%.5lld (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), RAconv_list5(&p.to))
+			return fmt.Sprintf("%.5d (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), RAconv_list5(&p.to))
 		} else {
-			return fmt.Sprintf("%.5lld (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), Dconv_list5(p, &p.to))
+			return fmt.Sprintf("%.5d (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), Dconv_list5(p, &p.to))
 		}
 	} else if a == int(ADATA_8) {
-		return fmt.Sprintf("%.5lld (%L)	%s	%s/%d,%s", p.pc, p.lineno, Aconv_list5(a), Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
+		return fmt.Sprintf("%.5d (%L)	%s	%s/%d,%s", p.pc, p.lineno, Aconv_list5(a), Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
 	} else if p.as == int(ATEXT_8) {
-		return fmt.Sprintf("%.5lld (%L)	%s	%s,%d,%s", p.pc, p.lineno, Aconv_list5(a), Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
+		return fmt.Sprintf("%.5d (%L)	%s	%s,%d,%s", p.pc, p.lineno, Aconv_list5(a), Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
 	} else if p.reg == int(NREG_5) {
-		return fmt.Sprintf("%.5lld (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), Dconv_list5(p, &p.to))
+		return fmt.Sprintf("%.5d (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), Dconv_list5(p, &p.to))
 	} else if p.from.typ != int(D_FREG_5) {
-		return fmt.Sprintf("%.5lld (%L)	%s%s	%s,R%d,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
+		return fmt.Sprintf("%.5d (%L)	%s%s	%s,R%d,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
 	} else {
-		return fmt.Sprintf("%.5lld (%L)	%s%s	%s,F%d,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
+		return fmt.Sprintf("%.5d (%L)	%s%s	%s,F%d,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
 	}
 }
 

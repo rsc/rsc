@@ -95,7 +95,7 @@ func linkpatch(ctxt *Link, sym *LSym) {
 			} else {
 				tmp = "<nil>"
 			}
-			ctxt.diag("branch out of range (%#ux)\n%P [%s]", c, p, tmp)
+			ctxt.diag("branch out of range (%#x)\n%v [%s]", c, ctxt.Pconv(p), tmp)
 			p.to.typ = ctxt.arch.D_NONE
 		}
 		p.to.u.branch = q

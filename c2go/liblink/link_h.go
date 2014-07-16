@@ -222,6 +222,10 @@ type Link struct {
 	filesyms       *LSym
 }
 
+func (ctxt *Link) Pconv(p *Prog) string {
+	return ctxt.arch.Pconv(ctxt, p)
+}
+
 type Plist struct {
 	name    *LSym
 	firstpc *Prog
@@ -243,6 +247,7 @@ type LinkArch struct {
 	settextflag   func(*Prog, int)
 	symtype       func(*Addr) /*0x208314380 6*/ int
 	textflag      func(*Prog) /*0x208314380 6*/ int
+	Pconv         func(*Link, *Prog) string
 	minlc         int
 	ptrsize       int
 	regsize       int
