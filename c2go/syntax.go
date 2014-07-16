@@ -80,8 +80,46 @@ func rewriteSyntax(x cc.Syntax) {
 			if x.Op == c2go.ExprBlock {
 				x.Block = filterBlock(x.Block)
 			}
+
+			switch x.Op {
+			case cc.Add, cc.Sub:
+				// Turn p + y - z, which is really (p + y) - z, into p + (y - z),
+				// so that there is only one pointer addition (which will turn into
+				// a slice operation using y-z as the index).
+				if x.XType != nil && x.XType.Kind == cc.Ptr {
+					switch x.Left.Op {
+					case cc.Add, cc.Sub:
+						if x.Left.XType != nil && x.Left.XType.Kind == cc.Ptr {
+							p, op1, y, op2, z := x.Left.Left, x.Left.Op, x.Left.Right, x.Op, x.Right
+							if op1 == cc.Sub {
+								y = &cc.Expr{Op: cc.Minus, Left: y, XType: y.XType}
+							}
+							x.Op = cc.Add
+							x.Left = p
+							x.Right = &cc.Expr{Op: op2, Left: y, Right: z, XType: x.XType}
+						}
+					}
+				}
+			}
+
+			// Turn c + p - q, which is really (c + p) - q, into c + (p - q),
+			// so that there is no int + ptr addition, only a ptr - ptr subtraction.
+			if x.Op == cc.Sub && x.Left.Op == cc.Add && !isPtrOrArray(x.XType) && isPtrOrArray(x.Left.XType) && !isPtrOrArray(x.Left.Left.XType) {
+				c, p, q := x.Left.Left, x.Left.Right, x.Right
+				expr := x.Left
+				expr.Left = p
+				expr.Right = q
+				expr.Op = cc.Sub
+				x.Left = c
+				x.Right = expr
+				expr.XType = x.XType
+			}
 		}
 	})
+}
+
+func isPtrOrArray(t *cc.Type) bool {
+	return t != nil && (t.Kind == cc.Ptr || t.Kind == cc.Array)
 }
 
 func filterBlock(x []*cc.Stmt) []*cc.Stmt {

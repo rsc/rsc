@@ -24,10 +24,13 @@ func (x byLen) Less(i, j int) bool {
 }
 
 type TypeGroup struct {
-	Vars   []*TypeVar
-	Types  []string
-	Ops    []string
-	Target *cc.Type
+	Vars       []*TypeVar
+	Types      []string
+	Ops        []string
+	Target     *cc.Type
+	TargetKind cc.TypeKind
+	Bool       bool // bool where 0=false, 1=true
+	NegBool    bool // bool where -1=false, 0=true
 }
 
 func inferTypes(prog *cc.Prog) {
@@ -68,6 +71,8 @@ func inferTypes(prog *cc.Prog) {
 	groups = map[*TypeVar][]*TypeVar{}
 	for _, tv := range typeVars {
 		upwalk(tv)
+	}
+	for _, tv := range typeVars {
 		groups[tv.parent] = append(groups[tv.parent], tv)
 	}
 
@@ -125,9 +130,6 @@ func inferTypes(prog *cc.Prog) {
 	}
 
 	for _, list := range grps {
-		if *showGroups && *src == "" && *dst == "" {
-			fmt.Printf("group(%d)\n", len(list))
-		}
 		var types []string
 		var haveType = map[string]bool{}
 		var ops []string
@@ -213,10 +215,26 @@ func inferTypes(prog *cc.Prog) {
 		g.Ops = ops
 		g.Types = types
 
-		if *showGroups && *src == "" && *dst == "" {
-			fmt.Printf("types: %s\n", strings.Join(types, ", "))
-			fmt.Printf("ops: %s\n", strings.Join(ops, ", "))
-			for _, tv := range list {
+		typeGroups = append(typeGroups, g)
+	}
+
+	determineBools()
+
+	if *showGroups && *src == "" && *dst == "" {
+		for _, g := range typeGroups {
+			if len(g.Vars) <= 1 {
+				continue
+			}
+			fmt.Printf("group(%d) %p\n", len(g.Vars), g)
+			if g.Bool {
+				fmt.Printf("real type: bool\n")
+			}
+			if g.NegBool {
+				fmt.Printf("real type: negbool\n")
+			}
+			fmt.Printf("types: %s\n", strings.Join(g.Types, ", "))
+			fmt.Printf("ops: %s\n", strings.Join(g.Ops, ", "))
+			for _, tv := range g.Vars {
 				fmt.Printf("\t%s (%d):", tv.Src, len(tv.Link))
 				if tv.UsedAsBool {
 					fmt.Printf(" bool")
@@ -244,6 +262,78 @@ func inferTypes(prog *cc.Prog) {
 	}
 }
 
+func determineBools() {
+	for _, g := range typeGroups {
+		g.Bool = true
+	}
+	changed := true
+	for changed {
+		changed = false
+	Groups:
+		for _, g := range typeGroups {
+			if !g.Bool {
+				continue
+			}
+			hasBool := false
+			for _, typ := range g.Types {
+				if strings.Contains(typ, "*") {
+					g.Bool = false
+					changed = true
+					continue Groups
+				}
+				if typ == "bool" {
+					hasBool = true
+				}
+			}
+			if !hasBool {
+				g.Bool = false
+				changed = true
+				continue
+			}
+			for _, tv := range g.Vars {
+				if tv.UsedAsBool {
+					continue
+				}
+				switch x := tv.Src.(type) {
+				case *cc.Decl:
+					typ := x.Type
+					if typ != nil && typ.Kind == cc.Func {
+						typ = typ.Base
+					}
+					if typ != nil && cc.Char <= typ.Kind && typ.Kind <= cc.Enum {
+						continue
+					}
+				case *cc.Expr:
+					switch x.Op {
+					case cc.AndAnd, cc.OrOr, cc.Not, cc.EqEq, cc.NotEq, cc.Gt, cc.Lt, cc.GtEq, cc.LtEq:
+						continue
+					case cc.Number:
+						if x.Text == "0" || x.Text == "1" {
+							continue
+						}
+					case cc.Call:
+						tv := typeVars[x.Left.XDecl]
+						if tv != nil && tv.Group != nil && tv.Group.Bool {
+							continue
+						}
+					case cc.Name, cc.Eq, cc.Paren:
+						continue
+					}
+				case *cc.Type:
+					if cc.Char <= x.Kind && x.Kind <= cc.Enum {
+						continue
+					}
+				default:
+					fmt.Printf("unexpected syntax in group: %T\n", tv.Src)
+				}
+				fmt.Printf("not bool %p: %v\n", g, tv.Src)
+				g.Bool = false
+				changed = true
+			}
+		}
+	}
+}
+
 type TypeVar struct {
 	Src        cc.Syntax
 	UsedAsBool bool
@@ -268,6 +358,7 @@ func (tv *TypeVar) Name() string {
 	return ""
 }
 
+var typeGroups []*TypeGroup
 var typeVars = map[cc.Syntax]*TypeVar{}
 var typeVarsIndir = map[cc.Syntax]*TypeVar{}
 var typeVarsAddr = map[cc.Syntax]*TypeVar{}
@@ -297,6 +388,8 @@ func add(x cc.Syntax) {
 			if x.Storage&cc.Static != 0 && curFn != nil {
 				fmt.Printf("func-static variable %s\n", x.Name)
 			}
+
+			x.CurFn = curFn
 
 			if x.Body != nil {
 				curFn = x
