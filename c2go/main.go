@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"code.google.com/p/rsc/c2go"
 	"code.google.com/p/rsc/cc"
@@ -50,8 +51,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	forceTypes(prog)
 	inferTypes(prog)
+	overrideTypes()
 	if *showGroups {
 		return
 	}
@@ -61,28 +62,92 @@ func main() {
 	write(prog, files)
 }
 
-func forceTypes(x cc.Syntax) {
-	cc.Postorder(x, func(x cc.Syntax) {
-		switch x := x.(type) {
-		case *cc.Decl:
-			switch x.Name {
-			case "o1", "h":
-				x.Type = &cc.Type{Kind: cc.Ulong}
-			case "oprrr", "opbra", "olr", "olhr", "olrr", "olhrr", "osr", "oshr", "ofsr", "osrr", "oshrr", "omvl", "ocmp":
-				x.Type.Base = &cc.Type{Kind: cc.Ulong}
-			case "out":
-				if x.Type != nil && x.Type.Base != nil && (x.Type.Base.Kind == cc.Long || x.Type.Base.Kind == cc.Int) {
-					x.Type.Base.Kind++
-				}
-			}
+func declKey(d *cc.Decl) string {
+	key := d.Name
+	if d.XOuter != nil && d.XOuter != d {
+		key = declKey(d.XOuter) + "." + key
+	} else if d.CurFn != nil {
+		key = declKey(d.CurFn) + "." + key
+	}
+	return key
+}
 
-		case *cc.Expr:
-			switch x.Op {
-			case cc.Name:
-				x.XType = x.XDecl.Type
+var override = map[string]*cc.Type{
+	"oprrr": uint32Type,
+	"opbra": uint32Type,
+	"olr":   uint32Type,
+	"olhr":  uint32Type,
+	"olrr":  uint32Type,
+	"osr":   uint32Type,
+	"olhrr": uint32Type,
+	"oshr":  uint32Type,
+	"ofsr":  uint32Type,
+	"osrr":  uint32Type,
+	"oshrr": uint32Type,
+	"omvl":  uint32Type,
+	"ocmp":  uint32Type,
+
+	"asmout.o1":  uint32Type,
+	"asmout.o2":  uint32Type,
+	"asmout.o3":  uint32Type,
+	"asmout.o4":  uint32Type,
+	"asmout.o5":  uint32Type,
+	"asmout.o6":  uint32Type,
+	"asmout.rel": &cc.Type{Kind: cc.Ptr},
+
+	".andptr": &cc.Type{Kind: c2go.Slice},
+
+	"chipfloat5.h": uint32Type,
+
+	"oplook.o":  &cc.Type{Kind: cc.Ptr},
+	"oplook.c1": &cc.Type{Kind: c2go.Slice},
+	"oplook.c3": &cc.Type{Kind: c2go.Slice},
+
+	"asmoutnacl.out": &cc.Type{Kind: c2go.Slice, Base: uint32Type},
+	"span5.out":      &cc.Type{Kind: cc.Array, Base: uint32Type, Width: &cc.Expr{Op: cc.Number, Text: "9"}},
+}
+
+func overrideTypes() {
+	for x, tv := range typeVars {
+		d, ok := x.(*cc.Decl)
+		if !ok {
+			continue
+		}
+		g := tv.Group
+		key := declKey(d)
+		if strings.Contains(key, "andptr") {
+			println(key)
+		}
+		if t := override[key]; t != nil {
+			println("found override", key)
+			if (t.Kind == cc.Ptr || t.Kind == c2go.Slice) && t.Base == nil {
+				g.TargetKind = t.Kind
+			} else {
+				g.Target = t
 			}
 		}
-	})
+		if g.Target != nil {
+			continue
+		}
+		if g.Bool {
+			g.Target = boolType
+			continue
+		}
+		var kind cc.TypeKind
+		for _, tv := range g.Vars {
+			if tv.Type == nil {
+				continue
+			}
+			if cc.Char <= tv.Type.Kind && tv.Type.Kind <= cc.Enum {
+				if k := c2goKind[tv.Type.Kind]; kind < k {
+					kind = k
+				}
+			}
+		}
+		if kind != 0 {
+			g.Target = &cc.Type{Kind: kind}
+		}
+	}
 }
 
 // Rewrite C types to be Go types.
@@ -106,9 +171,6 @@ func rewriteTypes(x cc.Syntax) {
 			x.Type = toGoType(x, x.Type, cache)
 			if x.Type != nil && x.Type.Kind == cc.Func && !x.Type.Base.Is(cc.Void) {
 				x.Type.Base = toGoType(x, x.Type.Base, cache)
-			}
-			if x.Name == "andptr" {
-				x.Type.Kind = c2go.Slice
 			}
 
 		case *cc.Expr:
@@ -148,7 +210,6 @@ func toGoType(x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Type) (r *cc.Typ
 	}
 
 	tv := typeVars[x]
-
 	switch typ.Kind {
 	default:
 		panic(fmt.Sprintf("unexpected C type %s", typ))
@@ -160,26 +221,7 @@ func toGoType(x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Type) (r *cc.Typ
 		// Use type group to decide.
 		var t *cc.Type
 		if tv != nil && tv.Group != nil {
-			g := tv.Group
-			if g.Target == nil {
-				var kind cc.TypeKind
-				for _, tv := range g.Vars {
-					if tv.Type == nil {
-						continue
-					}
-					if cc.Char <= tv.Type.Kind && tv.Type.Kind <= cc.Enum {
-						if k := c2goKind[tv.Type.Kind]; kind < k {
-							kind = k
-						}
-					}
-				}
-				if kind != 0 {
-					g.Target = &cc.Type{Kind: kind}
-				}
-			}
-			if g.Target != nil {
-				t = g.Target
-			}
+			t = tv.Group.Target
 		}
 		if t == nil {
 			t = &cc.Type{Kind: c2goKind[typ.Kind]}
@@ -195,12 +237,8 @@ func toGoType(x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Type) (r *cc.Typ
 		t := &cc.Type{Kind: cc.Ptr}
 		cache[typ] = t
 
-		if typ.Base.Kind == cc.Char {
-			t.Kind = c2go.String
-			return t
-		}
-
 		// Use type group to decide slice vs string vs ptr, if available.
+		forced := false
 		if tv != nil && tv.Group != nil {
 			g := tv.Group
 			if g.Target != nil {
@@ -209,14 +247,28 @@ func toGoType(x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Type) (r *cc.Typ
 				return t
 			}
 
-		PtrOps:
-			for _, op := range tv.Group.Ops {
-				switch op {
-				case "ptr+", "ptr++", "[i]":
-					t.Kind = c2go.Slice
-					break PtrOps
+			switch g.TargetKind {
+			case cc.Ptr:
+				// ok
+				forced = true
+			case c2go.Slice:
+				t.Kind = c2go.Slice
+				forced = true
+			default:
+			PtrOps:
+				for _, op := range tv.Group.Ops {
+					switch op {
+					case "ptr+", "ptr++", "[i]":
+						t.Kind = c2go.Slice
+						break PtrOps
+					}
 				}
 			}
+		}
+
+		if !forced && typ.Base.Kind == cc.Char {
+			t.Kind = c2go.String
+			return t
 		}
 
 		t.Base = toGoType(typ.Base, typ.Base, cache)
@@ -232,6 +284,10 @@ func toGoType(x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Type) (r *cc.Typ
 		return typ
 
 	case cc.Array:
+		if tv != nil && tv.Group != nil && tv.Group.Target != nil {
+			return tv.Group.Target
+		}
+
 		t := &cc.Type{Kind: cc.Array, Width: typ.Width}
 		if t.Width == nil {
 			t.Kind = c2go.Slice
@@ -297,6 +353,9 @@ func fixGoTypesStmt(fn *cc.Decl, x *cc.Stmt) {
 		fixGoTypesExpr(fn, x.Post, nil)
 		fixGoTypesExpr(fn, x.Expr, boolType)
 
+	case cc.Switch:
+		fixGoTypesExpr(fn, x.Expr, nil)
+
 	case cc.Return:
 		if x.Expr != nil {
 			forceGoType(fn, x.Expr, fn.Type.Base)
@@ -319,7 +378,8 @@ func fixGoTypesStmt(fn *cc.Decl, x *cc.Stmt) {
 
 func zeroFor(targ *cc.Type) *cc.Expr {
 	if targ != nil {
-		switch targ.Def().Kind {
+		targ = targ.Def()
+		switch targ.Kind {
 		case c2go.String:
 			return &cc.Expr{Op: cc.String, Texts: []string{`""`}}
 
@@ -328,6 +388,13 @@ func zeroFor(targ *cc.Type) *cc.Expr {
 
 		case cc.Struct, cc.Array:
 			return &cc.Expr{Op: cc.CastInit, Type: targ, Init: &cc.Init{}}
+
+		case c2go.Bool:
+			return &cc.Expr{Op: cc.Name, Text: "false"}
+		}
+
+		if c2go.Int8 <= targ.Kind && targ.Kind <= c2go.Float64 {
+			return &cc.Expr{Op: cc.Number, Text: "0"}
 		}
 		return &cc.Expr{Op: cc.Number, Text: "0 /*" + targ.String() + "*/"}
 	}
@@ -336,7 +403,6 @@ func zeroFor(targ *cc.Type) *cc.Expr {
 }
 
 func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
-
 	if x == nil {
 		return nil
 	}
@@ -354,18 +420,40 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 	case cc.AndAnd, cc.OrOr, cc.Not, cc.EqEq, cc.Lt, cc.LtEq, cc.Gt, cc.GtEq, cc.NotEq:
 		if targ != nil && targ.Kind != c2go.Bool {
 			old := copyExpr(x)
-			x.Op = cc.Call
-			x.Left = &cc.Expr{Op: cc.Name, Text: targ.String()}
-			x.Right = old
+			if targ.Kind == c2go.Int {
+				x.Op = cc.Call
+				x.Left = &cc.Expr{Op: cc.Name, Text: "bool2int"}
+				x.List = []*cc.Expr{old}
+				x.Right = nil
+			} else {
+				x.Op = cc.Cast
+				x.Left = &cc.Expr{Op: cc.Call, Left: &cc.Expr{Op: cc.Name, Text: "bool2int"}, List: []*cc.Expr{old}}
+				x.Type = targ
+			}
 			fixGoTypesExpr(fn, old, boolType)
 			return targ
 		}
 	default:
 		if targ != nil && targ.Kind == c2go.Bool {
 			old := copyExpr(x)
+			left := fixGoTypesExpr(fn, old, nil)
+			if left != nil && left.Kind == c2go.Bool {
+				return targ
+			}
+			if old.Op == cc.Number {
+				switch old.Text {
+				case "1":
+					x.Op = cc.Name
+					x.Text = "true"
+					return targ
+				case "0":
+					x.Op = cc.Name
+					x.Text = "false"
+					return targ
+				}
+			}
 			x.Op = cc.NotEq
 			x.Left = old
-			left := fixGoTypesExpr(fn, old, nil)
 			x.Right = zeroFor(left)
 			return targ
 		}
@@ -392,6 +480,15 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		return nil
 
 	case cc.Add, cc.And, cc.Div, cc.Mod, cc.Mul, cc.Or, cc.Sub, cc.Xor:
+		if x.Op == cc.Sub && isSliceOrArray(x.Left.XType) && isSliceOrArray(x.Right.XType) {
+			fixGoTypesExpr(fn, x.Left, nil)
+			fixGoTypesExpr(fn, x.Right, nil)
+			x.Left = &cc.Expr{Op: cc.Minus, Left: &cc.Expr{Op: cc.Call, Left: &cc.Expr{Op: cc.Name, Text: "cap"}, List: []*cc.Expr{x.Left}}}
+			x.Right = &cc.Expr{Op: cc.Call, Left: &cc.Expr{Op: cc.Name, Text: "cap"}, List: []*cc.Expr{x.Right}}
+			x.Op = cc.Add
+			return intType
+		}
+
 		left := fixGoTypesExpr(fn, x.Left, targ)
 
 		if x.Op == cc.And && x.Right.Op == cc.Twid {
@@ -419,19 +516,35 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 			x.Right = x.Right.Left
 		}
 
-		forceGoType(fn, x.Right, left)
-
 		if x.Op == cc.AddEq && isSliceOrString(left) {
+			fixGoTypesExpr(fn, x.Right, nil)
 			old := copyExpr(x.Left)
 			x.Op = cc.Eq
 			x.Right = &cc.Expr{Op: c2go.ExprSlice, List: []*cc.Expr{old, x.Right, nil}}
+			return left
 		}
+
+		forceGoType(fn, x.Right, left)
 
 		return left
 
 	case cc.Addr:
-		fixGoTypesExpr(fn, x.Left, nil)
-		return nil
+		left := fixGoTypesExpr(fn, x.Left, nil)
+		if left == nil {
+			return nil
+		}
+
+		if targ != nil && targ.Kind == c2go.Slice && sameType(targ.Base, left) {
+			l := x.Left
+			l.Op = c2go.ExprSlice
+			l.List = []*cc.Expr{l.Left, l.Right, nil}
+			l.Left = nil
+			l.Right = nil
+			fixMerge(x, l)
+			return targ
+		}
+
+		return &cc.Type{Kind: cc.Ptr, Base: left}
 
 	case cc.AndAnd, cc.OrOr, cc.Not:
 		fixGoTypesExpr(fn, x.Left, boolType)
@@ -475,7 +588,22 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		return x.Type
 
 	case cc.EqEq, cc.Gt, cc.GtEq, cc.Lt, cc.LtEq, cc.NotEq:
+		if fixSpecialCompare(fn, x) {
+			return boolType
+		}
 		left := fixGoTypesExpr(fn, x.Left, nil)
+		if x.Right.Op == cc.Number && x.Right.Text == "0" {
+			if isSliceOrPtr(left) {
+				x.Right.Op = cc.Name
+				x.Right.Text = "nil"
+				return boolType
+			}
+			if left != nil && left.Kind == c2go.String {
+				x.Right.Op = cc.String
+				x.Right.Texts = []string{`""`}
+				return boolType
+			}
+		}
 		right := fixGoTypesExpr(fn, x.Right, nil)
 		fixBinary(fn, x, left, right, nil)
 		return boolType
@@ -505,6 +633,10 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	case cc.Lsh, cc.Rsh:
 		left := fixGoTypesExpr(fn, x.Left, targ)
+		if left != nil && targ != nil && c2go.Int8 <= left.Kind && left.Kind <= c2go.Float64 && targ.Kind > left.Kind {
+			forceConvert(fn, x.Left, left, targ)
+			left = targ
+		}
 		fixShiftCount(fn, x.Right)
 		return left
 
@@ -602,7 +734,33 @@ func forceConvert(fn *cc.Decl, x *cc.Expr, actual, targ *cc.Type) {
 		return
 	}
 
-	if actual != nil && targ != nil && !sameType(actual, targ) {
+	if actual == nil || targ == nil {
+		return
+	}
+
+	if actual.Kind == c2go.Bool && c2go.Int8 <= targ.Kind && targ.Kind <= c2go.Float64 {
+		old := copyExpr(x)
+		if targ.Kind == c2go.Int {
+			x.Op = cc.Call
+			x.Left = &cc.Expr{Op: cc.Name, Text: "bool2int"}
+			x.List = []*cc.Expr{old}
+			x.Right = nil
+		} else {
+			x.Op = cc.Cast
+			x.Left = &cc.Expr{Op: cc.Call, Left: &cc.Expr{Op: cc.Name, Text: "bool2int"}, List: []*cc.Expr{old}}
+			x.Type = targ
+		}
+		return
+	}
+
+	if actual.Kind == c2go.Slice && targ.Kind == cc.Ptr && sameType(actual.Base, targ.Base) {
+		old := copyExpr(x)
+		x.Op = cc.Addr
+		x.Left = &cc.Expr{Op: cc.Index, Left: old, Right: &cc.Expr{Op: cc.Number, Text: "0"}}
+		return
+	}
+
+	if !sameType(actual, targ) {
 		old := copyExpr(x)
 		x.Op = cc.Cast
 		x.Left = old
@@ -620,8 +778,17 @@ func forceConvert(fn *cc.Decl, x *cc.Expr, actual, targ *cc.Type) {
 }
 
 func isNumericConst(x *cc.Expr) bool {
-	// TODO: better
-	return x.Op == cc.Number
+	switch x.Op {
+	case cc.Number:
+		return true
+	case cc.Name:
+		// TODO
+	case cc.Add, cc.And, cc.Div, cc.Mod, cc.Mul, cc.Or, cc.Sub, cc.Xor, cc.Lsh, cc.Rsh:
+		return isNumericConst(x.Left) && isNumericConst(x.Right)
+	case cc.Plus, cc.Minus, cc.Twid:
+		return isNumericConst(x.Left)
+	}
+	return false
 }
 
 func fixShiftCount(fn *cc.Decl, x *cc.Expr) {
@@ -641,7 +808,11 @@ func fixShiftCount(fn *cc.Decl, x *cc.Expr) {
 }
 
 func fixBinary(fn *cc.Decl, x *cc.Expr, left, right, targ *cc.Type) *cc.Type {
-	if left == nil || right == nil || left.Kind < c2go.Int8 || left.Kind > c2go.Float64 || right.Kind < c2go.Int8 || right.Kind > c2go.Float64 || targ == nil || targ.Kind < c2go.Int8 || targ.Kind > c2go.Float64 {
+	if left == nil || right == nil || left.Kind < c2go.Int8 || left.Kind > c2go.Float64 || right.Kind < c2go.Int8 || right.Kind > c2go.Float64 {
+		return nil
+	}
+
+	if targ != nil && (targ.Kind < c2go.Int8 || targ.Kind > c2go.Float64) {
 		return nil
 	}
 
@@ -654,7 +825,7 @@ func fixBinary(fn *cc.Decl, x *cc.Expr, left, right, targ *cc.Type) *cc.Type {
 	if t.Kind < right.Kind {
 		t = right
 	}
-	if t.Kind < targ.Kind {
+	if targ != nil && t.Kind < targ.Kind {
 		t = targ
 	}
 	if !sameType(t, left) {
@@ -693,6 +864,14 @@ func sameType(t, u *cc.Type) bool {
 
 func isSliceOrString(typ *cc.Type) bool {
 	return typ != nil && (typ.Kind == c2go.Slice || typ.Kind == c2go.String)
+}
+
+func isSliceOrPtr(typ *cc.Type) bool {
+	return typ != nil && (typ.Kind == c2go.Slice || typ.Kind == cc.Ptr)
+}
+
+func isSliceOrArray(typ *cc.Type) bool {
+	return typ != nil && (typ.Kind == c2go.Slice || typ.Kind == cc.Array)
 }
 
 func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
@@ -764,25 +943,49 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 		}
 		fprintf(x.Span, "unsupported %v", x)
 		return true
+	}
 
+	return false
+}
+
+func fixSpecialCompare(fn *cc.Decl, x *cc.Expr) bool {
+	if x.Right.Op != cc.Number || x.Right.Text != "0" || x.Left.Op != cc.Call || x.Left.Left.Op != cc.Name {
+		return false
+	}
+
+	call := x.Left
+	switch call.Left.Text {
 	case "memcmp":
-		if len(x.List) != 3 {
+		if len(call.List) != 3 {
 			fprintf(x.Span, "unsupported %v", x)
 			return false
 		}
-		obj1, obj1Type := objIndir(fn, x.List[0])
-		obj2, obj2Type := objIndir(fn, x.List[1])
+		obj1, obj1Type := objIndir(fn, call.List[0])
+		obj2, obj2Type := objIndir(fn, call.List[1])
 		if obj1Type == nil || !sameType(obj1Type, obj2Type) {
+			fprintf(x.Span, "unsupported %v", call)
+			return true
+		}
+
+		if !matchSize(fn, obj1, obj1Type, call.List[2]) && !matchSize(fn, obj2, obj2Type, call.List[2]) {
+			fprintf(x.Span, "unsupported %v - wrong size", call)
+			return true
+		}
+
+		x.Left = obj1
+		x.Right = obj2
+		x.List = nil
+		x.XType = boolType
+		return true
+
+	case "strcmp":
+		if len(call.List) != 2 {
 			fprintf(x.Span, "unsupported %v", x)
-			return true
+			return false
 		}
+		obj1 := call.List[0]
+		obj2 := call.List[1]
 
-		if !matchSize(fn, obj1, obj1Type, x.List[2]) && !matchSize(fn, obj2, obj2Type, x.List[2]) {
-			fprintf(x.Span, "unsupported %v - wrong size", x)
-			return true
-		}
-
-		x.Op = cc.EqEq
 		x.Left = obj1
 		x.Right = obj2
 		x.List = nil

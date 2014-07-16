@@ -311,6 +311,7 @@ type Decl struct {
 	Body    *Stmt
 
 	XOuter *Decl
+	CurFn  *Decl
 }
 
 func (d *Decl) String() string {

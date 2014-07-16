@@ -621,7 +621,11 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 		}
 		p.Print(x.Expr, nestBlock{x.Body, x.Else != nil})
 		if x.Else != nil {
-			p.Print(" else", nestBlock{x.Else, false})
+			if x.Else.Op == cc.If {
+				p.Print(" else ", x.Else)
+			} else {
+				p.Print(" else", nestBlock{x.Else, false})
+			}
 		}
 
 	case cc.Goto:
@@ -693,6 +697,7 @@ func (p *Printer) printType(t *cc.Type) {
 
 	switch t.Kind {
 	default:
+		p.Print(fmt.Sprintf("/*%p %d*/", t, t.Kind))
 		p.Print(t.String()) // hope for the best
 
 	case Slice:
