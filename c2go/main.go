@@ -610,7 +610,7 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		return nil
 
 	case cc.Add, cc.And, cc.Div, cc.Mod, cc.Mul, cc.Or, cc.Sub, cc.Xor:
-		if x.Op == cc.Sub && isPtrOrArray(x.Left.XType) && isPtrOrArray(x.Right.XType) {
+		if x.Op == cc.Sub && isPtrSliceOrArray(x.Left.XType) && isPtrSliceOrArray(x.Right.XType) {
 			left := fixGoTypesExpr(fn, x.Left, nil)
 			right := fixGoTypesExpr(fn, x.Right, nil)
 			if left != nil && right != nil && left.Kind != right.Kind {
@@ -1062,6 +1062,10 @@ func isSliceOrString(typ *cc.Type) bool {
 
 func isSliceOrPtr(typ *cc.Type) bool {
 	return typ != nil && (typ.Kind == c2go.Slice || typ.Kind == cc.Ptr)
+}
+
+func isPtrSliceOrArray(typ *cc.Type) bool {
+	return typ != nil && (typ.Kind == cc.Ptr || typ.Kind == cc.Array || typ.Kind == c2go.Slice)
 }
 
 func isSliceOrArray(typ *cc.Type) bool {
