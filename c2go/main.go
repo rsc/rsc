@@ -10,8 +10,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"code.google.com/p/rsc/c2go"
@@ -19,11 +21,13 @@ import (
 )
 
 var (
-	src        = flag.String("src", "", "src of search")
-	dst        = flag.String("dst", "", "dst of search")
-	out        = flag.String("o", "/tmp/c2go", "output directory")
-	strip      = flag.String("", "", "strip from input paths when writing in output directory")
-	inc        = flag.String("I", "", "include directory")
+	src     = flag.String("src", "", "src of search")
+	dst     = flag.String("dst", "", "dst of search")
+	out     = flag.String("o", "/tmp/c2go", "output directory")
+	strip   = flag.String("", "", "strip from input paths when writing in output directory")
+	inc     = flag.String("I", "", "include directory")
+	fixFile = flag.String("f", "", "file containing func redefinitions")
+
 	showGroups = flag.Bool("groups", false, "show groups")
 )
 
@@ -33,6 +37,10 @@ func main() {
 	args := flag.Args()
 	if *inc != "" {
 		cc.AddInclude(*inc)
+	}
+	var fixes map[string]string
+	if *fixFile != "" {
+		fixes = readFixFile(*fixFile)
 	}
 	if len(args) == 0 {
 		flag.Usage()
@@ -61,7 +69,28 @@ func main() {
 	println(len(prog.Decls), "DECLS")
 	fixGoTypes(prog)
 	println(len(prog.Decls), "DECLS")
-	write(prog, files)
+	write(prog, files, fixes)
+}
+
+func readFixFile(filename string) map[string]string {
+	fmt.Printf("read fixes %s\n", filename)
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	m := make(map[string]string)
+	for _, match := range regexp.MustCompile(`(?ms)^func (\w+).*?^}`).FindAllStringSubmatch(string(data), -1) {
+		fmt.Printf("FIX %s\n", match[1])
+		m[match[1]] = match[0]
+	}
+
+	for _, match := range regexp.MustCompile(`(?m)^//c2go:drop (\w+)`).FindAllStringSubmatch(string(data), -1) {
+		m[match[1]] = ""
+	}
+
+	return m
 }
 
 func declKey(d *cc.Decl) string {

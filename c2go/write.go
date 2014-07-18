@@ -21,15 +21,15 @@ func fprintf(span cc.Span, format string, args ...interface{}) {
 }
 
 // write actual output
-func write(prog *cc.Prog, files []string) {
+func write(prog *cc.Prog, files []string, fixes map[string]string) {
 	for _, file := range files {
-		writeFile(prog, file, "")
+		writeFile(prog, file, "", fixes)
 	}
-	writeFile(prog, "/Users/rsc/g/go/include/link.h", "liblink/link_h.go")
-	writeFile(prog, "/Users/rsc/g/go/src/pkg/runtime/stack.h", "liblink/stack_h.go")
-	writeFile(prog, "/Users/rsc/g/go/src/cmd/5l/5.out.h", "liblink/5.out.go")
-	writeFile(prog, "/Users/rsc/g/go/src/cmd/6l/6.out.h", "liblink/6.out.go")
-	writeFile(prog, "/Users/rsc/g/go/src/cmd/8l/8.out.h", "liblink/8.out.go")
+	writeFile(prog, "/Users/rsc/g/go/include/link.h", "liblink/link_h.go", fixes)
+	writeFile(prog, "/Users/rsc/g/go/src/pkg/runtime/stack.h", "liblink/stack_h.go", fixes)
+	writeFile(prog, "/Users/rsc/g/go/src/cmd/5l/5.out.h", "liblink/5.out.go", fixes)
+	writeFile(prog, "/Users/rsc/g/go/src/cmd/6l/6.out.h", "liblink/6.out.go", fixes)
+	writeFile(prog, "/Users/rsc/g/go/src/cmd/8l/8.out.h", "liblink/8.out.go", fixes)
 
 	ioutil.WriteFile(filepath.Join(*out, "liblink/zzz.go"), []byte(zzzExtra), 0666)
 }
@@ -49,7 +49,7 @@ func sizeof(x interface{}) int
 
 `
 
-func writeFile(prog *cc.Prog, file, dstfile string) {
+func writeFile(prog *cc.Prog, file, dstfile string, fixes map[string]string) {
 	if dstfile == "" {
 		dstfile = strings.TrimSuffix(strings.TrimSuffix(file, ".c"), ".h") + ".go"
 		if *strip != "" {
@@ -67,7 +67,11 @@ func writeFile(prog *cc.Prog, file, dstfile string) {
 			continue
 		}
 		off := len(p.Bytes())
-		p.Print(decl)
+		if f, ok := fixes[decl.Name]; ok {
+			p.Print(f)
+		} else {
+			p.Print(decl)
+		}
 		if len(p.Bytes()) > off {
 			p.Print(c2go.Newline)
 			p.Print(c2go.Newline)
