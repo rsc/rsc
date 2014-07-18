@@ -646,6 +646,9 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		}
 
 		left := fixGoTypesExpr(fn, x.Left, targ)
+		if strings.Contains(c2go.GoString(x.Left), ".and") {
+			fmt.Printf("XXX ctxt.and - %v - in %v\n", c2go.GoString(left), c2go.GoString(x))
+		}
 
 		if x.Op == cc.And && x.Right.Op == cc.Twid {
 			x.Op = c2go.AndNot
@@ -654,11 +657,14 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 		right := fixGoTypesExpr(fn, x.Right, targ)
 
-		if x.Op == cc.Add && isSliceOrString(left) {
+		if x.Op == cc.Add && isSliceStringOrArray(left) {
 			x.Op = c2go.ExprSlice
 			x.List = []*cc.Expr{x.Left, x.Right, nil}
 			x.Left = nil
 			x.Right = nil
+			if left.Kind == cc.Array {
+				left = &cc.Type{Kind: c2go.Slice, Base: left.Base}
+			}
 			return left
 		}
 
@@ -1083,6 +1089,10 @@ func sameType(t, u *cc.Type) bool {
 
 func isSliceOrString(typ *cc.Type) bool {
 	return typ != nil && (typ.Kind == c2go.Slice || typ.Kind == c2go.String)
+}
+
+func isSliceStringOrArray(typ *cc.Type) bool {
+	return typ != nil && (typ.Kind == c2go.Slice || typ.Kind == c2go.String || typ.Kind == cc.Array)
 }
 
 func isSliceOrPtr(typ *cc.Type) bool {
