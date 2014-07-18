@@ -33,7 +33,7 @@ type TypeGroup struct {
 	NegBool    bool // bool where -1=false, 0=true
 }
 
-func inferTypes(prog *cc.Prog) {
+func XinferTypes(prog *cc.Prog) {
 	add(prog)
 
 	groups := map[*TypeVar][]*TypeVar{}

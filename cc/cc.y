@@ -998,6 +998,9 @@ topdecl:
 				lx.pushDecl(d)
 			} else {
 				d.Span = $<span>$
+				if idec.i != nil {
+					d.Init = idec.i
+				}
 			}
 			$$ = append($$, d);
 		}

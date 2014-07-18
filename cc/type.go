@@ -13,13 +13,14 @@ var printf = fmt.Printf
 
 type Type struct {
 	SyntaxInfo
-	Kind  TypeKind
-	Qual  TypeQual
-	Base  *Type
-	Tag   string
-	Decls []*Decl
-	Width *Expr
-	Name  string
+	Kind     TypeKind
+	Qual     TypeQual
+	Base     *Type
+	Tag      string
+	Decls    []*Decl
+	Width    *Expr
+	Name     string
+	TypeDecl *Decl
 }
 
 type TypeKind int
@@ -297,7 +298,11 @@ func (t *Type) String() string {
 			}
 			s += d.Name + " " + d.Type.String()
 		}
-		s += ") " + t.Base.String()
+		if t.Base == t {
+			s += ") SELF"
+		} else {
+			s += ") " + t.Base.String()
+		}
 		return s
 	}
 }
@@ -310,8 +315,9 @@ type Decl struct {
 	Init    *Init
 	Body    *Stmt
 
-	XOuter *Decl
-	CurFn  *Decl
+	XOuter    *Decl
+	CurFn     *Decl
+	OuterType *Type
 }
 
 func (d *Decl) String() string {

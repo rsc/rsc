@@ -51,133 +51,380 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	renameDecls(prog)
 	inferTypes(prog)
-	overrideTypes()
+	rewriteSyntax(prog)
+	rewriteTypes(prog)
 	if *showGroups {
 		return
 	}
-	rewriteSyntax(prog)
-	rewriteTypes(prog)
 	fixGoTypes(prog)
 	write(prog, files)
 }
 
 func declKey(d *cc.Decl) string {
 	key := d.Name
-	if d.XOuter != nil && d.XOuter != d {
-		key = declKey(d.XOuter) + "." + key
-	} else if d.CurFn != nil {
+	if t := d.OuterType; t != nil {
+		name := t.Name
+		if name == "" {
+			name = t.Tag
+		}
+		if name == "" {
+			name = t.String()
+		}
+		key = name + "." + key
+	}
+	if d.CurFn != nil {
 		key = declKey(d.CurFn) + "." + key
 	}
 	return key
 }
 
 var override = map[string]*cc.Type{
-	"oprrr": uint32Type,
-	"opbra": uint32Type,
-	"olr":   uint32Type,
-	"olhr":  uint32Type,
-	"olrr":  uint32Type,
-	"osr":   uint32Type,
-	"olhrr": uint32Type,
-	"oshr":  uint32Type,
-	"ofsr":  uint32Type,
-	"osrr":  uint32Type,
-	"oshrr": uint32Type,
-	"omvl":  uint32Type,
-	"ocmp":  uint32Type,
+	"oprrr_asm5.return": uint32Type,
+	"opbra_asm5.return": uint32Type,
+	"olr_asm5.return":   uint32Type,
+	"olhr_asm5.return":  uint32Type,
+	"olrr_asm5.return":  uint32Type,
+	"osr_asm5.return":   uint32Type,
+	"olhrr_asm5.return": uint32Type,
+	"oshr_asm5.return":  uint32Type,
+	"ofsr_asm5.return":  uint32Type,
+	"osrr_asm5.return":  uint32Type,
+	"oshrr_asm5.return": uint32Type,
+	"omvl_asm5.return":  uint32Type,
+	"ocmp_asm5.return":  uint32Type,
 
-	"asmout.o1":  uint32Type,
-	"asmout.o2":  uint32Type,
-	"asmout.o3":  uint32Type,
-	"asmout.o4":  uint32Type,
-	"asmout.o5":  uint32Type,
-	"asmout.o6":  uint32Type,
-	"asmout.rel": &cc.Type{Kind: cc.Ptr},
+	"asmout_asm5.o1":  uint32Type,
+	"asmout_asm5.o2":  uint32Type,
+	"asmout_asm5.o4":  uint32Type,
+	"asmout_asm5.o5":  uint32Type,
+	"asmout_asm5.o6":  uint32Type,
+	"asmout_asm5.rel": &cc.Type{Kind: cc.Ptr},
 
-	".andptr": &cc.Type{Kind: c2go.Slice},
+	"Link.andptr": &cc.Type{Kind: c2go.Slice},
 
 	"chipfloat5.h": uint32Type,
 
-	"oplook.o":  &cc.Type{Kind: cc.Ptr},
-	"oplook.c1": &cc.Type{Kind: c2go.Slice},
-	"oplook.c3": &cc.Type{Kind: c2go.Slice},
+	"oplook_asm5.return": &cc.Type{Kind: cc.Ptr},
+	"oplook_asm5.c1":     &cc.Type{Kind: c2go.Slice},
+	"oplook_asm5.c3":     &cc.Type{Kind: c2go.Slice},
 
-	"asmoutnacl.out": &cc.Type{Kind: c2go.Slice, Base: uint32Type},
-	"span5.out":      &cc.Type{Kind: cc.Array, Base: uint32Type, Width: &cc.Expr{Op: cc.Number, Text: "9"}},
-}
+	"Oprang_asm5.start": &cc.Type{Kind: c2go.Slice},
 
-func overrideTypes() {
-	for x, tv := range typeVars {
-		d, ok := x.(*cc.Decl)
-		if !ok {
-			continue
-		}
-		g := tv.Group
-		key := declKey(d)
-		if strings.Contains(key, "andptr") {
-			println(key)
-		}
-		if t := override[key]; t != nil {
-			println("found override", key)
-			if (t.Kind == cc.Ptr || t.Kind == c2go.Slice) && t.Base == nil {
-				g.TargetKind = t.Kind
-			} else {
-				g.Target = t
-			}
-		}
-		if g.Target != nil {
-			continue
-		}
-		if g.Bool {
-			g.Target = boolType
-			continue
-		}
-		var kind cc.TypeKind
-		for _, tv := range g.Vars {
-			if tv.Type == nil {
-				continue
-			}
-			if cc.Char <= tv.Type.Kind && tv.Type.Kind <= cc.Enum {
-				if k := c2goKind[tv.Type.Kind]; kind < k {
-					kind = k
-				}
-			}
-		}
-		if kind != 0 {
-			g.Target = &cc.Type{Kind: kind}
-		}
-	}
+	"asmoutnacl_asm5.out": &cc.Type{Kind: c2go.Slice, Base: uint32Type},
+	"asmout_asm5.out":     &cc.Type{Kind: c2go.Slice, Base: uint32Type},
+
+	"span5.out": &cc.Type{Kind: cc.Array, Base: uint32Type, Width: &cc.Expr{Op: cc.Number, Text: "9"}},
 }
 
 // Rewrite C types to be Go types.
-func rewriteTypes(x cc.Syntax) {
+func rewriteTypes(prog cc.Syntax) {
+	// Assign overrides to groups.
+	cc.Postorder(prog, func(x cc.Syntax) {
+		if d, ok := x.(*cc.Decl); ok {
+			key := declKey(d)
+			t := override[key]
+			if t == nil {
+				if strings.HasSuffix(key, "start") {
+					println("KEY", key)
+				}
+				return
+			}
+			if t.Kind == cc.Array {
+				// Override only applies to specific decl. Skip for now.
+				return
+			}
+			println("OVERRIDE", key)
+			f := flowCache[d]
+			if f == nil {
+				return
+			}
+			g := f.group
+			if g.goKind != 0 || g.goType != nil {
+				fmt.Printf("multiple overrides: %v (%p) and %v (%p)\n", key, f.group, g.goKey, g.goFlow.group)
+			}
+			g.goKey = key
+			g.goFlow = f
+			if t.Kind <= cc.Enum {
+				panic("bad go type override")
+			}
+			if (t.Kind == cc.Ptr || t.Kind == c2go.Slice) && t.Base == nil {
+				g.goKind = t.Kind
+			} else {
+				g.goType = t
+			}
+		}
+	})
+
+	// Process overrides.
 	cache := make(map[*cc.Type]*cc.Type)
-	cc.Postorder(x, func(x cc.Syntax) {
-		switch x := x.(type) {
-		case *cc.Type:
-			if len(x.Decls) > 0 {
-				last := x.Decls[len(x.Decls)-1]
-				if last.Name == "" && last.Type.Is(cc.Void) {
-					x.Decls = x.Decls[:len(x.Decls)-1]
+	for _, g := range flowGroups {
+		if g.goType != nil {
+			continue
+		}
+		if c2go.Int8 <= g.goKind && g.goKind <= c2go.Float64 {
+			g.goType = &cc.Type{Kind: g.goKind}
+			continue
+		}
+		if g.goKind == cc.Ptr || g.goKind == c2go.Slice {
+			t := g.decls[0].Type
+			if t == nil || t.Base == nil {
+				fmt.Printf("%s: expected ptr/array/slice for %s\n", g.decls[0].Span, declKey(g.decls[0]))
+				continue
+			}
+			g.goType = &cc.Type{Kind: g.goKind, Base: toGoType(nil, nil, t.Base, cache)}
+			continue
+		}
+		if g.goKind != 0 {
+			fmt.Printf("%s: unexpected go kind %v\n", g.goKey, g.goKind)
+			continue
+		}
+	}
+
+	// Process defaults.
+	// Each group has a 'canonical' instance of the type
+	// that we can use as the initial hint.
+	for _, g := range flowGroups {
+		if g.goType != nil {
+			continue
+		}
+		if g.canon == nil {
+			fmt.Printf("group missing canonical\n")
+			continue
+		}
+		t := g.canon.Def()
+		if cc.Char <= t.Kind && t.Kind <= cc.Enum {
+			// Convert to an appropriately sized number.
+			// Canon is largest rank from C; convert to Go.
+			if t.Kind == cc.Longlong {
+				println("canon long long", c2goKind[t.Kind])
+			}
+			g.goType = &cc.Type{Kind: c2goKind[t.Kind]}
+			continue
+		}
+
+		if t.Kind == cc.Ptr || t.Kind == cc.Array {
+			// Default is convert to pointer.
+			// If there are any arrays or any pointer arithmetic, convert to slice instead.
+			k := cc.Ptr
+			for _, d := range g.decls {
+				if d.Type != nil && d.Type.Kind == cc.Array {
+					k = c2go.Slice
+				}
+			}
+			for _, f := range g.syntax {
+				if f.ptrAdd {
+					k = c2go.Slice
+				}
+			}
+			if t.Base.Kind == cc.Char {
+				g.goType = &cc.Type{Kind: c2go.String}
+				continue
+			}
+			g.goType = &cc.Type{Kind: k, Base: toGoType(nil, nil, t.Base, cache)}
+			continue
+		}
+	}
+
+	if *showGroups {
+		fmt.Printf("%d groups\n", len(flowGroups))
+		for _, g := range flowGroups {
+			fmt.Printf("group(%d): %v (canon %v)\n", len(g.decls), c2go.GoString(g.goType), c2go.GoString(g.canon))
+			for i := 0; i < 2; i++ {
+				for _, f := range g.syntax {
+					if d, ok := f.syntax.(*cc.Decl); ok == (i == 0) {
+						suffix := ""
+						if ok {
+							suffix = ": " + declKey(d) + " " + c2go.GoString(d.Type)
+						}
+						if f.ptrAdd {
+							suffix += " (ptradd)"
+						}
+						fmt.Printf("\t%s %v%s\n", f.syntax.GetSpan(), f.syntax, suffix)
+					}
 				}
 			}
 		}
-	})
+	}
 
-	cc.Preorder(x, func(x cc.Syntax) {
+	// Apply grouped decisions to individual declarations.
+	cc.Postorder(prog, func(x cc.Syntax) {
 		switch x := x.(type) {
 		case *cc.Decl:
-			x.Type = toGoType(x, x.Type, cache)
-			if x.Type != nil && x.Type.Kind == cc.Func && !x.Type.Base.Is(cc.Void) {
-				x.Type.Base = toGoType(x, x.Type.Base, cache)
+			d := x
+			if d.Name == "..." || d.Type == nil {
+				return
+			}
+			if d.Name == "" && d.Type.Is(cc.Enum) && len(d.Type.Decls) > 0 {
+				for _, dd := range d.Type.Decls {
+					dd.Type = idealType
+				}
+				return
+			}
+			t := override[declKey(d)]
+			if t != nil && t.Kind == cc.Array {
+				d.Type = t
+				return
+			}
+			f := flowCache[d]
+			if f == nil {
+				d.Type = toGoType(nil, d, d.Type, cache)
+				fmt.Printf("%s: missing flow group for %s\n", d.Span, declKey(d))
+				return
+			}
+			g := f.group
+			if d.Init != nil && len(d.Init.Braced) > 0 && d.Type != nil && d.Type.Kind == cc.Array {
+				// Initialization of array - do not override type.
+				// But if size is not given explicitly, change to slice.
+				d.Type.Base = toGoType(nil, nil, d.Type.Base, cache)
+				if d.Type.Width == nil {
+					d.Type.Kind = c2go.Slice
+				}
+				return
+			}
+			d.Type = toGoType(g, d, d.Type, cache)
+			if d.Type != nil && d.Type.Kind == cc.Func && d.Type.Base.Kind != cc.Void {
+				if f != nil && f.returnValue != nil && f.returnValue.group != nil && f.returnValue.group.goType != nil {
+					d.Type.Base = f.returnValue.group.goType
+				}
 			}
 
 		case *cc.Expr:
-			x.XType = toGoType(x, x.XType, cache)
-			x.Type = toGoType(x, x.Type, cache)
+			if x.Type != nil {
+				t := toGoType(nil, nil, x.Type, cache)
+				if t == nil {
+					fprintf(x.Span, "cannot convert %v to go type\n", c2go.GoString(x.Type))
+				}
+				x.Type = t
+			}
 		}
 	})
+}
+
+func toGoType(g *flowGroup, x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Type) (ret *cc.Type) {
+	if typ == nil {
+		return nil
+	}
+
+	// Array and func implicitly convert to pointer types, so don't
+	// trust the group they are in - they'll turn into pointers incorrectly.
+	if g != nil && typ.Kind != cc.Array && typ.Kind != cc.Func {
+		if g.goType != nil {
+			return g.goType
+		}
+		defer func() {
+			if ret != nil && ret.Kind <= cc.Enum {
+				panic("bad go type override")
+			}
+			g.goType = ret
+		}()
+	}
+
+	// Look in cache first. This cuts off recursion for self-referential types.
+	// The cache only contains aggregate types - numeric types are shared
+	// by many expressions in the program and we might want to translate
+	// them differently in different contexts.
+	if cache[typ] != nil {
+		return cache[typ]
+	}
+
+	var force *cc.Type
+
+	if d, ok := x.(*cc.Decl); ok {
+		key := declKey(d)
+		force = override[key]
+	}
+
+	switch typ.Kind {
+	default:
+		panic(fmt.Sprintf("unexpected C type %s", typ))
+
+	case c2go.Ideal:
+		return typ
+
+	case cc.Void:
+		return &cc.Type{Kind: cc.Struct} // struct{}
+
+	case cc.Char, cc.Uchar, cc.Short, cc.Ushort, cc.Int, cc.Uint, cc.Long, cc.Ulong, cc.Longlong, cc.Ulonglong, cc.Float, cc.Double, cc.Enum:
+		// TODO: Use group.
+		if force != nil {
+			return force
+		}
+		return &cc.Type{Kind: c2goKind[typ.Kind]}
+
+	case cc.Ptr:
+		t := &cc.Type{Kind: cc.Ptr}
+		cache[typ] = t
+		t.Base = toGoType(nil, nil, typ.Base, cache)
+
+		if g != nil {
+			if g.goKind != 0 {
+				t.Kind = g.goKind
+				return t
+			}
+			for _, f := range g.syntax {
+				if f.ptrAdd || f.ptrIndex {
+					t.Kind = c2go.Slice
+				}
+			}
+		}
+
+		if force != nil {
+			if force.Base != nil {
+				return force
+			}
+			if force.Kind == cc.Ptr || force.Kind == c2go.Slice {
+				t.Kind = force.Kind
+				return t
+			}
+		}
+
+		if typ.Base.Kind == cc.Char {
+			t.Kind = c2go.String
+			t.Base = nil
+			return t
+		}
+
+		return t
+
+	case cc.Array:
+		if typ.Base.Def().Kind == cc.Char {
+			return &cc.Type{Kind: c2go.String}
+		}
+		t := &cc.Type{Kind: cc.Array, Width: typ.Width}
+		cache[typ] = t
+		t.Base = toGoType(nil, nil, typ.Base, cache)
+		return t
+
+	case cc.TypedefType:
+		// If this is a typedef like uchar, translate the base type directly.
+		def := typ.Base
+		if cc.Char <= def.Kind && def.Kind <= cc.Enum {
+			return toGoType(g, x, def, cache)
+		}
+
+		// Otherwise assume it is a struct or some such, and preserve the name
+		// but translate the base.
+		t := &cc.Type{Kind: cc.TypedefType, Name: typ.Name}
+		cache[typ] = t
+		t.Base = toGoType(nil, nil, typ.Base, cache)
+		return t
+
+	case cc.Func:
+		// A func Type contains Decls, and we don't fork the Decls, so don't fork the Type.
+		// The Decls themselves appear in the group lists, so they'll be handled by rewriteTypes.
+		// The return value has no Decl and needs to be converted.
+		if !typ.Base.Is(cc.Void) {
+			typ.Base = toGoType(nil, nil, typ.Base, cache)
+		}
+		return typ
+
+	case cc.Struct:
+		// A struct Type contains Decls, and we don't fork the Decls, so don't fork the Type.
+		// The Decls themselves appear in the group lists, so they'll be handled by rewriteTypes.
+		return typ
+	}
 }
 
 var c2goKind = map[cc.TypeKind]cc.TypeKind{
@@ -194,123 +441,6 @@ var c2goKind = map[cc.TypeKind]cc.TypeKind{
 	cc.Float:     c2go.Float32,
 	cc.Double:    c2go.Float64,
 	cc.Enum:      c2go.Int,
-}
-
-func toGoType(x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Type) (r *cc.Type) {
-	if typ == nil {
-		return nil
-	}
-
-	// Look in cache first. This cuts off recursion for self-referential types.
-	// The cache only contains aggregate types - numeric types are shared
-	// by many expressions in the program and we might want to translate
-	// them differently in different contexts.
-	if cache[typ] != nil {
-		return cache[typ]
-	}
-
-	tv := typeVars[x]
-	switch typ.Kind {
-	default:
-		panic(fmt.Sprintf("unexpected C type %s", typ))
-
-	case cc.Void:
-		return &cc.Type{Kind: cc.Struct} // struct{}
-
-	case cc.Char, cc.Uchar, cc.Short, cc.Ushort, cc.Int, cc.Uint, cc.Long, cc.Ulong, cc.Longlong, cc.Ulonglong, cc.Float, cc.Double, cc.Enum:
-		// Use type group to decide.
-		var t *cc.Type
-		if tv != nil && tv.Group != nil {
-			t = tv.Group.Target
-		}
-		if t == nil {
-			t = &cc.Type{Kind: c2goKind[typ.Kind]}
-		}
-		if typ.Decls != nil {
-			tt := *t
-			t = &tt
-			t.Decls = typ.Decls
-		}
-		return t
-
-	case cc.Ptr:
-		t := &cc.Type{Kind: cc.Ptr}
-		cache[typ] = t
-
-		// Use type group to decide slice vs string vs ptr, if available.
-		forced := false
-		if tv != nil && tv.Group != nil {
-			g := tv.Group
-			if g.Target != nil {
-				t = g.Target
-				cache[typ] = t
-				return t
-			}
-
-			switch g.TargetKind {
-			case cc.Ptr:
-				// ok
-				forced = true
-			case c2go.Slice:
-				t.Kind = c2go.Slice
-				forced = true
-			default:
-			PtrOps:
-				for _, op := range tv.Group.Ops {
-					switch op {
-					case "ptr+", "ptr++", "[i]":
-						t.Kind = c2go.Slice
-						break PtrOps
-					}
-				}
-			}
-		}
-
-		if !forced && typ.Base.Kind == cc.Char {
-			t.Kind = c2go.String
-			return t
-		}
-
-		t.Base = toGoType(typ.Base, typ.Base, cache)
-		return t
-
-	case cc.Struct, cc.Func:
-		// For structs or funcs, and we rewrite the Decls in place.
-		cache[typ] = typ
-		//if typ.Kind == cc.Func && !isDecl(x) && !typ.Base.Is(cc.Void) {
-		//	typ.Base = toGoType(typ.Base, typ.Base, cache)
-		//	fmt.Printf("now %s\n", typ)
-		//}
-		return typ
-
-	case cc.Array:
-		if tv != nil && tv.Group != nil && tv.Group.Target != nil {
-			return tv.Group.Target
-		}
-
-		t := &cc.Type{Kind: cc.Array, Width: typ.Width}
-		if t.Width == nil {
-			t.Kind = c2go.Slice
-		}
-		cache[typ] = t
-		t.Base = toGoType(typ.Base, typ.Base, cache)
-		return t
-
-	case cc.TypedefType:
-		k := typ.Base.Kind
-		if cc.Void <= k && k <= cc.Enum {
-			return toGoType(x, typ.Base, cache)
-		}
-		t := &cc.Type{Kind: cc.TypedefType, Name: typ.Name}
-		cache[typ] = t
-		t.Base = toGoType(typ.Base, typ.Base, cache)
-		return t
-	}
-}
-
-func isDecl(x cc.Syntax) bool {
-	_, ok := x.(*cc.Decl)
-	return ok
 }
 
 // fixGoTypes fixes all the Go type mismatches.
@@ -378,8 +508,8 @@ func fixGoTypesStmt(fn *cc.Decl, x *cc.Stmt) {
 
 func zeroFor(targ *cc.Type) *cc.Expr {
 	if targ != nil {
-		targ = targ.Def()
-		switch targ.Kind {
+		k := targ.Def().Kind
+		switch k {
 		case c2go.String:
 			return &cc.Expr{Op: cc.String, Texts: []string{`""`}}
 
@@ -393,7 +523,7 @@ func zeroFor(targ *cc.Type) *cc.Expr {
 			return &cc.Expr{Op: cc.Name, Text: "false"}
 		}
 
-		if c2go.Int8 <= targ.Kind && targ.Kind <= c2go.Float64 {
+		if c2go.Int8 <= k && k <= c2go.Float64 {
 			return &cc.Expr{Op: cc.Number, Text: "0"}
 		}
 		return &cc.Expr{Op: cc.Number, Text: "0 /*" + targ.String() + "*/"}
@@ -480,9 +610,16 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		return nil
 
 	case cc.Add, cc.And, cc.Div, cc.Mod, cc.Mul, cc.Or, cc.Sub, cc.Xor:
-		if x.Op == cc.Sub && isSliceOrArray(x.Left.XType) && isSliceOrArray(x.Right.XType) {
-			fixGoTypesExpr(fn, x.Left, nil)
-			fixGoTypesExpr(fn, x.Right, nil)
+		if x.Op == cc.Sub && isPtrOrArray(x.Left.XType) && isPtrOrArray(x.Right.XType) {
+			left := fixGoTypesExpr(fn, x.Left, nil)
+			right := fixGoTypesExpr(fn, x.Right, nil)
+			if left != nil && right != nil && left.Kind != right.Kind {
+				if left.Kind == c2go.Slice {
+					forceConvert(fn, x.Right, right, left)
+				} else {
+					forceConvert(fn, x.Left, left, right)
+				}
+			}
 			x.Left = &cc.Expr{Op: cc.Minus, Left: &cc.Expr{Op: cc.Call, Left: &cc.Expr{Op: cc.Name, Text: "cap"}, List: []*cc.Expr{x.Left}}}
 			x.Right = &cc.Expr{Op: cc.Call, Left: &cc.Expr{Op: cc.Name, Text: "cap"}, List: []*cc.Expr{x.Right}}
 			x.Op = cc.Add
@@ -506,6 +643,9 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 			return left
 		}
 
+		if x.String() == "m / 4" {
+			fmt.Println("fixbinary", c2go.GoString(left), c2go.GoString(right))
+		}
 		return fixBinary(fn, x, left, right, targ)
 
 	case cc.AddEq, cc.AndEq, cc.DivEq, cc.Eq, cc.ModEq, cc.MulEq, cc.OrEq, cc.SubEq, cc.XorEq:
@@ -605,6 +745,13 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 			}
 		}
 		right := fixGoTypesExpr(fn, x.Right, nil)
+
+		if isSliceOrArray(x.Left.XType) && isSliceOrArray(x.Right.XType) {
+			x.Left = &cc.Expr{Op: cc.Minus, Left: &cc.Expr{Op: cc.Call, Left: &cc.Expr{Op: cc.Name, Text: "cap"}, List: []*cc.Expr{x.Left}}}
+			x.Right = &cc.Expr{Op: cc.Minus, Left: &cc.Expr{Op: cc.Call, Left: &cc.Expr{Op: cc.Name, Text: "cap"}, List: []*cc.Expr{x.Right}}}
+			return boolType
+		}
+
 		fixBinary(fn, x, left, right, nil)
 		return boolType
 
@@ -623,7 +770,7 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		}
 
 		switch left.Kind {
-		case c2go.Slice, cc.Array:
+		case cc.Ptr, c2go.Slice, cc.Array:
 			return left.Base
 
 		case c2go.String:
@@ -633,6 +780,9 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	case cc.Lsh, cc.Rsh:
 		left := fixGoTypesExpr(fn, x.Left, targ)
+		if x.String() == "r << 16" {
+			fmt.Printf("LSH: %v left=%v targ=%v\n", x, c2go.GoString(left), c2go.GoString(targ))
+		}
 		if left != nil && targ != nil && c2go.Int8 <= left.Kind && left.Kind <= c2go.Float64 && targ.Kind > left.Kind {
 			forceConvert(fn, x.Left, left, targ)
 			left = targ
@@ -649,7 +799,7 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		if x.Text == "nelem" {
 			x.Text = "len"
 			x.XDecl = nil
-			return intType
+			return &cc.Type{Kind: cc.Func, Base: intType}
 		}
 
 		if x.XDecl == nil {
@@ -658,13 +808,7 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		return x.XDecl.Type
 
 	case cc.Number:
-		if targ == nil {
-			return nil
-		}
-		if targ.Kind <= c2go.Int8 && targ.Kind <= c2go.Float64 {
-			return targ
-		}
-		return intType
+		return idealType
 
 	case cc.Minus, cc.Plus, cc.Twid:
 		return fixGoTypesExpr(fn, x.Left, targ)
@@ -687,8 +831,17 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 		return nil
 
-	case cc.SizeofExpr, cc.SizeofType:
-		// TODO
+	case cc.SizeofExpr:
+		left := fixGoTypesExpr(fn, x.Left, nil)
+		if left != nil && (left.Kind == cc.Array || left.Kind == c2go.Slice) && left.Base.Def().Is(c2go.Uint8) {
+			x.Op = cc.Call
+			x.List = []*cc.Expr{x.Left}
+			x.Left = &cc.Expr{Op: cc.Name, Text: "len"}
+			return intType
+		}
+		return nil
+
+	case cc.SizeofType:
 		return nil
 
 	case cc.String:
@@ -707,6 +860,8 @@ var (
 	uintType   = &cc.Type{Kind: c2go.Uint}
 	uint32Type = &cc.Type{Kind: c2go.Uint32}
 	uint64Type = &cc.Type{Kind: c2go.Uint64}
+	idealType  = &cc.Type{Kind: c2go.Ideal}
+	stringType = &cc.Type{Kind: c2go.String}
 )
 
 func forceGoType(fn *cc.Decl, x *cc.Expr, targ *cc.Type) {
@@ -738,6 +893,24 @@ func forceConvert(fn *cc.Decl, x *cc.Expr, actual, targ *cc.Type) {
 		return
 	}
 
+	if actual.Kind == c2go.Ideal && c2go.Int8 <= targ.Kind && targ.Kind <= c2go.Float64 {
+		return
+	}
+
+	if x != nil && x.Op == cc.Name && x.Text == "nil" {
+		if targ.Kind == cc.Func || targ.Kind == cc.Ptr || targ.Kind == c2go.Slice {
+			return
+		}
+	}
+
+	// Func conversions are never useful.
+	// If the func types are different, the conversion will fail;
+	// if not, the conversion is unnecessary.
+	// Either way the conversion is an eyesore.
+	if targ.Kind == cc.Func || targ.Kind == cc.Ptr && targ.Base.Kind == cc.Func {
+		return
+	}
+
 	if actual.Kind == c2go.Bool && c2go.Int8 <= targ.Kind && targ.Kind <= c2go.Float64 {
 		old := copyExpr(x)
 		if targ.Kind == c2go.Int {
@@ -753,6 +926,15 @@ func forceConvert(fn *cc.Decl, x *cc.Expr, actual, targ *cc.Type) {
 		return
 	}
 
+	if actual.Kind == cc.Array && targ.Kind == c2go.Slice && sameType(actual.Base, targ.Base) {
+		old := copyExpr(x)
+		x.Op = c2go.ExprSlice
+		x.List = []*cc.Expr{old, nil, nil}
+		x.Left = nil
+		x.Right = nil
+		return
+	}
+
 	if actual.Kind == c2go.Slice && targ.Kind == cc.Ptr && sameType(actual.Base, targ.Base) {
 		old := copyExpr(x)
 		x.Op = cc.Addr
@@ -762,6 +944,8 @@ func forceConvert(fn *cc.Decl, x *cc.Expr, actual, targ *cc.Type) {
 
 	if !sameType(actual, targ) {
 		old := copyExpr(x)
+		// for debugging:
+		// old = &cc.Expr{Op: cc.Cast, Left: old, Type: actual, XType: actual}
 		x.Op = cc.Cast
 		x.Left = old
 		x.Right = nil
@@ -808,7 +992,17 @@ func fixShiftCount(fn *cc.Decl, x *cc.Expr) {
 }
 
 func fixBinary(fn *cc.Decl, x *cc.Expr, left, right, targ *cc.Type) *cc.Type {
-	if left == nil || right == nil || left.Kind < c2go.Int8 || left.Kind > c2go.Float64 || right.Kind < c2go.Int8 || right.Kind > c2go.Float64 {
+	if x.String() == "m / 4 > len(out)" {
+		fmt.Printf("fixbinary %v - %v %v %v\n", x, c2go.GoString(left), c2go.GoString(right), c2go.GoString(targ))
+	}
+	if left == nil || right == nil {
+		return nil
+	}
+
+	if left.Kind != c2go.Ideal && (left.Kind < c2go.Int8 || left.Kind > c2go.Float64) {
+		return nil
+	}
+	if right.Kind != c2go.Ideal && (right.Kind < c2go.Int8 || right.Kind > c2go.Float64) {
 		return nil
 	}
 
@@ -822,10 +1016,10 @@ func fixBinary(fn *cc.Decl, x *cc.Expr, left, right, targ *cc.Type) *cc.Type {
 	// Must make left and right match.
 	// Convert to largest of three.
 	t := left
-	if t.Kind < right.Kind {
+	if t.Kind == c2go.Ideal || t.Kind < right.Kind && right.Kind != c2go.Ideal {
 		t = right
 	}
-	if targ != nil && t.Kind < targ.Kind {
+	if targ != nil && (t.Kind == c2go.Ideal || t.Kind < targ.Kind && targ.Kind != c2go.Ideal) {
 		t = targ
 	}
 	if !sameType(t, left) {
@@ -901,15 +1095,14 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 			fprintf(x.Span, "unsupported %v", x)
 			return false
 		}
-		obj1, obj1Type := objIndir(fn, x.List[0])
-		obj2, obj2Type := objIndir(fn, x.List[1])
-		if obj1Type == nil || obj2Type == nil {
-			fprintf(x.Span, "unsupported %v - missing types", x)
-			return true
-		}
-
 		siz := x.List[2]
 		if siz.Op == cc.Number && siz.Text == "4" {
+			obj1, obj1Type := objIndir(fn, x.List[0])
+			obj2, obj2Type := objIndir(fn, x.List[1])
+			if obj1Type == nil || obj2Type == nil {
+				fprintf(x.Span, "unsupported %v - missing types", x)
+				return true
+			}
 			if (obj1Type.Kind == c2go.Uint32 || obj1Type.Kind == c2go.Int32) && obj2Type.Kind == c2go.Float32 {
 				x.Op = cc.Eq
 				x.Left = obj1
@@ -923,9 +1116,15 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 				x.XType = uint32Type
 				return true
 			}
-			fprintf(x.Span, "unsupported %v - size 8 type %v %v", x, obj1Type, obj2Type)
+			fprintf(x.Span, "unsupported %v - size 4 type %v %v", x, c2go.GoString(obj1Type), c2go.GoString(obj2Type))
 		}
 		if siz.Op == cc.Number && siz.Text == "8" {
+			obj1, obj1Type := objIndir(fn, x.List[0])
+			obj2, obj2Type := objIndir(fn, x.List[1])
+			if obj1Type == nil || obj2Type == nil {
+				fprintf(x.Span, "unsupported %v - missing types", x)
+				return true
+			}
 			if (obj1Type.Kind == c2go.Uint64 || obj1Type.Kind == c2go.Int64) && obj2Type.Kind == c2go.Float64 {
 				x.Op = cc.Eq
 				x.Left = obj1
@@ -939,9 +1138,121 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 				x.XType = uint64Type
 				return true
 			}
-			fprintf(x.Span, "unsupported %v - size 8 type %v %v", x, obj1Type, obj2Type)
+			fprintf(x.Span, "unsupported %v - size 8 type %v %v", x, c2go.GoString(obj1Type), c2go.GoString(obj2Type))
 		}
-		fprintf(x.Span, "unsupported %v", x)
+		if siz.Op == cc.SizeofExpr {
+			obj1Type := fixGoTypesExpr(fn, x.List[0], nil)
+			obj2Type := fixGoTypesExpr(fn, x.List[1], nil)
+			sizeType := fixGoTypesExpr(fn, siz.Left, nil)
+			if obj1Type == nil || obj2Type == nil {
+				fprintf(x.Span, "unsupported %v - bad types", x)
+				return true
+			}
+			if obj2Type.Kind == cc.Array && sameType(obj2Type, sizeType) || obj2Type.Kind == c2go.Slice && c2go.GoString(x.List[1]) == c2go.GoString(siz.Left) {
+				x.Left.Text = "copy"
+				x.Left.XDecl = nil
+				x.List = x.List[:2]
+				return true
+			}
+			fprintf(x.Span, "unsupported %v - not array %v %v", x, c2go.GoString(obj2Type), c2go.GoString(sizeType))
+			return true
+		}
+		left := fixGoTypesExpr(fn, x.List[0], nil)
+		right := fixGoTypesExpr(fn, x.List[1], nil)
+		fixGoTypesExpr(fn, siz, nil)
+		if isSliceOrArray(left) && isSliceOrArray(right) && left.Base.Is(c2go.Uint8) && right.Base.Is(c2go.Uint8) {
+			x.Left.Text = "copy"
+			x.Left.XDecl = nil
+			if x.List[1].Op == c2go.ExprSlice && x.List[1].List[1] == nil {
+				x.List[1].List[2] = siz
+			} else {
+				x.List[1] = &cc.Expr{Op: c2go.ExprSlice, List: []*cc.Expr{x.List[1], nil, siz}}
+			}
+			x.List = x.List[:2]
+			return true
+		}
+		fprintf(x.Span, "unsupported %v (%v %v)", x, c2go.GoString(left), c2go.GoString(right))
+		return true
+
+	case "malloc", "emallocz":
+		if len(x.List) != 1 {
+			fprintf(x.Span, "unsupported %v - too many args", x)
+			return false
+		}
+		siz := x.List[0]
+		var count *cc.Expr
+		if siz.Op == cc.Mul {
+			count = siz.Left
+			siz = siz.Right
+		}
+		var typ *cc.Type
+		switch siz.Op {
+		default:
+			typ = byteType
+			count = siz
+
+		case cc.SizeofExpr:
+			typ = fixGoTypesExpr(fn, siz.Left, nil)
+			if typ == nil {
+				fprintf(siz.Span, "failed to type check %v", siz.Left)
+			}
+
+		case cc.SizeofType:
+			typ = siz.Type
+			if typ == nil {
+				fprintf(siz.Span, "sizeoftype missing type")
+			}
+		}
+		if typ == nil {
+			fprintf(x.Span, "unsupported %v - cannot understand type", x)
+			return true
+		}
+		if count == nil {
+			x.Left.Text = "new"
+			x.Left.XDecl = nil
+			x.List = []*cc.Expr{&cc.Expr{Op: cc.Name, Text: c2go.GoString(typ)}}
+			x.XType = &cc.Type{Kind: cc.Ptr, Base: typ}
+		} else {
+			x.Left.Text = "make"
+			x.Left.XDecl = nil
+			x.List = []*cc.Expr{
+				&cc.Expr{Op: cc.Name, Text: "[]" + c2go.GoString(typ)},
+				count,
+			}
+			x.XType = &cc.Type{Kind: c2go.Slice, Base: typ}
+		}
+		return true
+
+	case "strdup", "estrdup":
+		if len(x.List) != 1 {
+			fprintf(x.Span, "unsupported %v - too many args", x)
+			return false
+		}
+		fixGoTypesExpr(fn, x.List[0], stringType)
+		fixMerge(x, x.List[0])
+		x.XType = stringType
+		return true
+
+	case "strcpy", "strcat":
+		if len(x.List) != 2 {
+			fprintf(x.Span, "unsupported %v - too many args", x)
+			return false
+		}
+		fixGoTypesExpr(fn, x.List[0], stringType)
+		fixGoTypesExpr(fn, x.List[1], stringType)
+		x.Op = cc.Eq
+		if x.Left.Text == "strcat" {
+			x.Op = cc.AddEq
+		}
+		x.Left = x.List[0]
+		x.Right = x.List[1]
+		x.XType = stringType
+		return true
+
+	case "strlen":
+		x.Left.Text = "len"
+		x.Left.XDecl = nil
+		x.XType = intType
 		return true
 	}
 

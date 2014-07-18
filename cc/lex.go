@@ -69,9 +69,8 @@ type lexer struct {
 	enumSeen map[interface{}]bool
 
 	// type checking state
-	scope        *Scope
-	includeScope *Scope
-	includeSeen  map[string]bool
+	scope       *Scope
+	includeSeen map[string]*[]*Decl
 
 	// output
 	errors []string
@@ -81,16 +80,12 @@ type lexer struct {
 
 func (lx *lexer) parse() {
 	if lx.includeSeen == nil {
-		lx.includeSeen = make(map[string]bool)
+		lx.includeSeen = make(map[string]*[]*Decl)
 	}
 	if lx.wholeInput == "" {
 		lx.wholeInput = lx.input
 	}
-	if lx.includeScope != nil {
-		lx.scope = lx.includeScope
-	} else {
-		lx.scope = &Scope{}
-	}
+	lx.scope = &Scope{}
 	yyParse(lx)
 }
 
@@ -101,6 +96,7 @@ type lexInput struct {
 	lastsym    string
 	file       string
 	lineno     int
+	declSave   *[]*Decl
 }
 
 func (lx *lexer) pushInclude(includeLine string) {
@@ -129,10 +125,19 @@ func (lx *lexer) pushInclude(includeLine string) {
 		return
 	}
 
-	if lx.includeSeen[file] {
+	if decls := lx.includeSeen[file]; decls != nil {
+		for _, decl := range *decls {
+			// fmt.Printf("%s: replay %s\n", file, decl.Name)
+			lx.pushDecl(decl)
+		}
 		return
 	}
-	lx.includeSeen[file] = true
+
+	dp := lx.declSave
+	if dp == nil {
+		dp = new([]*Decl)
+		lx.includeSeen[file] = dp
+	}
 
 	if extraMap[origFile] != "" {
 		str := extraMap[origFile] + "\n"
@@ -142,6 +147,7 @@ func (lx *lexer) pushInclude(includeLine string) {
 			wholeInput: str,
 			file:       "internal/" + origFile,
 			lineno:     1,
+			declSave:   dp,
 		}
 	}
 
@@ -156,6 +162,7 @@ func (lx *lexer) pushInclude(includeLine string) {
 		wholeInput: str,
 		file:       file,
 		lineno:     1,
+		declSave:   dp,
 	}
 }
 
@@ -306,7 +313,6 @@ Restart:
 	in := lx.input
 	if len(in) == 0 {
 		if lx.pop() {
-			lx.includeScope = lx.scope
 			goto Restart
 		}
 		return tokEOF
@@ -466,7 +472,7 @@ Restart:
 			for t.Kind == TypedefType && t.Base != nil {
 				t = t.Base
 			}
-			yy.typ = &Type{Kind: TypedefType, Name: yy.str, Base: t}
+			yy.typ = &Type{Kind: TypedefType, Name: yy.str, Base: t, TypeDecl: yy.decl}
 			return tokTypeName
 		}
 		if lx.tok == "EXTERN" {
