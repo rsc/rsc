@@ -2,151 +2,17 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"log"
 	"strconv"
 	"strings"
 )
 
-func ldobjfile(ctxt *Link, f *Biobuf, pkg string, len int64, pn string) {
-	var c int
-	var buf [8]uint8
-	var start int64
-	var lib string
-	start = Boffset(f)
-	ctxt.version++
-	buf = [8]uint8{}
-	Bread(f, buf[:])
-	if string(buf[:]) != startmagic_objfile {
-		sysfatal("%s: invalid file start %x %x %x %x %x %x %x %x", pn, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
-	}
-	c = Bgetc(f)
-	if (c) != 1 {
-		sysfatal("%s: invalid file version number %d", pn, c)
-	}
-	for {
-		lib = rdstring_objfile(f)
-		if lib[0] == 0 {
-			break
-		}
-		addlib(ctxt, pkg, pn, lib)
-	}
-	for {
-		c = Bgetc(f)
-		Bungetc(f)
-		if c == 0xff {
-			break
-		}
-		readsym_objfile(ctxt, f, pkg, pn)
-	}
-	buf = [8]uint8{}
-	Bread(f, buf[:])
-	if string(buf[:]) != endmagic_objfile {
-		sysfatal("%s: invalid file end", pn)
-	}
-	if Boffset(f) != start+len {
-		sysfatal("%s: unexpected end at %d, want %d", pn, int64(Boffset(f)), int64(start+len))
-	}
-}
-
-// Copyright 2013 The Go Authors.  All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-// Writing and reading of Go object files.
-//
-// Originally, Go object files were Plan 9 object files, but no longer.
-// Now they are more like standard object files, in that each symbol is defined
-// by an associated memory image (bytes) and a list of relocations to apply
-// during linking. We do not (yet?) use a standard file format, however.
-// For now, the format is chosen to be as simple as possible to read and write.
-// It may change for reasons of efficiency, or we may even switch to a
-// standard file format if there are compelling benefits to doing so.
-// See golang.org/s/go13linker for more background.
-//
-// The file format is:
-//
-//	- magic header: "\x00\x00go13ld"
-//	- byte 1 - version number
-//	- sequence of strings giving dependencies (imported packages)
-//	- empty string (marks end of sequence)
-//	- sequence of defined symbols
-//	- byte 0xff (marks end of sequence)
-//	- magic footer: "\xff\xffgo13ld"
-//
-// All integers are stored in a zigzag varint format.
-// See golang.org/s/go12symtab for a definition.
-//
-// Data blocks and strings are both stored as an integer
-// followed by that many bytes.
-//
-// A symbol reference is a string name followed by a version.
-// An empty name corresponds to a nil LSym* pointer.
-//
-// Each symbol is laid out as the following fields (taken from LSym*):
-//
-//	- byte 0xfe (sanity check for synchronization)
-//	- type [int]
-//	- name [string]
-//	- version [int]
-//	- dupok [int]
-//	- size [int]
-//	- gotype [symbol reference]
-//	- p [data block]
-//	- nr [int]
-//	- r [nr relocations, sorted by off]
-//
-// If type == STEXT, there are a few more fields:
-//
-//	- args [int]
-//	- locals [int]
-//	- nosplit [int]
-//	- leaf [int]
-//	- nlocal [int]
-//	- local [nlocal automatics]
-//	- pcln [pcln table]
-//
-// Each relocation has the encoding:
-//
-//	- off [int]
-//	- siz [int]
-//	- type [int]
-//	- add [int]
-//	- xadd [int]
-//	- sym [symbol reference]
-//	- xsym [symbol reference]
-//
-// Each local has the encoding:
-//
-//	- asym [symbol reference]
-//	- offset [int]
-//	- type [int]
-//	- gotype [symbol reference]
-//
-// The pcln table has the encoding:
-//
-//	- pcsp [data block]
-//	- pcfile [data block]
-//	- pcline [data block]
-//	- npcdata [int]
-//	- pcdata [npcdata data blocks]
-//	- nfuncdata [int]
-//	- funcdata [nfuncdata symbol references]
-//	- funcdatasym [nfuncdata ints]
-//	- nfile [int]
-//	- file [nfile symbol references]
-//
-// The file layout and meaning of type integers are architecture-independent.
-//
-// TODO(rsc): The file format is good for a first pass but needs work.
-//	- There are SymID in the object file that should really just be strings.
-//	- The actual symbol memory images are interlaced with the symbol
-//	  metadata. They should be separated, to reduce the I/O required to
-//	  load just the metadata.
-//	- The symbol references should be shortened, either with a symbol
-//	  table or by using a simple backward index to an earlier mentioned symbol.
 // The Go and C compilers, and the assembler, call writeobj to write
 // out a Go object file.  The linker does not call this; the linker
 // does not write out object files.
 func writeobj(ctxt *Link, b *Biobuf) {
-	var flag int
+	var flag int64
 	var h *Hist
 	var s *LSym
 	var text *LSym
@@ -161,16 +27,15 @@ func writeobj(ctxt *Link, b *Biobuf) {
 	// Build list of symbols, and assign instructions to lists.
 	// Ignore ctxt->plist boundaries. There are no guarantees there,
 	// and the C compilers and assemblers just use one big list.
-	text = (*LSym)(nil)
-	curtext = (*LSym)(nil)
-	data = (*LSym)(nil)
-	etext = (*LSym)(nil)
-	edata = (*LSym)(nil)
+	text = nil
+	curtext = nil
+	data = nil
+	etext = nil
+	edata = nil
 	for pl = ctxt.plist; pl != nil; pl = pl.link {
-		println("writeobj", pl)
 		for p = pl.firstpc; p != nil; p = plink {
 			plink = p.link
-			p.link = (*Prog)(nil)
+			p.link = nil
 			if p.as == ctxt.arch.AEND {
 				continue
 			}
@@ -191,8 +56,8 @@ func writeobj(ctxt *Link, b *Biobuf) {
 				}
 				a = new(Auto)
 				a.asym = p.from.sym
-				a.aoffset = int32(p.from.offset)
-				a.typ = ctxt.arch.symtype(&p.from)
+				a.aoffset = p.from.offset
+				a.typ = int64(ctxt.arch.symtype(&p.from))
 				a.gotype = p.from.gotype
 				a.link = curtext.autom
 				curtext.autom = a
@@ -200,13 +65,13 @@ func writeobj(ctxt *Link, b *Biobuf) {
 			}
 			if p.as == ctxt.arch.AGLOBL {
 				s = p.from.sym
-				var tmp uint8 = s.seenglobl
+				tmp6 := s.seenglobl
 				s.seenglobl++
-				if tmp != 0 {
-					print("duplicate %v\n", ctxt.Pconv(p))
+				if tmp6 != 0 {
+					fmt.Printf("duplicate %v\n", p)
 				}
 				if s.onlist != 0 {
-					sysfatal("symbol %s listed multiple times", s.name)
+					log.Fatalf("symbol %s listed multiple times", s.name)
 				}
 				s.onlist = 1
 				if data == nil {
@@ -214,25 +79,23 @@ func writeobj(ctxt *Link, b *Biobuf) {
 				} else {
 					edata.next = s
 				}
-				s.next = (*LSym)(nil)
-				s.size = int(p.to.offset)
-				if s.typ == 0 || s.typ == int(SXREF) {
-					s.typ = int(SBSS)
+				s.next = nil
+				s.size = p.to.offset
+				if s.typ == 0 || s.typ == SXREF {
+					s.typ = SBSS
 				}
 				if ctxt.arch.thechar == '5' {
 					flag = p.reg
 				} else {
 					flag = p.from.scale
 				}
-				if flag&int(DUPOK_textflag) != 0 {
+				if flag&DUPOK_textflag != 0 {
 					s.dupok = 1
 				}
-				if flag&int(RODATA_textflag) != 0 {
-					s.typ = int(SRODATA)
-				} else {
-					if flag&int(NOPTR_textflag) != 0 {
-						s.typ = int(SNOPTRBSS)
-					}
+				if flag&RODATA_textflag != 0 {
+					s.typ = SRODATA
+				} else if flag&NOPTR_textflag != 0 {
+					s.typ = SNOPTRBSS
 				}
 				edata = s
 				continue
@@ -245,14 +108,14 @@ func writeobj(ctxt *Link, b *Biobuf) {
 				s = p.from.sym
 				if s == nil {
 					// func _() { }
-					curtext = (*LSym)(nil)
+					curtext = nil
 					continue
 				}
 				if s.text != nil {
-					sysfatal("duplicate TEXT for %s", s.name)
+					log.Fatalf("duplicate TEXT for %s", s.name)
 				}
 				if s.onlist != 0 {
-					sysfatal("symbol %s listed multiple times", s.name)
+					log.Fatalf("symbol %s listed multiple times", s.name)
 				}
 				s.onlist = 1
 				if text == nil {
@@ -266,14 +129,14 @@ func writeobj(ctxt *Link, b *Biobuf) {
 				} else {
 					flag = p.from.scale
 				}
-				if flag&int(DUPOK_textflag) != 0 {
+				if flag&DUPOK_textflag != 0 {
 					s.dupok = 1
 				}
-				if flag&int(NOSPLIT_textflag) != 0 {
+				if flag&NOSPLIT_textflag != 0 {
 					s.nosplit = 1
 				}
-				s.next = (*LSym)(nil)
-				s.typ = int(STEXT)
+				s.next = nil
+				s.typ = STEXT
 				s.text = p
 				s.etext = p
 				curtext = s
@@ -346,7 +209,7 @@ func writesym_objfile(ctxt *Link, b *Biobuf, s *LSym) {
 			Bprint(ctxt.bso, "nosplit ")
 		}
 		Bprint(ctxt.bso, "size=%d value=%d", int64(s.size), int64(s.value))
-		if s.typ == int(STEXT) {
+		if s.typ == STEXT {
 			Bprint(ctxt.bso, " args=%#x locals=%#x", uint64(s.args), uint64(s.locals))
 			if s.leaf != 0 {
 				Bprint(ctxt.bso, " leaf")
@@ -354,10 +217,10 @@ func writesym_objfile(ctxt *Link, b *Biobuf, s *LSym) {
 		}
 		Bprint(ctxt.bso, "\n")
 		for p = s.text; p != nil; p = p.link {
-			Bprint(ctxt.bso, "\t%#06x %v\n", int(p.pc), ctxt.Pconv(p))
+			Bprint(ctxt.bso, "\t%#04x %v\n", int(p.pc), p)
 		}
 		for i = 0; i < len(s.p); {
-			Bprint(ctxt.bso, "\t%#06x", i)
+			Bprint(ctxt.bso, "\t%#04x", i)
 			for j = i; j < i+16 && j < len(s.p); j++ {
 				Bprint(ctxt.bso, " %02x", s.p[j])
 			}
@@ -404,7 +267,7 @@ func writesym_objfile(ctxt *Link, b *Biobuf, s *LSym) {
 		wrsym_objfile(b, r.sym)
 		wrsym_objfile(b, r.xsym)
 	}
-	if s.typ == int(STEXT) {
+	if s.typ == STEXT {
 		wrint_objfile(b, int64(s.args))
 		wrint_objfile(b, int64(s.locals))
 		wrint_objfile(b, int64(s.nosplit))
@@ -463,7 +326,7 @@ func wrint_objfile(b *Biobuf, sval int64) {
 	}
 	p[0] = uint8(v)
 	p = p[1:]
-	Bwrite(b, buf[:int32(-cap(p)+cap(buf))])
+	Bwrite(b, buf[:-cap(p)+cap(buf[:])])
 }
 
 func wrstring_objfile(b *Biobuf, s string) {
@@ -498,16 +361,6 @@ func wrdata_objfile(b *Biobuf, v []byte) {
 	Bwrite(b, v)
 }
 
-func wrsym_objfile(b *Biobuf, s *LSym) {
-	if s == nil {
-		wrint_objfile(b, 0)
-		wrint_objfile(b, 0)
-		return
-	}
-	wrstring_objfile(b, s.name)
-	wrint_objfile(b, int64(s.version))
-}
-
 func wrpathsym_objfile(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
 		wrint_objfile(b, 0)
@@ -515,19 +368,74 @@ func wrpathsym_objfile(ctxt *Link, b *Biobuf, s *LSym) {
 		return
 	}
 	wrpath_objfile(ctxt, b, s.name)
-	wrint_objfile(b, int64(s.version))
+	wrint_objfile(b, s.version)
+}
+
+func wrsym_objfile(b *Biobuf, s *LSym) {
+	if s == nil {
+		wrint_objfile(b, 0)
+		wrint_objfile(b, 0)
+		return
+	}
+	wrstring_objfile(b, s.name)
+	wrint_objfile(b, s.version)
+}
+
+var startmagic_objfile string = "\x00\x00go13ld"
+
+var endmagic_objfile string = "\xff\xffgo13ld"
+
+func ldobjfile(ctxt *Link, f *Biobuf, pkg string, len int64, pn string) {
+	var c int
+	var buf [8]uint8
+	var start int64
+	var lib string
+	start = Boffset(f)
+	ctxt.version++
+	buf = [8]uint8{}
+	Bread(f, buf[:])
+	if string(buf[:]) != startmagic_objfile {
+		sysfatal("%s: invalid file start %x %x %x %x %x %x %x %x", pn, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
+	}
+	c = Bgetc(f)
+	if (c) != 1 {
+		sysfatal("%s: invalid file version number %d", pn, c)
+	}
+	for {
+		lib = rdstring_objfile(f)
+		if lib[0] == 0 {
+			break
+		}
+		addlib(ctxt, pkg, pn, lib)
+	}
+	for {
+		c = Bgetc(f)
+		Bungetc(f)
+		if c == 0xff {
+			break
+		}
+		readsym_objfile(ctxt, f, pkg, pn)
+	}
+	buf = [8]uint8{}
+	Bread(f, buf[:])
+	if string(buf[:]) != endmagic_objfile {
+		sysfatal("%s: invalid file end", pn)
+	}
+	if Boffset(f) != start+len {
+		sysfatal("%s: unexpected end at %d, want %d", pn, int64(Boffset(f)), int64(start+len))
+	}
 }
 
 func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
-	var i int
-	var j int
+	var i int64
+	var j int64
 	var c int
-	var t int
-	var v int
-	var n int
-	var size int
-	var dupok int
-	var ndup_objfile int
+	var t int64
+	var v int64
+	var n int64
+	var size int64
+	var dupok int64
+	var ndup_objfile int64
 	var name string
 	var r *Reloc
 	var s *LSym
@@ -535,24 +443,24 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 	var pc *Pcln
 	var a *Auto
 	if Bgetc(f) != 0xfe {
-		sysfatal("readsym out of sync")
+		log.Fatalf("readsym out of sync")
 	}
-	t = int(rdint_objfile(f))
+	t = rdint_objfile(f)
 	name = expandpkg(rdstring_objfile(f), pkg)
-	v = int(rdint_objfile(f))
+	v = rdint_objfile(f)
 	if v != 0 && v != 1 {
-		sysfatal("invalid symbol version %d", v)
+		log.Fatalf("invalid symbol version %d", v)
 	}
-	dupok = int(rdint_objfile(f))
-	size = int(rdint_objfile(f))
+	dupok = rdint_objfile(f)
+	size = rdint_objfile(f)
 	if v != 0 {
 		v = ctxt.version
 	}
 	s = linklookup(ctxt, name, v)
-	dup = (*LSym)(nil)
-	if s.typ != 0 && s.typ != int(SXREF) {
-		if s.typ != int(SBSS) && s.typ != int(SNOPTRBSS) && !(dupok != 0) && !(s.dupok != 0) {
-			sysfatal("duplicate symbol %s (types %d and %d) in %s and %s", s.name, s.typ, t, s.file, pn)
+	dup = nil
+	if s.typ != 0 && s.typ != SXREF {
+		if s.typ != SBSS && s.typ != SNOPTRBSS && !(dupok != 0) && !(s.dupok != 0) {
+			log.Fatalf("duplicate symbol %s (types %d and %d) in %s and %s", s.name, s.typ, t, s.file, pn)
 		}
 		if len(s.p) > 0 {
 			dup = s
@@ -562,11 +470,11 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 	}
 	s.file = pkg
 	s.dupok = dupok
-	if t == int(SXREF) {
-		sysfatal("bad sxref")
+	if t == SXREF {
+		log.Fatalf("bad sxref")
 	}
 	if t == 0 {
-		sysfatal("missing type for %s in %s", name, pn)
+		log.Fatalf("missing type for %s in %s", name, pn)
 	}
 	s.typ = t
 	if s.size < size {
@@ -574,38 +482,38 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 	}
 	s.gotype = rdsym_objfile(ctxt, f, pkg)
 	rddata_objfile(f, &s.p)
-	n = int(rdint_objfile(f))
+	n = rdint_objfile(f)
 	if n > 0 {
 		s.r = make([]Reloc, n)
 		for i = 0; i < n; i++ {
 			r = &s.r[i]
-			r.off = int(rdint_objfile(f))
-			r.siz = uint8(rdint_objfile(f))
-			r.typ = int(rdint_objfile(f))
+			r.off = rdint_objfile(f)
+			r.siz = rdint_objfile(f)
+			r.typ = rdint_objfile(f)
 			r.add = rdint_objfile(f)
 			r.xadd = rdint_objfile(f)
 			r.sym = rdsym_objfile(ctxt, f, pkg)
 			r.xsym = rdsym_objfile(ctxt, f, pkg)
 		}
 	}
-	if len(s.p) > 0 && dup != nil && len(dup.p) > 0 && !strings.HasPrefix(s.name, "gclocals·") {
+	if len(s.p) > 0 && dup != nil && len(dup.p) > 0 && strings.HasPrefix(s.name, "gclocals·") {
 		// content-addressed garbage collection liveness bitmap symbol.
 		// double check for hash collisions.
 		if !bytes.Equal(s.p, dup.p) {
-			sysfatal("dupok hash collision for %s in %s and %s", s.name, s.file, pn)
+			log.Fatalf("dupok hash collision for %s in %s and %s", s.name, s.file, pn)
 		}
 	}
-	if s.typ == int(STEXT) {
-		s.args = int(rdint_objfile(f))
-		s.locals = int(rdint_objfile(f))
-		s.nosplit = uint8(rdint_objfile(f))
-		s.leaf = uint8(rdint_objfile(f))
-		n = int(rdint_objfile(f))
+	if s.typ == STEXT {
+		s.args = rdint_objfile(f)
+		s.locals = rdint_objfile(f)
+		s.nosplit = rdint_objfile(f)
+		s.leaf = rdint_objfile(f)
+		n = rdint_objfile(f)
 		for i = 0; i < n; i++ {
 			a = new(Auto)
 			a.asym = rdsym_objfile(ctxt, f, pkg)
-			a.aoffset = int32(rdint_objfile(f))
-			a.typ = int(rdint_objfile(f))
+			a.aoffset = rdint_objfile(f)
+			a.typ = rdint_objfile(f)
 			a.gotype = rdsym_objfile(ctxt, f, pkg)
 			a.link = s.autom
 			s.autom = a
@@ -615,28 +523,31 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 		rddata_objfile(f, &pc.pcsp.p)
 		rddata_objfile(f, &pc.pcfile.p)
 		rddata_objfile(f, &pc.pcline.p)
-		n = int(rdint_objfile(f))
+		n = rdint_objfile(f)
 		pc.pcdata = make([]Pcdata, n)
+		pc.npcdata = n
 		for i = 0; i < n; i++ {
 			rddata_objfile(f, &pc.pcdata[i].p)
 		}
-		n = int(rdint_objfile(f))
+		n = rdint_objfile(f)
 		pc.funcdata = make([]*LSym, n)
 		pc.funcdataoff = make([]int64, n)
+		pc.nfuncdata = n
 		for i = 0; i < n; i++ {
 			pc.funcdata[i] = rdsym_objfile(ctxt, f, pkg)
 		}
 		for i = 0; i < n; i++ {
 			pc.funcdataoff[i] = rdint_objfile(f)
 		}
-		n = int(rdint_objfile(f))
+		n = rdint_objfile(f)
 		pc.file = make([]*LSym, n)
+		pc.nfile = n
 		for i = 0; i < n; i++ {
 			pc.file[i] = rdsym_objfile(ctxt, f, pkg)
 		}
 		if dup == nil {
 			if s.onlist != 0 {
-				sysfatal("symbol %s listed multiple times", s.name)
+				log.Fatalf("symbol %s listed multiple times", s.name)
 			}
 			s.onlist = 1
 			if ctxt.etextp != nil {
@@ -661,21 +572,21 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 		if s.nosplit != 0 {
 			Bprint(ctxt.bso, "nosplit ")
 		}
-		Bprint(ctxt.bso, "size=%d value=%d", int64(s.size), int64(s.value))
-		if s.typ == int(STEXT) {
-			Bprint(ctxt.bso, " args=%#x locals=%#x", uint64(s.args), uint64(s.locals))
+		Bprint(ctxt.bso, "size=%lld value=%lld", int64(s.size), int64(s.value))
+		if s.typ == STEXT {
+			Bprint(ctxt.bso, " args=%#llux locals=%#llux", uint64(s.args), uint64(s.locals))
 		}
 		Bprint(ctxt.bso, "\n")
-		for i = 0; i < len(s.p); {
-			Bprint(ctxt.bso, "\t%#06x", i)
-			for j = i; j < i+16 && j < len(s.p); j++ {
-				Bprint(ctxt.bso, " %02x", s.p[j])
+		for i = 0; i < int64(len(s.p)); {
+			Bprint(ctxt.bso, "\t%#06ux", i)
+			for j = i; j < i+16 && j < int64(len(s.p)); j++ {
+				Bprint(ctxt.bso, " %02ux", s.p[j])
 			}
 			for ; j < i+16; j++ {
 				Bprint(ctxt.bso, "   ")
 			}
 			Bprint(ctxt.bso, "  ")
-			for j = i; j < i+16 && j < len(s.p); j++ {
+			for j = i; j < i+16 && j < int64(len(s.p)); j++ {
 				c = int(s.p[j])
 				if ' ' <= c && c <= 0x7e {
 					Bprint(ctxt.bso, "%c", c)
@@ -686,9 +597,9 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 			Bprint(ctxt.bso, "\n")
 			i += 16
 		}
-		for i = range s.r {
+		for i := range s.r {
 			r = &s.r[i]
-			Bprint(ctxt.bso, "\trel %d+%d t=%d %s+%d\n", int(r.off), r.siz, r.typ, r.sym.name, int64(r.add))
+			Bprint(ctxt.bso, "\trel %d+%d t=%d %s+%lld\n", int(r.off), r.siz, r.typ, r.sym.name, int64(r.add))
 		}
 	}
 }
@@ -700,11 +611,11 @@ func rdint_objfile(f *Biobuf) int64 {
 	uv = 0
 	for shift = 0; ; shift += 7 {
 		if shift >= 64 {
-			sysfatal("corrupt input")
+			log.Fatalf("corrupt input")
 		}
 		c = Bgetc(f)
 		uv |= uint64(c&0x7F) << uint(shift)
-		if !(c&0x80 != 0 /*untyped*/) {
+		if !(c&0x80 != 0) {
 			break
 		}
 	}
@@ -712,33 +623,32 @@ func rdint_objfile(f *Biobuf) int64 {
 }
 
 func rdstring_objfile(f *Biobuf) string {
-	var n int32
+	var n int64
 	var p []byte
-	n = int32(rdint_objfile(f))
+	n = rdint_objfile(f)
 	p = make([]byte, n)
 	Bread(f, p)
 	return string(p)
 }
 
 func rddata_objfile(f *Biobuf, pp *[]byte) {
-	n := rdint_objfile(f)
-	*pp = make([]byte, n)
+	*pp = make([]byte, rdint_objfile(f))
 	Bread(f, *pp)
 }
 
 func rdsym_objfile(ctxt *Link, f *Biobuf, pkg string) *LSym {
-	var n int32
-	var v int
+	var n int64
+	var v int64
 	var p []byte
 	var s *LSym
-	n = int32(rdint_objfile(f))
+	n = rdint_objfile(f)
 	if n == 0 {
 		rdint_objfile(f)
-		return (*LSym)(nil)
+		return nil
 	}
 	p = make([]byte, n)
 	Bread(f, p)
-	v = int(rdint_objfile(f))
+	v = rdint_objfile(f)
 	if v != 0 {
 		v = ctxt.version
 	}
@@ -747,22 +657,16 @@ func rdsym_objfile(ctxt *Link, f *Biobuf, pkg string) *LSym {
 		if strings.HasPrefix(s.name, "$f32.") {
 			u64, _ := strconv.ParseUint(s.name[5:], 16, 32)
 			i32 := int32(u64)
-			s.typ = int(SRODATA)
-			adduint32(ctxt, s, uint32(i32))
+			s.typ = SRODATA
+			adduint32(ctxt, s, uint64(i32))
 			s.reachable = 0
-		} else {
-			if strings.HasPrefix(s.name, "$f64.") {
-				u64, _ := strconv.ParseUint(s.name[5:], 16, 64)
-				i64 := int64(u64)
-				s.typ = int(SRODATA)
-				adduint64(ctxt, s, uint64(i64))
-				s.reachable = 0
-			}
+		} else if strings.HasPrefix(s.name, "$f64.") {
+			u64, _ := strconv.ParseUint(s.name[5:], 16, 64)
+			i64 := int64(u64)
+			s.typ = SRODATA
+			adduint64(ctxt, s, uint64(i64))
+			s.reachable = 0
 		}
 	}
 	return s
 }
-
-var startmagic_objfile = "\x00\x00go13ld"
-
-var endmagic_objfile = "\xff\xffgo13ld"

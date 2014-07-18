@@ -1,884 +1,9 @@
 package main
 
-func span8(ctxt *Link, s *LSym) {
-	var p *Prog
-	var q *Prog
-	var c int
-	var v int32
-	var loop int32
-	var bp []uint8
-	var n int
-	var m int
-	var i int
-	ctxt.cursym = s
-	if s.text == nil || s.text.link == nil {
-		return
-	}
-	if ycover_asm8[0] == 0 {
-		instinit_asm8()
-	}
-	for p = s.text; p != nil; p = p.link {
-		n = 0
-		if p.to.typ == int(D_BRANCH_8) {
-			if p.pcond == nil {
-				p.pcond = p
-			}
-		}
-		q = p.pcond
-		if (q) != nil {
-			if q.back != 2 {
-				n = 1
-			}
-		}
-		p.back = n
-		if p.as == int(AADJSP_8) {
-			p.to.typ = int(D_SP_8)
-			v = int32(-p.from.offset)
-			p.from.offset = int64(v)
-			p.as = int(AADDL_8)
-			if v < 0 {
-				p.as = int(ASUBL_8)
-				v = -v
-				p.from.offset = int64(v)
-			}
-			if v == 0 {
-				p.as = int(ANOP_8)
-			}
-		}
-	}
-	for p = s.text; p != nil; p = p.link {
-		p.back = 2 // use short branches first time through
-		q = p.pcond
-		if (q) != nil && (q.back&2 != 0 /*untyped*/) {
-			p.back |= 1 // backward jump
-		}
-		if p.as == int(AADJSP_8) {
-			p.to.typ = int(D_SP_8)
-			v = int32(-p.from.offset)
-			p.from.offset = int64(v)
-			p.as = int(AADDL_8)
-			if v < 0 {
-				p.as = int(ASUBL_8)
-				v = -v
-				p.from.offset = int64(v)
-			}
-			if v == 0 {
-				p.as = int(ANOP_8)
-			}
-		}
-	}
-	n = 0
-	for {
-		loop = 0
-		s.r = s.r[:0]
-		s.p = s.p[:0]
-		c = 0
-		for p = s.text; p != nil; p = p.link {
-			if ctxt.headtype == int(Hnacl) && p.isize > 0 {
-				var deferreturn_asm8 *LSym
-				if deferreturn_asm8 == nil {
-					deferreturn_asm8 = linklookup(ctxt, "runtime.deferreturn", 0)
-				}
-				// pad everything to avoid crossing 32-byte boundary
-				if (c >> 5) != ((c + p.isize - 1) >> 5) {
-					c = int(naclpad_asm8(ctxt, s, int32(c), -c&31))
-				}
-				// pad call deferreturn to start at 32-byte boundary
-				// so that subtracting 5 in jmpdefer will jump back
-				// to that boundary and rerun the call.
-				if p.as == int(ACALL_8) && p.to.sym == deferreturn_asm8 {
-					c = int(naclpad_asm8(ctxt, s, int32(c), -c&31))
-				}
-				// pad call to end at 32-byte boundary
-				if p.as == int(ACALL_8) {
-					c = int(naclpad_asm8(ctxt, s, int32(c), -(c+p.isize)&31))
-				}
-				// the linker treats REP and STOSQ as different instructions
-				// but in fact the REP is a prefix on the STOSQ.
-				// make sure REP has room for 2 more bytes, so that
-				// padding will not be inserted before the next instruction.
-				if p.as == int(AREP_8) && (c>>5) != ((c+3-1)>>5) {
-					c = int(naclpad_asm8(ctxt, s, int32(c), -c&31))
-				}
-				// same for LOCK.
-				// various instructions follow; the longest is 4 bytes.
-				// give ourselves 8 bytes so as to avoid surprises.
-				if p.as == int(ALOCK_8) && (c>>5) != ((c+8-1)>>5) {
-					c = int(naclpad_asm8(ctxt, s, int32(c), -c&31))
-				}
-			}
-			p.pc = c
-			// process forward jumps to p
-			for q = p.comefrom; q != nil; q = q.forwd {
-				v = int32(p.pc) - (int32(q.pc) + int32(q.mark))
-				if q.back&2 != 0 /*untyped*/ { // short
-					if v > 127 {
-						loop++
-						q.back ^= 2
-					}
-					if q.as == int(AJCXZW_8) {
-						s.p[q.pc+2] = uint8(v)
-					} else {
-						s.p[q.pc+1] = uint8(v)
-					}
-				} else {
-					bp = s.p[q.pc+q.mark-4:]
-					bp[0] = uint8(v)
-					bp = bp[1:]
-					bp[0] = uint8(v >> 8)
-					bp = bp[1:]
-					bp[0] = uint8(v >> 16)
-					bp = bp[1:]
-					bp[0] = uint8(v >> 24)
-				}
-			}
-			p.comefrom = (*Prog)(nil)
-			p.pc = c
-			asmins_asm8(ctxt, p)
-			m = -cap(ctxt.andptr) + cap(ctxt.and)
-			if p.isize != m {
-				p.isize = m
-				loop++
-			}
-			symgrow(ctxt, s, int64(p.pc)+int64(m))
-			copy(s.p[p.pc:], ctxt.and[:m])
-			p.mark = m
-			c += m
-		}
-		n++
-		if n > 20 {
-			ctxt.diag("span must be looping")
-			sysfatal("bad code")
-		}
-		if !(loop != 0) {
-			break
-		}
-	}
-	if ctxt.headtype == int(Hnacl) {
-		c = int(naclpad_asm8(ctxt, s, int32(c), -c&31))
-	}
-	c += -c & int(FuncAlign_asm8-1)
-	s.size = c
-	if false { /* debug['a'] > 1 */
-		print("span1 %s %d (%d tries)\n %.6x", s.name, s.size, n, 0)
-		for i = range s.p {
-			print(" %.2x", s.p[i])
-			if i%16 == 15 {
-				print("\n  %.6x", i+1)
-			}
-		}
-		if i%16 != 0 /*untyped*/ {
-			print("\n")
-		}
-		for i = range s.r {
-			var r *Reloc
-			r = &s.r[i]
-			print(" rel %#.4x/%d %s%+d\n", r.off, r.siz, r.sym.name, r.add)
-		}
-	}
-}
-
-var anames6 = []string{
-	"XXX",
-	"AAA",
-	"AAD",
-	"AAM",
-	"AAS",
-	"ADCB",
-	"ADCL",
-	"ADCW",
-	"ADDB",
-	"ADDL",
-	"ADDW",
-	"ADJSP",
-	"ANDB",
-	"ANDL",
-	"ANDW",
-	"ARPL",
-	"BOUNDL",
-	"BOUNDW",
-	"BSFL",
-	"BSFW",
-	"BSRL",
-	"BSRW",
-	"BTL",
-	"BTW",
-	"BTCL",
-	"BTCW",
-	"BTRL",
-	"BTRW",
-	"BTSL",
-	"BTSW",
-	"BYTE",
-	"CALL",
-	"CLC",
-	"CLD",
-	"CLI",
-	"CLTS",
-	"CMC",
-	"CMPB",
-	"CMPL",
-	"CMPW",
-	"CMPSB",
-	"CMPSL",
-	"CMPSW",
-	"DAA",
-	"DAS",
-	"DATA",
-	"DECB",
-	"DECL",
-	"DECQ",
-	"DECW",
-	"DIVB",
-	"DIVL",
-	"DIVW",
-	"ENTER",
-	"GLOBL",
-	"GOK",
-	"HISTORY",
-	"HLT",
-	"IDIVB",
-	"IDIVL",
-	"IDIVW",
-	"IMULB",
-	"IMULL",
-	"IMULW",
-	"INB",
-	"INL",
-	"INW",
-	"INCB",
-	"INCL",
-	"INCQ",
-	"INCW",
-	"INSB",
-	"INSL",
-	"INSW",
-	"INT",
-	"INTO",
-	"IRETL",
-	"IRETW",
-	"JCC",
-	"JCS",
-	"JCXZL",
-	"JEQ",
-	"JGE",
-	"JGT",
-	"JHI",
-	"JLE",
-	"JLS",
-	"JLT",
-	"JMI",
-	"JMP",
-	"JNE",
-	"JOC",
-	"JOS",
-	"JPC",
-	"JPL",
-	"JPS",
-	"LAHF",
-	"LARL",
-	"LARW",
-	"LEAL",
-	"LEAW",
-	"LEAVEL",
-	"LEAVEW",
-	"LOCK",
-	"LODSB",
-	"LODSL",
-	"LODSW",
-	"LONG",
-	"LOOP",
-	"LOOPEQ",
-	"LOOPNE",
-	"LSLL",
-	"LSLW",
-	"MOVB",
-	"MOVL",
-	"MOVW",
-	"MOVBLSX",
-	"MOVBLZX",
-	"MOVBQSX",
-	"MOVBQZX",
-	"MOVBWSX",
-	"MOVBWZX",
-	"MOVWLSX",
-	"MOVWLZX",
-	"MOVWQSX",
-	"MOVWQZX",
-	"MOVSB",
-	"MOVSL",
-	"MOVSW",
-	"MULB",
-	"MULL",
-	"MULW",
-	"NAME",
-	"NEGB",
-	"NEGL",
-	"NEGW",
-	"NOP",
-	"NOTB",
-	"NOTL",
-	"NOTW",
-	"ORB",
-	"ORL",
-	"ORW",
-	"OUTB",
-	"OUTL",
-	"OUTW",
-	"OUTSB",
-	"OUTSL",
-	"OUTSW",
-	"PAUSE",
-	"POPAL",
-	"POPAW",
-	"POPFL",
-	"POPFW",
-	"POPL",
-	"POPW",
-	"PUSHAL",
-	"PUSHAW",
-	"PUSHFL",
-	"PUSHFW",
-	"PUSHL",
-	"PUSHW",
-	"RCLB",
-	"RCLL",
-	"RCLW",
-	"RCRB",
-	"RCRL",
-	"RCRW",
-	"REP",
-	"REPN",
-	"RET",
-	"ROLB",
-	"ROLL",
-	"ROLW",
-	"RORB",
-	"RORL",
-	"RORW",
-	"SAHF",
-	"SALB",
-	"SALL",
-	"SALW",
-	"SARB",
-	"SARL",
-	"SARW",
-	"SBBB",
-	"SBBL",
-	"SBBW",
-	"SCASB",
-	"SCASL",
-	"SCASW",
-	"SETCC",
-	"SETCS",
-	"SETEQ",
-	"SETGE",
-	"SETGT",
-	"SETHI",
-	"SETLE",
-	"SETLS",
-	"SETLT",
-	"SETMI",
-	"SETNE",
-	"SETOC",
-	"SETOS",
-	"SETPC",
-	"SETPL",
-	"SETPS",
-	"CDQ",
-	"CWD",
-	"SHLB",
-	"SHLL",
-	"SHLW",
-	"SHRB",
-	"SHRL",
-	"SHRW",
-	"STC",
-	"STD",
-	"STI",
-	"STOSB",
-	"STOSL",
-	"STOSW",
-	"SUBB",
-	"SUBL",
-	"SUBW",
-	"SYSCALL",
-	"TESTB",
-	"TESTL",
-	"TESTW",
-	"TEXT",
-	"VERR",
-	"VERW",
-	"WAIT",
-	"WORD",
-	"XCHGB",
-	"XCHGL",
-	"XCHGW",
-	"XLAT",
-	"XORB",
-	"XORL",
-	"XORW",
-	"FMOVB",
-	"FMOVBP",
-	"FMOVD",
-	"FMOVDP",
-	"FMOVF",
-	"FMOVFP",
-	"FMOVL",
-	"FMOVLP",
-	"FMOVV",
-	"FMOVVP",
-	"FMOVW",
-	"FMOVWP",
-	"FMOVX",
-	"FMOVXP",
-	"FCOMB",
-	"FCOMBP",
-	"FCOMD",
-	"FCOMDP",
-	"FCOMDPP",
-	"FCOMF",
-	"FCOMFP",
-	"FCOML",
-	"FCOMLP",
-	"FCOMW",
-	"FCOMWP",
-	"FUCOM",
-	"FUCOMP",
-	"FUCOMPP",
-	"FADDDP",
-	"FADDW",
-	"FADDL",
-	"FADDF",
-	"FADDD",
-	"FMULDP",
-	"FMULW",
-	"FMULL",
-	"FMULF",
-	"FMULD",
-	"FSUBDP",
-	"FSUBW",
-	"FSUBL",
-	"FSUBF",
-	"FSUBD",
-	"FSUBRDP",
-	"FSUBRW",
-	"FSUBRL",
-	"FSUBRF",
-	"FSUBRD",
-	"FDIVDP",
-	"FDIVW",
-	"FDIVL",
-	"FDIVF",
-	"FDIVD",
-	"FDIVRDP",
-	"FDIVRW",
-	"FDIVRL",
-	"FDIVRF",
-	"FDIVRD",
-	"FXCHD",
-	"FFREE",
-	"FLDCW",
-	"FLDENV",
-	"FRSTOR",
-	"FSAVE",
-	"FSTCW",
-	"FSTENV",
-	"FSTSW",
-	"F2XM1",
-	"FABS",
-	"FCHS",
-	"FCLEX",
-	"FCOS",
-	"FDECSTP",
-	"FINCSTP",
-	"FINIT",
-	"FLD1",
-	"FLDL2E",
-	"FLDL2T",
-	"FLDLG2",
-	"FLDLN2",
-	"FLDPI",
-	"FLDZ",
-	"FNOP",
-	"FPATAN",
-	"FPREM",
-	"FPREM1",
-	"FPTAN",
-	"FRNDINT",
-	"FSCALE",
-	"FSIN",
-	"FSINCOS",
-	"FSQRT",
-	"FTST",
-	"FXAM",
-	"FXTRACT",
-	"FYL2X",
-	"FYL2XP1",
-	"END",
-	"DYNT_",
-	"INIT_",
-	"SIGNAME",
-	"CMPXCHGB",
-	"CMPXCHGL",
-	"CMPXCHGW",
-	"CMPXCHG8B",
-	"CPUID",
-	"INVD",
-	"INVLPG",
-	"LFENCE",
-	"MFENCE",
-	"MOVNTIL",
-	"RDMSR",
-	"RDPMC",
-	"RDTSC",
-	"RSM",
-	"SFENCE",
-	"SYSRET",
-	"WBINVD",
-	"WRMSR",
-	"XADDB",
-	"XADDL",
-	"XADDW",
-	"CMOVLCC",
-	"CMOVLCS",
-	"CMOVLEQ",
-	"CMOVLGE",
-	"CMOVLGT",
-	"CMOVLHI",
-	"CMOVLLE",
-	"CMOVLLS",
-	"CMOVLLT",
-	"CMOVLMI",
-	"CMOVLNE",
-	"CMOVLOC",
-	"CMOVLOS",
-	"CMOVLPC",
-	"CMOVLPL",
-	"CMOVLPS",
-	"CMOVQCC",
-	"CMOVQCS",
-	"CMOVQEQ",
-	"CMOVQGE",
-	"CMOVQGT",
-	"CMOVQHI",
-	"CMOVQLE",
-	"CMOVQLS",
-	"CMOVQLT",
-	"CMOVQMI",
-	"CMOVQNE",
-	"CMOVQOC",
-	"CMOVQOS",
-	"CMOVQPC",
-	"CMOVQPL",
-	"CMOVQPS",
-	"CMOVWCC",
-	"CMOVWCS",
-	"CMOVWEQ",
-	"CMOVWGE",
-	"CMOVWGT",
-	"CMOVWHI",
-	"CMOVWLE",
-	"CMOVWLS",
-	"CMOVWLT",
-	"CMOVWMI",
-	"CMOVWNE",
-	"CMOVWOC",
-	"CMOVWOS",
-	"CMOVWPC",
-	"CMOVWPL",
-	"CMOVWPS",
-	"ADCQ",
-	"ADDQ",
-	"ANDQ",
-	"BSFQ",
-	"BSRQ",
-	"BTCQ",
-	"BTQ",
-	"BTRQ",
-	"BTSQ",
-	"CMPQ",
-	"CMPSQ",
-	"CMPXCHGQ",
-	"CQO",
-	"DIVQ",
-	"IDIVQ",
-	"IMULQ",
-	"IRETQ",
-	"JCXZQ",
-	"LEAQ",
-	"LEAVEQ",
-	"LODSQ",
-	"MOVQ",
-	"MOVLQSX",
-	"MOVLQZX",
-	"MOVNTIQ",
-	"MOVSQ",
-	"MULQ",
-	"NEGQ",
-	"NOTQ",
-	"ORQ",
-	"POPFQ",
-	"POPQ",
-	"PUSHFQ",
-	"PUSHQ",
-	"RCLQ",
-	"RCRQ",
-	"ROLQ",
-	"RORQ",
-	"QUAD",
-	"SALQ",
-	"SARQ",
-	"SBBQ",
-	"SCASQ",
-	"SHLQ",
-	"SHRQ",
-	"STOSQ",
-	"SUBQ",
-	"TESTQ",
-	"XADDQ",
-	"XCHGQ",
-	"XORQ",
-	"ADDPD",
-	"ADDPS",
-	"ADDSD",
-	"ADDSS",
-	"ANDNPD",
-	"ANDNPS",
-	"ANDPD",
-	"ANDPS",
-	"CMPPD",
-	"CMPPS",
-	"CMPSD",
-	"CMPSS",
-	"COMISD",
-	"COMISS",
-	"CVTPD2PL",
-	"CVTPD2PS",
-	"CVTPL2PD",
-	"CVTPL2PS",
-	"CVTPS2PD",
-	"CVTPS2PL",
-	"CVTSD2SL",
-	"CVTSD2SQ",
-	"CVTSD2SS",
-	"CVTSL2SD",
-	"CVTSL2SS",
-	"CVTSQ2SD",
-	"CVTSQ2SS",
-	"CVTSS2SD",
-	"CVTSS2SL",
-	"CVTSS2SQ",
-	"CVTTPD2PL",
-	"CVTTPS2PL",
-	"CVTTSD2SL",
-	"CVTTSD2SQ",
-	"CVTTSS2SL",
-	"CVTTSS2SQ",
-	"DIVPD",
-	"DIVPS",
-	"DIVSD",
-	"DIVSS",
-	"EMMS",
-	"FXRSTOR",
-	"FXRSTOR64",
-	"FXSAVE",
-	"FXSAVE64",
-	"LDMXCSR",
-	"MASKMOVOU",
-	"MASKMOVQ",
-	"MAXPD",
-	"MAXPS",
-	"MAXSD",
-	"MAXSS",
-	"MINPD",
-	"MINPS",
-	"MINSD",
-	"MINSS",
-	"MOVAPD",
-	"MOVAPS",
-	"MOVOU",
-	"MOVHLPS",
-	"MOVHPD",
-	"MOVHPS",
-	"MOVLHPS",
-	"MOVLPD",
-	"MOVLPS",
-	"MOVMSKPD",
-	"MOVMSKPS",
-	"MOVNTO",
-	"MOVNTPD",
-	"MOVNTPS",
-	"MOVNTQ",
-	"MOVO",
-	"MOVQOZX",
-	"MOVSD",
-	"MOVSS",
-	"MOVUPD",
-	"MOVUPS",
-	"MULPD",
-	"MULPS",
-	"MULSD",
-	"MULSS",
-	"ORPD",
-	"ORPS",
-	"PACKSSLW",
-	"PACKSSWB",
-	"PACKUSWB",
-	"PADDB",
-	"PADDL",
-	"PADDQ",
-	"PADDSB",
-	"PADDSW",
-	"PADDUSB",
-	"PADDUSW",
-	"PADDW",
-	"PANDB",
-	"PANDL",
-	"PANDSB",
-	"PANDSW",
-	"PANDUSB",
-	"PANDUSW",
-	"PANDW",
-	"PAND",
-	"PANDN",
-	"PAVGB",
-	"PAVGW",
-	"PCMPEQB",
-	"PCMPEQL",
-	"PCMPEQW",
-	"PCMPGTB",
-	"PCMPGTL",
-	"PCMPGTW",
-	"PEXTRW",
-	"PFACC",
-	"PFADD",
-	"PFCMPEQ",
-	"PFCMPGE",
-	"PFCMPGT",
-	"PFMAX",
-	"PFMIN",
-	"PFMUL",
-	"PFNACC",
-	"PFPNACC",
-	"PFRCP",
-	"PFRCPIT1",
-	"PFRCPI2T",
-	"PFRSQIT1",
-	"PFRSQRT",
-	"PFSUB",
-	"PFSUBR",
-	"PINSRW",
-	"PINSRD",
-	"PINSRQ",
-	"PMADDWL",
-	"PMAXSW",
-	"PMAXUB",
-	"PMINSW",
-	"PMINUB",
-	"PMOVMSKB",
-	"PMULHRW",
-	"PMULHUW",
-	"PMULHW",
-	"PMULLW",
-	"PMULULQ",
-	"POR",
-	"PSADBW",
-	"PSHUFHW",
-	"PSHUFL",
-	"PSHUFLW",
-	"PSHUFW",
-	"PSHUFB",
-	"PSLLO",
-	"PSLLL",
-	"PSLLQ",
-	"PSLLW",
-	"PSRAL",
-	"PSRAW",
-	"PSRLO",
-	"PSRLL",
-	"PSRLQ",
-	"PSRLW",
-	"PSUBB",
-	"PSUBL",
-	"PSUBQ",
-	"PSUBSB",
-	"PSUBSW",
-	"PSUBUSB",
-	"PSUBUSW",
-	"PSUBW",
-	"PSWAPL",
-	"PUNPCKHBW",
-	"PUNPCKHLQ",
-	"PUNPCKHQDQ",
-	"PUNPCKHWL",
-	"PUNPCKLBW",
-	"PUNPCKLLQ",
-	"PUNPCKLQDQ",
-	"PUNPCKLWL",
-	"PXOR",
-	"RCPPS",
-	"RCPSS",
-	"RSQRTPS",
-	"RSQRTSS",
-	"SHUFPD",
-	"SHUFPS",
-	"SQRTPD",
-	"SQRTPS",
-	"SQRTSD",
-	"SQRTSS",
-	"STMXCSR",
-	"SUBPD",
-	"SUBPS",
-	"SUBSD",
-	"SUBSS",
-	"UCOMISD",
-	"UCOMISS",
-	"UNPCKHPD",
-	"UNPCKHPS",
-	"UNPCKLPD",
-	"UNPCKLPS",
-	"XORPD",
-	"XORPS",
-	"PF2IW",
-	"PF2IL",
-	"PI2FW",
-	"PI2FL",
-	"RETFW",
-	"RETFL",
-	"RETFQ",
-	"SWAPGS",
-	"MODE",
-	"CRC32B",
-	"CRC32Q",
-	"IMUL3Q",
-	"PREFETCHT0",
-	"PREFETCHT1",
-	"PREFETCHT2",
-	"PREFETCHNTA",
-	"MOVQL",
-	"BSWAPL",
-	"BSWAPQ",
-	"UNDEF",
-	"AESENC",
-	"AESENCLAST",
-	"AESDEC",
-	"AESDECLAST",
-	"AESIMC",
-	"AESKEYGENASSIST",
-	"PSHUFD",
-	"PCLMULQDQ",
-	"USEFIELD",
-	"TYPE",
-	"FUNCDATA",
-	"PCDATA",
-	"CHECKNIL",
-	"VARDEF",
-	"VARKILL",
-	"DUFFCOPY",
-	"DUFFZERO",
-	"LAST",
-}
+import (
+	"fmt"
+	"log"
+)
 
 /*
  * this is the ranlib header
@@ -889,9 +14,9 @@ const (
 )
 
 type Optab_asm8 struct {
-	as     int
+	as     int64
 	ytab   []uint8
-	prefix int
+	prefix int64
 	op     [13]uint8
 }
 
@@ -1010,44 +135,7 @@ const (
 
 var ycover_asm8 [Ymax_asm8 * Ymax_asm8]uint8
 
-var reg_asm8 [D_NONE_8]int8
-
-func asmins_asm8(ctxt *Link, p *Prog) {
-	var r *Reloc
-	ctxt.andptr = ctxt.and[:]
-	if p.as == int(AUSEFIELD_8) {
-		r = addrel(ctxt.cursym)
-		r.off = 0
-		r.sym = p.from.sym
-		r.typ = int(R_USEFIELD)
-		r.siz = 0
-		return
-	}
-	if ctxt.headtype == int(Hnacl) {
-		switch p.as {
-		case ARET_8:
-			copy(ctxt.andptr, naclret_asm8)
-			ctxt.andptr = ctxt.andptr[len(naclret_asm8):]
-			return
-		case ACALL_8:
-		case AJMP_8:
-			if D_AX_8 <= int(p.to.typ) && p.to.typ <= int(D_DI_8) {
-				ctxt.andptr[0] = 0x83
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = uint8(0xe0 | (p.to.typ - int(D_AX_8)))
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0xe0
-				ctxt.andptr = ctxt.andptr[1:]
-			}
-			break
-		case AINT_8:
-			ctxt.andptr[0] = 0xf4
-			ctxt.andptr = ctxt.andptr[1:]
-			return
-		}
-	}
-	doasm_asm8(ctxt, p)
-}
+var reg_asm8 [D_NONE_8]int
 
 var ynone_asm8 = []uint8{
 	Ynone_asm8,
@@ -2002,16 +1090,16 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{AAAD_8, ynone_asm8, Px_asm8, [13]uint8{0xd5, 0x0a}},
 	{AAAM_8, ynone_asm8, Px_asm8, [13]uint8{0xd4, 0x0a}},
 	{AAAS_8, ynone_asm8, Px_asm8, [13]uint8{0x3f}},
-	{AADCB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x14, 0x80, (02), 0x10, 0x10}},
-	{AADCL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, (02), 0x15, 0x81, (02), 0x11, 0x13}},
-	{AADCW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, (02), 0x15, 0x81, (02), 0x11, 0x13}},
-	{AADDB_8, yxorb_asm8, Px_asm8, [13]uint8{0x04, 0x80, (00), 0x00, 0x02}},
-	{AADDL_8, yaddl_asm8, Px_asm8, [13]uint8{0x83, (00), 0x05, 0x81, (00), 0x01, 0x03}},
-	{AADDW_8, yaddl_asm8, Pe_asm8, [13]uint8{0x83, (00), 0x05, 0x81, (00), 0x01, 0x03}},
+	{AADCB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x14, 0x80, 02, 0x10, 0x10}},
+	{AADCL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, 02, 0x15, 0x81, 02, 0x11, 0x13}},
+	{AADCW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, 02, 0x15, 0x81, 02, 0x11, 0x13}},
+	{AADDB_8, yxorb_asm8, Px_asm8, [13]uint8{0x04, 0x80, 00, 0x00, 0x02}},
+	{AADDL_8, yaddl_asm8, Px_asm8, [13]uint8{0x83, 00, 0x05, 0x81, 00, 0x01, 0x03}},
+	{AADDW_8, yaddl_asm8, Pe_asm8, [13]uint8{0x83, 00, 0x05, 0x81, 00, 0x01, 0x03}},
 	{AADJSP_8, nil, 0, [13]uint8{}},
-	{AANDB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x24, 0x80, (04), 0x20, 0x22}},
-	{AANDL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, (04), 0x25, 0x81, (04), 0x21, 0x23}},
-	{AANDW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, (04), 0x25, 0x81, (04), 0x21, 0x23}},
+	{AANDB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x24, 0x80, 04, 0x20, 0x22}},
+	{AANDL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, 04, 0x25, 0x81, 04, 0x21, 0x23}},
+	{AANDW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, 04, 0x25, 0x81, 04, 0x21, 0x23}},
 	{AARPL_8, yrl_ml_asm8, Px_asm8, [13]uint8{0x63}},
 	{ABOUNDL_8, yrl_m_asm8, Px_asm8, [13]uint8{0x62}},
 	{ABOUNDW_8, yrl_m_asm8, Pe_asm8, [13]uint8{0x62}},
@@ -2028,44 +1116,44 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{ABTSL_8, yml_rl_asm8, Pm_asm8, [13]uint8{0xab}},
 	{ABTSW_8, yml_rl_asm8, Pq_asm8, [13]uint8{0xab}},
 	{ABYTE_8, ybyte_asm8, Px_asm8, [13]uint8{1}},
-	{ACALL_8, ycall_asm8, Px_asm8, [13]uint8{0xff, (02), 0xff, (0x15), 0xe8}},
+	{ACALL_8, ycall_asm8, Px_asm8, [13]uint8{0xff, 02, 0xff, 0x15, 0xe8}},
 	{ACLC_8, ynone_asm8, Px_asm8, [13]uint8{0xf8}},
 	{ACLD_8, ynone_asm8, Px_asm8, [13]uint8{0xfc}},
 	{ACLI_8, ynone_asm8, Px_asm8, [13]uint8{0xfa}},
 	{ACLTS_8, ynone_asm8, Pm_asm8, [13]uint8{0x06}},
 	{ACMC_8, ynone_asm8, Px_asm8, [13]uint8{0xf5}},
-	{ACMPB_8, ycmpb_asm8, Pb_asm8, [13]uint8{0x3c, 0x80, (07), 0x38, 0x3a}},
-	{ACMPL_8, ycmpl_asm8, Px_asm8, [13]uint8{0x83, (07), 0x3d, 0x81, (07), 0x39, 0x3b}},
-	{ACMPW_8, ycmpl_asm8, Pe_asm8, [13]uint8{0x83, (07), 0x3d, 0x81, (07), 0x39, 0x3b}},
+	{ACMPB_8, ycmpb_asm8, Pb_asm8, [13]uint8{0x3c, 0x80, 07, 0x38, 0x3a}},
+	{ACMPL_8, ycmpl_asm8, Px_asm8, [13]uint8{0x83, 07, 0x3d, 0x81, 07, 0x39, 0x3b}},
+	{ACMPW_8, ycmpl_asm8, Pe_asm8, [13]uint8{0x83, 07, 0x3d, 0x81, 07, 0x39, 0x3b}},
 	{ACMPSB_8, ynone_asm8, Pb_asm8, [13]uint8{0xa6}},
 	{ACMPSL_8, ynone_asm8, Px_asm8, [13]uint8{0xa7}},
 	{ACMPSW_8, ynone_asm8, Pe_asm8, [13]uint8{0xa7}},
 	{ADAA_8, ynone_asm8, Px_asm8, [13]uint8{0x27}},
 	{ADAS_8, ynone_asm8, Px_asm8, [13]uint8{0x2f}},
 	{ADATA_8, nil, 0, [13]uint8{}},
-	{ADECB_8, yincb_asm8, Pb_asm8, [13]uint8{0xfe, (01)}},
-	{ADECL_8, yincl_asm8, Px_asm8, [13]uint8{0x48, 0xff, (01)}},
-	{ADECW_8, yincl_asm8, Pe_asm8, [13]uint8{0x48, 0xff, (01)}},
-	{ADIVB_8, ydivb_asm8, Pb_asm8, [13]uint8{0xf6, (06)}},
-	{ADIVL_8, ydivl_asm8, Px_asm8, [13]uint8{0xf7, (06)}},
-	{ADIVW_8, ydivl_asm8, Pe_asm8, [13]uint8{0xf7, (06)}},
+	{ADECB_8, yincb_asm8, Pb_asm8, [13]uint8{0xfe, 01}},
+	{ADECL_8, yincl_asm8, Px_asm8, [13]uint8{0x48, 0xff, 01}},
+	{ADECW_8, yincl_asm8, Pe_asm8, [13]uint8{0x48, 0xff, 01}},
+	{ADIVB_8, ydivb_asm8, Pb_asm8, [13]uint8{0xf6, 06}},
+	{ADIVL_8, ydivl_asm8, Px_asm8, [13]uint8{0xf7, 06}},
+	{ADIVW_8, ydivl_asm8, Pe_asm8, [13]uint8{0xf7, 06}},
 	{AENTER_8, nil, 0, [13]uint8{}}, /* botch */
 	{AGLOBL_8, nil, 0, [13]uint8{}},
 	{AGOK_8, nil, 0, [13]uint8{}},
 	{AHISTORY_8, nil, 0, [13]uint8{}},
 	{AHLT_8, ynone_asm8, Px_asm8, [13]uint8{0xf4}},
-	{AIDIVB_8, ydivb_asm8, Pb_asm8, [13]uint8{0xf6, (07)}},
-	{AIDIVL_8, ydivl_asm8, Px_asm8, [13]uint8{0xf7, (07)}},
-	{AIDIVW_8, ydivl_asm8, Pe_asm8, [13]uint8{0xf7, (07)}},
-	{AIMULB_8, ydivb_asm8, Pb_asm8, [13]uint8{0xf6, (05)}},
-	{AIMULL_8, yimul_asm8, Px_asm8, [13]uint8{0xf7, (05), 0x6b, 0x69}},
-	{AIMULW_8, yimul_asm8, Pe_asm8, [13]uint8{0xf7, (05), 0x6b, 0x69}},
+	{AIDIVB_8, ydivb_asm8, Pb_asm8, [13]uint8{0xf6, 07}},
+	{AIDIVL_8, ydivl_asm8, Px_asm8, [13]uint8{0xf7, 07}},
+	{AIDIVW_8, ydivl_asm8, Pe_asm8, [13]uint8{0xf7, 07}},
+	{AIMULB_8, ydivb_asm8, Pb_asm8, [13]uint8{0xf6, 05}},
+	{AIMULL_8, yimul_asm8, Px_asm8, [13]uint8{0xf7, 05, 0x6b, 0x69}},
+	{AIMULW_8, yimul_asm8, Pe_asm8, [13]uint8{0xf7, 05, 0x6b, 0x69}},
 	{AINB_8, yin_asm8, Pb_asm8, [13]uint8{0xe4, 0xec}},
 	{AINL_8, yin_asm8, Px_asm8, [13]uint8{0xe5, 0xed}},
 	{AINW_8, yin_asm8, Pe_asm8, [13]uint8{0xe5, 0xed}},
-	{AINCB_8, yincb_asm8, Pb_asm8, [13]uint8{0xfe, (00)}},
-	{AINCL_8, yincl_asm8, Px_asm8, [13]uint8{0x40, 0xff, (00)}},
-	{AINCW_8, yincl_asm8, Pe_asm8, [13]uint8{0x40, 0xff, (00)}},
+	{AINCB_8, yincb_asm8, Pb_asm8, [13]uint8{0xfe, 00}},
+	{AINCL_8, yincl_asm8, Px_asm8, [13]uint8{0x40, 0xff, 00}},
+	{AINCW_8, yincl_asm8, Pe_asm8, [13]uint8{0x40, 0xff, 00}},
 	{AINSB_8, ynone_asm8, Pb_asm8, [13]uint8{0x6c}},
 	{AINSL_8, ynone_asm8, Px_asm8, [13]uint8{0x6d}},
 	{AINSW_8, ynone_asm8, Pe_asm8, [13]uint8{0x6d}},
@@ -2073,7 +1161,7 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{AINTO_8, ynone_asm8, Px_asm8, [13]uint8{0xce}},
 	{AIRETL_8, ynone_asm8, Px_asm8, [13]uint8{0xcf}},
 	{AIRETW_8, ynone_asm8, Pe_asm8, [13]uint8{0xcf}},
-	{AJCC_8, yjcond_asm8, Px_asm8, [13]uint8{0x73, 0x83, (00)}},
+	{AJCC_8, yjcond_asm8, Px_asm8, [13]uint8{0x73, 0x83, 00}},
 	{AJCS_8, yjcond_asm8, Px_asm8, [13]uint8{0x72, 0x82}},
 	{AJCXZL_8, yloop_asm8, Px_asm8, [13]uint8{0xe3}},
 	{AJCXZW_8, yloop_asm8, Px_asm8, [13]uint8{0xe3}},
@@ -2085,10 +1173,10 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{AJLS_8, yjcond_asm8, Px_asm8, [13]uint8{0x76, 0x86}},
 	{AJLT_8, yjcond_asm8, Px_asm8, [13]uint8{0x7c, 0x8c}},
 	{AJMI_8, yjcond_asm8, Px_asm8, [13]uint8{0x78, 0x88}},
-	{AJMP_8, yjmp_asm8, Px_asm8, [13]uint8{0xff, (04), 0xeb, 0xe9}},
+	{AJMP_8, yjmp_asm8, Px_asm8, [13]uint8{0xff, 04, 0xeb, 0xe9}},
 	{AJNE_8, yjcond_asm8, Px_asm8, [13]uint8{0x75, 0x85}},
-	{AJOC_8, yjcond_asm8, Px_asm8, [13]uint8{0x71, 0x81, (00)}},
-	{AJOS_8, yjcond_asm8, Px_asm8, [13]uint8{0x70, 0x80, (00)}},
+	{AJOC_8, yjcond_asm8, Px_asm8, [13]uint8{0x71, 0x81, 00}},
+	{AJOS_8, yjcond_asm8, Px_asm8, [13]uint8{0x70, 0x80, 00}},
 	{AJPC_8, yjcond_asm8, Px_asm8, [13]uint8{0x7b, 0x8b}},
 	{AJPL_8, yjcond_asm8, Px_asm8, [13]uint8{0x79, 0x89}},
 	{AJPS_8, yjcond_asm8, Px_asm8, [13]uint8{0x7a, 0x8a}},
@@ -2109,9 +1197,9 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{ALOOPNE_8, yloop_asm8, Px_asm8, [13]uint8{0xe0}},
 	{ALSLL_8, yml_rl_asm8, Pm_asm8, [13]uint8{0x03}},
 	{ALSLW_8, yml_rl_asm8, Pq_asm8, [13]uint8{0x03}},
-	{AMOVB_8, ymovb_asm8, Pb_asm8, [13]uint8{0x88, 0x8a, 0xb0, 0xc6, (00)}},
-	{AMOVL_8, ymovl_asm8, Px_asm8, [13]uint8{0x89, 0x8b, 0x31, 0x83, (04), 0xb8, 0xc7, (00), Pe_asm8, 0x6e, Pe_asm8, 0x7e, 0}},
-	{AMOVW_8, ymovw_asm8, Pe_asm8, [13]uint8{0x89, 0x8b, 0x31, 0x83, (04), 0xb8, 0xc7, (00), 0}},
+	{AMOVB_8, ymovb_asm8, Pb_asm8, [13]uint8{0x88, 0x8a, 0xb0, 0xc6, 00}},
+	{AMOVL_8, ymovl_asm8, Px_asm8, [13]uint8{0x89, 0x8b, 0x31, 0x83, 04, 0xb8, 0xc7, 00, Pe_asm8, 0x6e, Pe_asm8, 0x7e, 0}},
+	{AMOVW_8, ymovw_asm8, Pe_asm8, [13]uint8{0x89, 0x8b, 0x31, 0x83, 04, 0xb8, 0xc7, 00, 0}},
 	{AMOVQ_8, ymovq_asm8, Pf3_asm8, [13]uint8{0x7e}},
 	{AMOVBLSX_8, ymb_rl_asm8, Pm_asm8, [13]uint8{0xbe}},
 	{AMOVBLZX_8, ymb_rl_asm8, Pm_asm8, [13]uint8{0xb6}},
@@ -2122,20 +1210,20 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{AMOVSB_8, ynone_asm8, Pb_asm8, [13]uint8{0xa4}},
 	{AMOVSL_8, ynone_asm8, Px_asm8, [13]uint8{0xa5}},
 	{AMOVSW_8, ynone_asm8, Pe_asm8, [13]uint8{0xa5}},
-	{AMULB_8, ydivb_asm8, Pb_asm8, [13]uint8{0xf6, (04)}},
-	{AMULL_8, ydivl_asm8, Px_asm8, [13]uint8{0xf7, (04)}},
-	{AMULW_8, ydivl_asm8, Pe_asm8, [13]uint8{0xf7, (04)}},
+	{AMULB_8, ydivb_asm8, Pb_asm8, [13]uint8{0xf6, 04}},
+	{AMULL_8, ydivl_asm8, Px_asm8, [13]uint8{0xf7, 04}},
+	{AMULW_8, ydivl_asm8, Pe_asm8, [13]uint8{0xf7, 04}},
 	{ANAME_8, nil, 0, [13]uint8{}},
-	{ANEGB_8, yscond_asm8, Px_asm8, [13]uint8{0xf6, (03)}},
-	{ANEGL_8, yscond_asm8, Px_asm8, [13]uint8{0xf7, (03)}},
-	{ANEGW_8, yscond_asm8, Pe_asm8, [13]uint8{0xf7, (03)}},
+	{ANEGB_8, yscond_asm8, Px_asm8, [13]uint8{0xf6, 03}},
+	{ANEGL_8, yscond_asm8, Px_asm8, [13]uint8{0xf7, 03}},
+	{ANEGW_8, yscond_asm8, Pe_asm8, [13]uint8{0xf7, 03}},
 	{ANOP_8, ynop_asm8, Px_asm8, [13]uint8{0, 0}},
-	{ANOTB_8, yscond_asm8, Px_asm8, [13]uint8{0xf6, (02)}},
-	{ANOTL_8, yscond_asm8, Px_asm8, [13]uint8{0xf7, (02)}},
-	{ANOTW_8, yscond_asm8, Pe_asm8, [13]uint8{0xf7, (02)}},
-	{AORB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x0c, 0x80, (01), 0x08, 0x0a}},
-	{AORL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, (01), 0x0d, 0x81, (01), 0x09, 0x0b}},
-	{AORW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, (01), 0x0d, 0x81, (01), 0x09, 0x0b}},
+	{ANOTB_8, yscond_asm8, Px_asm8, [13]uint8{0xf6, 02}},
+	{ANOTL_8, yscond_asm8, Px_asm8, [13]uint8{0xf7, 02}},
+	{ANOTW_8, yscond_asm8, Pe_asm8, [13]uint8{0xf7, 02}},
+	{AORB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x0c, 0x80, 01, 0x08, 0x0a}},
+	{AORL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, 01, 0x0d, 0x81, 01, 0x09, 0x0b}},
+	{AORW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, 01, 0x0d, 0x81, 01, 0x09, 0x0b}},
 	{AOUTB_8, yin_asm8, Pb_asm8, [13]uint8{0xe6, 0xee}},
 	{AOUTL_8, yin_asm8, Px_asm8, [13]uint8{0xe7, 0xef}},
 	{AOUTW_8, yin_asm8, Pe_asm8, [13]uint8{0xe7, 0xef}},
@@ -2147,162 +1235,162 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{APOPAW_8, ynone_asm8, Pe_asm8, [13]uint8{0x61}},
 	{APOPFL_8, ynone_asm8, Px_asm8, [13]uint8{0x9d}},
 	{APOPFW_8, ynone_asm8, Pe_asm8, [13]uint8{0x9d}},
-	{APOPL_8, ypopl_asm8, Px_asm8, [13]uint8{0x58, 0x8f, (00)}},
-	{APOPW_8, ypopl_asm8, Pe_asm8, [13]uint8{0x58, 0x8f, (00)}},
+	{APOPL_8, ypopl_asm8, Px_asm8, [13]uint8{0x58, 0x8f, 00}},
+	{APOPW_8, ypopl_asm8, Pe_asm8, [13]uint8{0x58, 0x8f, 00}},
 	{APUSHAL_8, ynone_asm8, Px_asm8, [13]uint8{0x60}},
 	{APUSHAW_8, ynone_asm8, Pe_asm8, [13]uint8{0x60}},
 	{APUSHFL_8, ynone_asm8, Px_asm8, [13]uint8{0x9c}},
 	{APUSHFW_8, ynone_asm8, Pe_asm8, [13]uint8{0x9c}},
-	{APUSHL_8, ypushl_asm8, Px_asm8, [13]uint8{0x50, 0xff, (06), 0x6a, 0x68}},
-	{APUSHW_8, ypushl_asm8, Pe_asm8, [13]uint8{0x50, 0xff, (06), 0x6a, 0x68}},
-	{ARCLB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, (02), 0xc0, (02), 0xd2, (02)}},
-	{ARCLL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, (02), 0xc1, (02), 0xd3, (02), 0xd3, (02)}},
-	{ARCLW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, (02), 0xc1, (02), 0xd3, (02), 0xd3, (02)}},
-	{ARCRB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, (03), 0xc0, (03), 0xd2, (03)}},
-	{ARCRL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, (03), 0xc1, (03), 0xd3, (03), 0xd3, (03)}},
-	{ARCRW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, (03), 0xc1, (03), 0xd3, (03), 0xd3, (03)}},
+	{APUSHL_8, ypushl_asm8, Px_asm8, [13]uint8{0x50, 0xff, 06, 0x6a, 0x68}},
+	{APUSHW_8, ypushl_asm8, Pe_asm8, [13]uint8{0x50, 0xff, 06, 0x6a, 0x68}},
+	{ARCLB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, 02, 0xc0, 02, 0xd2, 02}},
+	{ARCLL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, 02, 0xc1, 02, 0xd3, 02, 0xd3, 02}},
+	{ARCLW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, 02, 0xc1, 02, 0xd3, 02, 0xd3, 02}},
+	{ARCRB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, 03, 0xc0, 03, 0xd2, 03}},
+	{ARCRL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, 03, 0xc1, 03, 0xd3, 03, 0xd3, 03}},
+	{ARCRW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, 03, 0xc1, 03, 0xd3, 03, 0xd3, 03}},
 	{AREP_8, ynone_asm8, Px_asm8, [13]uint8{0xf3}},
 	{AREPN_8, ynone_asm8, Px_asm8, [13]uint8{0xf2}},
 	{ARET_8, ynone_asm8, Px_asm8, [13]uint8{0xc3}},
-	{AROLB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, (00), 0xc0, (00), 0xd2, (00)}},
-	{AROLL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, (00), 0xc1, (00), 0xd3, (00), 0xd3, (00)}},
-	{AROLW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, (00), 0xc1, (00), 0xd3, (00), 0xd3, (00)}},
-	{ARORB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, (01), 0xc0, (01), 0xd2, (01)}},
-	{ARORL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, (01), 0xc1, (01), 0xd3, (01), 0xd3, (01)}},
-	{ARORW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, (01), 0xc1, (01), 0xd3, (01), 0xd3, (01)}},
+	{AROLB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, 00, 0xc0, 00, 0xd2, 00}},
+	{AROLL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, 00, 0xc1, 00, 0xd3, 00, 0xd3, 00}},
+	{AROLW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, 00, 0xc1, 00, 0xd3, 00, 0xd3, 00}},
+	{ARORB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, 01, 0xc0, 01, 0xd2, 01}},
+	{ARORL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, 01, 0xc1, 01, 0xd3, 01, 0xd3, 01}},
+	{ARORW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, 01, 0xc1, 01, 0xd3, 01, 0xd3, 01}},
 	{ASAHF_8, ynone_asm8, Px_asm8, [13]uint8{0x9e}},
-	{ASALB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, (04), 0xc0, (04), 0xd2, (04)}},
-	{ASALL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASALW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASARB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, (07), 0xc0, (07), 0xd2, (07)}},
-	{ASARL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, (07), 0xc1, (07), 0xd3, (07), 0xd3, (07)}},
-	{ASARW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, (07), 0xc1, (07), 0xd3, (07), 0xd3, (07)}},
-	{ASBBB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x1c, 0x80, (03), 0x18, 0x1a}},
-	{ASBBL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, (03), 0x1d, 0x81, (03), 0x19, 0x1b}},
-	{ASBBW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, (03), 0x1d, 0x81, (03), 0x19, 0x1b}},
+	{ASALB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, 04, 0xc0, 04, 0xd2, 04}},
+	{ASALL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASALW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASARB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, 07, 0xc0, 07, 0xd2, 07}},
+	{ASARL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, 07, 0xc1, 07, 0xd3, 07, 0xd3, 07}},
+	{ASARW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, 07, 0xc1, 07, 0xd3, 07, 0xd3, 07}},
+	{ASBBB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x1c, 0x80, 03, 0x18, 0x1a}},
+	{ASBBL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, 03, 0x1d, 0x81, 03, 0x19, 0x1b}},
+	{ASBBW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, 03, 0x1d, 0x81, 03, 0x19, 0x1b}},
 	{ASCASB_8, ynone_asm8, Pb_asm8, [13]uint8{0xae}},
 	{ASCASL_8, ynone_asm8, Px_asm8, [13]uint8{0xaf}},
 	{ASCASW_8, ynone_asm8, Pe_asm8, [13]uint8{0xaf}},
-	{ASETCC_8, yscond_asm8, Pm_asm8, [13]uint8{0x93, (00)}},
-	{ASETCS_8, yscond_asm8, Pm_asm8, [13]uint8{0x92, (00)}},
-	{ASETEQ_8, yscond_asm8, Pm_asm8, [13]uint8{0x94, (00)}},
-	{ASETGE_8, yscond_asm8, Pm_asm8, [13]uint8{0x9d, (00)}},
-	{ASETGT_8, yscond_asm8, Pm_asm8, [13]uint8{0x9f, (00)}},
-	{ASETHI_8, yscond_asm8, Pm_asm8, [13]uint8{0x97, (00)}},
-	{ASETLE_8, yscond_asm8, Pm_asm8, [13]uint8{0x9e, (00)}},
-	{ASETLS_8, yscond_asm8, Pm_asm8, [13]uint8{0x96, (00)}},
-	{ASETLT_8, yscond_asm8, Pm_asm8, [13]uint8{0x9c, (00)}},
-	{ASETMI_8, yscond_asm8, Pm_asm8, [13]uint8{0x98, (00)}},
-	{ASETNE_8, yscond_asm8, Pm_asm8, [13]uint8{0x95, (00)}},
-	{ASETOC_8, yscond_asm8, Pm_asm8, [13]uint8{0x91, (00)}},
-	{ASETOS_8, yscond_asm8, Pm_asm8, [13]uint8{0x90, (00)}},
-	{ASETPC_8, yscond_asm8, Pm_asm8, [13]uint8{0x96, (00)}},
-	{ASETPL_8, yscond_asm8, Pm_asm8, [13]uint8{0x99, (00)}},
-	{ASETPS_8, yscond_asm8, Pm_asm8, [13]uint8{0x9a, (00)}},
+	{ASETCC_8, yscond_asm8, Pm_asm8, [13]uint8{0x93, 00}},
+	{ASETCS_8, yscond_asm8, Pm_asm8, [13]uint8{0x92, 00}},
+	{ASETEQ_8, yscond_asm8, Pm_asm8, [13]uint8{0x94, 00}},
+	{ASETGE_8, yscond_asm8, Pm_asm8, [13]uint8{0x9d, 00}},
+	{ASETGT_8, yscond_asm8, Pm_asm8, [13]uint8{0x9f, 00}},
+	{ASETHI_8, yscond_asm8, Pm_asm8, [13]uint8{0x97, 00}},
+	{ASETLE_8, yscond_asm8, Pm_asm8, [13]uint8{0x9e, 00}},
+	{ASETLS_8, yscond_asm8, Pm_asm8, [13]uint8{0x96, 00}},
+	{ASETLT_8, yscond_asm8, Pm_asm8, [13]uint8{0x9c, 00}},
+	{ASETMI_8, yscond_asm8, Pm_asm8, [13]uint8{0x98, 00}},
+	{ASETNE_8, yscond_asm8, Pm_asm8, [13]uint8{0x95, 00}},
+	{ASETOC_8, yscond_asm8, Pm_asm8, [13]uint8{0x91, 00}},
+	{ASETOS_8, yscond_asm8, Pm_asm8, [13]uint8{0x90, 00}},
+	{ASETPC_8, yscond_asm8, Pm_asm8, [13]uint8{0x96, 00}},
+	{ASETPL_8, yscond_asm8, Pm_asm8, [13]uint8{0x99, 00}},
+	{ASETPS_8, yscond_asm8, Pm_asm8, [13]uint8{0x9a, 00}},
 	{ACDQ_8, ynone_asm8, Px_asm8, [13]uint8{0x99}},
 	{ACWD_8, ynone_asm8, Pe_asm8, [13]uint8{0x99}},
-	{ASHLB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, (04), 0xc0, (04), 0xd2, (04)}},
-	{ASHLL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASHLW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASHRB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, (05), 0xc0, (05), 0xd2, (05)}},
-	{ASHRL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, (05), 0xc1, (05), 0xd3, (05), 0xd3, (05)}},
-	{ASHRW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, (05), 0xc1, (05), 0xd3, (05), 0xd3, (05)}},
+	{ASHLB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, 04, 0xc0, 04, 0xd2, 04}},
+	{ASHLL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASHLW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASHRB_8, yshb_asm8, Pb_asm8, [13]uint8{0xd0, 05, 0xc0, 05, 0xd2, 05}},
+	{ASHRL_8, yshl_asm8, Px_asm8, [13]uint8{0xd1, 05, 0xc1, 05, 0xd3, 05, 0xd3, 05}},
+	{ASHRW_8, yshl_asm8, Pe_asm8, [13]uint8{0xd1, 05, 0xc1, 05, 0xd3, 05, 0xd3, 05}},
 	{ASTC_8, ynone_asm8, Px_asm8, [13]uint8{0xf9}},
 	{ASTD_8, ynone_asm8, Px_asm8, [13]uint8{0xfd}},
 	{ASTI_8, ynone_asm8, Px_asm8, [13]uint8{0xfb}},
 	{ASTOSB_8, ynone_asm8, Pb_asm8, [13]uint8{0xaa}},
 	{ASTOSL_8, ynone_asm8, Px_asm8, [13]uint8{0xab}},
 	{ASTOSW_8, ynone_asm8, Pe_asm8, [13]uint8{0xab}},
-	{ASUBB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x2c, 0x80, (05), 0x28, 0x2a}},
-	{ASUBL_8, yaddl_asm8, Px_asm8, [13]uint8{0x83, (05), 0x2d, 0x81, (05), 0x29, 0x2b}},
-	{ASUBW_8, yaddl_asm8, Pe_asm8, [13]uint8{0x83, (05), 0x2d, 0x81, (05), 0x29, 0x2b}},
+	{ASUBB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x2c, 0x80, 05, 0x28, 0x2a}},
+	{ASUBL_8, yaddl_asm8, Px_asm8, [13]uint8{0x83, 05, 0x2d, 0x81, 05, 0x29, 0x2b}},
+	{ASUBW_8, yaddl_asm8, Pe_asm8, [13]uint8{0x83, 05, 0x2d, 0x81, 05, 0x29, 0x2b}},
 	{ASYSCALL_8, ynone_asm8, Px_asm8, [13]uint8{0xcd, 100}},
-	{ATESTB_8, ytestb_asm8, Pb_asm8, [13]uint8{0xa8, 0xf6, (00), 0x84, 0x84}},
-	{ATESTL_8, ytestl_asm8, Px_asm8, [13]uint8{0xa9, 0xf7, (00), 0x85, 0x85}},
-	{ATESTW_8, ytestl_asm8, Pe_asm8, [13]uint8{0xa9, 0xf7, (00), 0x85, 0x85}},
+	{ATESTB_8, ytestb_asm8, Pb_asm8, [13]uint8{0xa8, 0xf6, 00, 0x84, 0x84}},
+	{ATESTL_8, ytestl_asm8, Px_asm8, [13]uint8{0xa9, 0xf7, 00, 0x85, 0x85}},
+	{ATESTW_8, ytestl_asm8, Pe_asm8, [13]uint8{0xa9, 0xf7, 00, 0x85, 0x85}},
 	{ATEXT_8, ytext_asm8, Px_asm8, [13]uint8{}},
-	{AVERR_8, ydivl_asm8, Pm_asm8, [13]uint8{0x00, (04)}},
-	{AVERW_8, ydivl_asm8, Pm_asm8, [13]uint8{0x00, (05)}},
+	{AVERR_8, ydivl_asm8, Pm_asm8, [13]uint8{0x00, 04}},
+	{AVERW_8, ydivl_asm8, Pm_asm8, [13]uint8{0x00, 05}},
 	{AWAIT_8, ynone_asm8, Px_asm8, [13]uint8{0x9b}},
 	{AWORD_8, ybyte_asm8, Px_asm8, [13]uint8{2}},
 	{AXCHGB_8, yml_mb_asm8, Pb_asm8, [13]uint8{0x86, 0x86}},
 	{AXCHGL_8, yxchg_asm8, Px_asm8, [13]uint8{0x90, 0x90, 0x87, 0x87}},
 	{AXCHGW_8, yxchg_asm8, Pe_asm8, [13]uint8{0x90, 0x90, 0x87, 0x87}},
 	{AXLAT_8, ynone_asm8, Px_asm8, [13]uint8{0xd7}},
-	{AXORB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x34, 0x80, (06), 0x30, 0x32}},
-	{AXORL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, (06), 0x35, 0x81, (06), 0x31, 0x33}},
-	{AXORW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, (06), 0x35, 0x81, (06), 0x31, 0x33}},
-	{AFMOVB_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdf, (04)}},
-	{AFMOVBP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdf, (06)}},
-	{AFMOVD_8, yfmvd_asm8, Px_asm8, [13]uint8{0xdd, (00), 0xdd, (02), 0xd9, (00), 0xdd, (02)}},
-	{AFMOVDP_8, yfmvdp_asm8, Px_asm8, [13]uint8{0xdd, (03), 0xdd, (03)}},
-	{AFMOVF_8, yfmvf_asm8, Px_asm8, [13]uint8{0xd9, (00), 0xd9, (02)}},
-	{AFMOVFP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xd9, (03)}},
-	{AFMOVL_8, yfmvf_asm8, Px_asm8, [13]uint8{0xdb, (00), 0xdb, (02)}},
-	{AFMOVLP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdb, (03)}},
-	{AFMOVV_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdf, (05)}},
-	{AFMOVVP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdf, (07)}},
-	{AFMOVW_8, yfmvf_asm8, Px_asm8, [13]uint8{0xdf, (00), 0xdf, (02)}},
-	{AFMOVWP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdf, (03)}},
-	{AFMOVX_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdb, (05)}},
-	{AFMOVXP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdb, (07)}},
+	{AXORB_8, yxorb_asm8, Pb_asm8, [13]uint8{0x34, 0x80, 06, 0x30, 0x32}},
+	{AXORL_8, yxorl_asm8, Px_asm8, [13]uint8{0x83, 06, 0x35, 0x81, 06, 0x31, 0x33}},
+	{AXORW_8, yxorl_asm8, Pe_asm8, [13]uint8{0x83, 06, 0x35, 0x81, 06, 0x31, 0x33}},
+	{AFMOVB_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdf, 04}},
+	{AFMOVBP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdf, 06}},
+	{AFMOVD_8, yfmvd_asm8, Px_asm8, [13]uint8{0xdd, 00, 0xdd, 02, 0xd9, 00, 0xdd, 02}},
+	{AFMOVDP_8, yfmvdp_asm8, Px_asm8, [13]uint8{0xdd, 03, 0xdd, 03}},
+	{AFMOVF_8, yfmvf_asm8, Px_asm8, [13]uint8{0xd9, 00, 0xd9, 02}},
+	{AFMOVFP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xd9, 03}},
+	{AFMOVL_8, yfmvf_asm8, Px_asm8, [13]uint8{0xdb, 00, 0xdb, 02}},
+	{AFMOVLP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdb, 03}},
+	{AFMOVV_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdf, 05}},
+	{AFMOVVP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdf, 07}},
+	{AFMOVW_8, yfmvf_asm8, Px_asm8, [13]uint8{0xdf, 00, 0xdf, 02}},
+	{AFMOVWP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdf, 03}},
+	{AFMOVX_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdb, 05}},
+	{AFMOVXP_8, yfmvp_asm8, Px_asm8, [13]uint8{0xdb, 07}},
 	{AFCOMB_8, nil, 0, [13]uint8{}},
 	{AFCOMBP_8, nil, 0, [13]uint8{}},
-	{AFCOMD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, (02), 0xd8, (02), 0xdc, (02)}},  /* botch */
-	{AFCOMDP_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, (03), 0xd8, (03), 0xdc, (03)}}, /* botch */
-	{AFCOMDPP_8, ycompp_asm8, Px_asm8, [13]uint8{0xde, (03)}},
-	{AFCOMF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, (02)}},
-	{AFCOMFP_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, (03)}},
-	{AFCOMI_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdb, (06)}},
-	{AFCOMIP_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdf, (06)}},
-	{AFCOML_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, (02)}},
-	{AFCOMLP_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, (03)}},
-	{AFCOMW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, (02)}},
-	{AFCOMWP_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, (03)}},
-	{AFUCOM_8, ycompp_asm8, Px_asm8, [13]uint8{0xdd, (04)}},
-	{AFUCOMI_8, ycompp_asm8, Px_asm8, [13]uint8{0xdb, (05)}},
-	{AFUCOMIP_8, ycompp_asm8, Px_asm8, [13]uint8{0xdf, (05)}},
-	{AFUCOMP_8, ycompp_asm8, Px_asm8, [13]uint8{0xdd, (05)}},
-	{AFUCOMPP_8, ycompp_asm8, Px_asm8, [13]uint8{0xda, (13)}},
-	{AFADDDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, (00)}},
-	{AFADDW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, (00)}},
-	{AFADDL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, (00)}},
-	{AFADDF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, (00)}},
-	{AFADDD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, (00), 0xd8, (00), 0xdc, (00)}},
-	{AFMULDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, (01)}},
-	{AFMULW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, (01)}},
-	{AFMULL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, (01)}},
-	{AFMULF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, (01)}},
-	{AFMULD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, (01), 0xd8, (01), 0xdc, (01)}},
-	{AFSUBDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, (05)}},
-	{AFSUBW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, (04)}},
-	{AFSUBL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, (04)}},
-	{AFSUBF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, (04)}},
-	{AFSUBD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, (04), 0xd8, (04), 0xdc, (05)}},
-	{AFSUBRDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, (04)}},
-	{AFSUBRW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, (05)}},
-	{AFSUBRL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, (05)}},
-	{AFSUBRF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, (05)}},
-	{AFSUBRD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, (05), 0xd8, (05), 0xdc, (04)}},
-	{AFDIVDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, (07)}},
-	{AFDIVW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, (06)}},
-	{AFDIVL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, (06)}},
-	{AFDIVF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, (06)}},
-	{AFDIVD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, (06), 0xd8, (06), 0xdc, (07)}},
-	{AFDIVRDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, (06)}},
-	{AFDIVRW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, (07)}},
-	{AFDIVRL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, (07)}},
-	{AFDIVRF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, (07)}},
-	{AFDIVRD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, (07), 0xd8, (07), 0xdc, (06)}},
-	{AFXCHD_8, yfxch_asm8, Px_asm8, [13]uint8{0xd9, (01), 0xd9, (01)}},
+	{AFCOMD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, 02, 0xd8, 02, 0xdc, 02}},  /* botch */
+	{AFCOMDP_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, 03, 0xd8, 03, 0xdc, 03}}, /* botch */
+	{AFCOMDPP_8, ycompp_asm8, Px_asm8, [13]uint8{0xde, 03}},
+	{AFCOMF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, 02}},
+	{AFCOMFP_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, 03}},
+	{AFCOMI_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdb, 06}},
+	{AFCOMIP_8, yfmvx_asm8, Px_asm8, [13]uint8{0xdf, 06}},
+	{AFCOML_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, 02}},
+	{AFCOMLP_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, 03}},
+	{AFCOMW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, 02}},
+	{AFCOMWP_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, 03}},
+	{AFUCOM_8, ycompp_asm8, Px_asm8, [13]uint8{0xdd, 04}},
+	{AFUCOMI_8, ycompp_asm8, Px_asm8, [13]uint8{0xdb, 05}},
+	{AFUCOMIP_8, ycompp_asm8, Px_asm8, [13]uint8{0xdf, 05}},
+	{AFUCOMP_8, ycompp_asm8, Px_asm8, [13]uint8{0xdd, 05}},
+	{AFUCOMPP_8, ycompp_asm8, Px_asm8, [13]uint8{0xda, 13}},
+	{AFADDDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, 00}},
+	{AFADDW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, 00}},
+	{AFADDL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, 00}},
+	{AFADDF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, 00}},
+	{AFADDD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, 00, 0xd8, 00, 0xdc, 00}},
+	{AFMULDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, 01}},
+	{AFMULW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, 01}},
+	{AFMULL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, 01}},
+	{AFMULF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, 01}},
+	{AFMULD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, 01, 0xd8, 01, 0xdc, 01}},
+	{AFSUBDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, 05}},
+	{AFSUBW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, 04}},
+	{AFSUBL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, 04}},
+	{AFSUBF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, 04}},
+	{AFSUBD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, 04, 0xd8, 04, 0xdc, 05}},
+	{AFSUBRDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, 04}},
+	{AFSUBRW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, 05}},
+	{AFSUBRL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, 05}},
+	{AFSUBRF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, 05}},
+	{AFSUBRD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, 05, 0xd8, 05, 0xdc, 04}},
+	{AFDIVDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, 07}},
+	{AFDIVW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, 06}},
+	{AFDIVL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, 06}},
+	{AFDIVF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, 06}},
+	{AFDIVD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, 06, 0xd8, 06, 0xdc, 07}},
+	{AFDIVRDP_8, yfaddp_asm8, Px_asm8, [13]uint8{0xde, 06}},
+	{AFDIVRW_8, yfmvx_asm8, Px_asm8, [13]uint8{0xde, 07}},
+	{AFDIVRL_8, yfmvx_asm8, Px_asm8, [13]uint8{0xda, 07}},
+	{AFDIVRF_8, yfmvx_asm8, Px_asm8, [13]uint8{0xd8, 07}},
+	{AFDIVRD_8, yfadd_asm8, Px_asm8, [13]uint8{0xdc, 07, 0xd8, 07, 0xdc, 06}},
+	{AFXCHD_8, yfxch_asm8, Px_asm8, [13]uint8{0xd9, 01, 0xd9, 01}},
 	{AFFREE_8, nil, 0, [13]uint8{}},
-	{AFLDCW_8, ystcw_asm8, Px_asm8, [13]uint8{0xd9, (05), 0xd9, (05)}},
-	{AFLDENV_8, ystcw_asm8, Px_asm8, [13]uint8{0xd9, (04), 0xd9, (04)}},
-	{AFRSTOR_8, ysvrs_asm8, Px_asm8, [13]uint8{0xdd, (04), 0xdd, (04)}},
-	{AFSAVE_8, ysvrs_asm8, Px_asm8, [13]uint8{0xdd, (06), 0xdd, (06)}},
-	{AFSTCW_8, ystcw_asm8, Px_asm8, [13]uint8{0xd9, (07), 0xd9, (07)}},
-	{AFSTENV_8, ystcw_asm8, Px_asm8, [13]uint8{0xd9, (06), 0xd9, (06)}},
-	{AFSTSW_8, ystsw_asm8, Px_asm8, [13]uint8{0xdd, (07), 0xdf, 0xe0}},
+	{AFLDCW_8, ystcw_asm8, Px_asm8, [13]uint8{0xd9, 05, 0xd9, 05}},
+	{AFLDENV_8, ystcw_asm8, Px_asm8, [13]uint8{0xd9, 04, 0xd9, 04}},
+	{AFRSTOR_8, ysvrs_asm8, Px_asm8, [13]uint8{0xdd, 04, 0xdd, 04}},
+	{AFSAVE_8, ysvrs_asm8, Px_asm8, [13]uint8{0xdd, 06, 0xdd, 06}},
+	{AFSTCW_8, ystcw_asm8, Px_asm8, [13]uint8{0xd9, 07, 0xd9, 07}},
+	{AFSTENV_8, ystcw_asm8, Px_asm8, [13]uint8{0xd9, 06, 0xd9, 06}},
+	{AFSTSW_8, ystsw_asm8, Px_asm8, [13]uint8{0xdd, 07, 0xdf, 0xe0}},
 	{AF2XM1_8, ynone_asm8, Px_asm8, [13]uint8{0xd9, 0xf0}},
 	{AFABS_8, ynone_asm8, Px_asm8, [13]uint8{0xd9, 0xe1}},
 	{AFCHS_8, ynone_asm8, Px_asm8, [13]uint8{0xd9, 0xe0}},
@@ -2340,7 +1428,7 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{ACMPXCHGB_8, yrb_mb_asm8, Pm_asm8, [13]uint8{0xb0}},
 	{ACMPXCHGL_8, yrl_ml_asm8, Pm_asm8, [13]uint8{0xb1}},
 	{ACMPXCHGW_8, yrl_ml_asm8, Pm_asm8, [13]uint8{0xb1}},
-	{ACMPXCHG8B_8, yscond_asm8, Pm_asm8, [13]uint8{0xc7, (01)}},
+	{ACMPXCHG8B_8, yscond_asm8, Pm_asm8, [13]uint8{0xc7, 01}},
 	{ACPUID_8, ynone_asm8, Pm_asm8, [13]uint8{0xa2}},
 	{ARDTSC_8, ynone_asm8, Pm_asm8, [13]uint8{0x31}},
 	{AXADDB_8, yrb_mb_asm8, Pb_asm8, [13]uint8{0x0f, 0xc0}},
@@ -2378,22 +1466,22 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{ACMOVWPC_8, yml_rl_asm8, Pq_asm8, [13]uint8{0x4b}},
 	{ACMOVWPL_8, yml_rl_asm8, Pq_asm8, [13]uint8{0x49}},
 	{ACMOVWPS_8, yml_rl_asm8, Pq_asm8, [13]uint8{0x4a}},
-	{AFCMOVCC_8, yfcmv_asm8, Px_asm8, [13]uint8{0xdb, (00)}},
-	{AFCMOVCS_8, yfcmv_asm8, Px_asm8, [13]uint8{0xda, (00)}},
-	{AFCMOVEQ_8, yfcmv_asm8, Px_asm8, [13]uint8{0xda, (01)}},
-	{AFCMOVHI_8, yfcmv_asm8, Px_asm8, [13]uint8{0xdb, (02)}},
-	{AFCMOVLS_8, yfcmv_asm8, Px_asm8, [13]uint8{0xda, (02)}},
-	{AFCMOVNE_8, yfcmv_asm8, Px_asm8, [13]uint8{0xdb, (01)}},
-	{AFCMOVNU_8, yfcmv_asm8, Px_asm8, [13]uint8{0xdb, (03)}},
-	{AFCMOVUN_8, yfcmv_asm8, Px_asm8, [13]uint8{0xda, (03)}},
+	{AFCMOVCC_8, yfcmv_asm8, Px_asm8, [13]uint8{0xdb, 00}},
+	{AFCMOVCS_8, yfcmv_asm8, Px_asm8, [13]uint8{0xda, 00}},
+	{AFCMOVEQ_8, yfcmv_asm8, Px_asm8, [13]uint8{0xda, 01}},
+	{AFCMOVHI_8, yfcmv_asm8, Px_asm8, [13]uint8{0xdb, 02}},
+	{AFCMOVLS_8, yfcmv_asm8, Px_asm8, [13]uint8{0xda, 02}},
+	{AFCMOVNE_8, yfcmv_asm8, Px_asm8, [13]uint8{0xdb, 01}},
+	{AFCMOVNU_8, yfcmv_asm8, Px_asm8, [13]uint8{0xdb, 03}},
+	{AFCMOVUN_8, yfcmv_asm8, Px_asm8, [13]uint8{0xda, 03}},
 	{ALFENCE_8, ynone_asm8, Pm_asm8, [13]uint8{0xae, 0xe8}},
 	{AMFENCE_8, ynone_asm8, Pm_asm8, [13]uint8{0xae, 0xf0}},
 	{ASFENCE_8, ynone_asm8, Pm_asm8, [13]uint8{0xae, 0xf8}},
 	{AEMMS_8, ynone_asm8, Pm_asm8, [13]uint8{0x77}},
-	{APREFETCHT0_8, yprefetch_asm8, Pm_asm8, [13]uint8{0x18, (01)}},
-	{APREFETCHT1_8, yprefetch_asm8, Pm_asm8, [13]uint8{0x18, (02)}},
-	{APREFETCHT2_8, yprefetch_asm8, Pm_asm8, [13]uint8{0x18, (03)}},
-	{APREFETCHNTA_8, yprefetch_asm8, Pm_asm8, [13]uint8{0x18, (00)}},
+	{APREFETCHT0_8, yprefetch_asm8, Pm_asm8, [13]uint8{0x18, 01}},
+	{APREFETCHT1_8, yprefetch_asm8, Pm_asm8, [13]uint8{0x18, 02}},
+	{APREFETCHT2_8, yprefetch_asm8, Pm_asm8, [13]uint8{0x18, 03}},
+	{APREFETCHNTA_8, yprefetch_asm8, Pm_asm8, [13]uint8{0x18, 00}},
 	{ABSWAPL_8, ybswap_asm8, Pm_asm8, [13]uint8{0xc8}},
 	{AUNDEF_8, ynone_asm8, Px_asm8, [13]uint8{0x0f, 0x0b}},
 	{AADDPD_8, yxm_asm8, Pq_asm8, [13]uint8{0x58}},
@@ -2504,8 +1592,8 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{AUNPCKLPS_8, yxm_asm8, Pm_asm8, [13]uint8{0x14}},
 	{AXORPD_8, yxm_asm8, Pe_asm8, [13]uint8{0x57}},
 	{AXORPS_8, yxm_asm8, Pm_asm8, [13]uint8{0x57}},
-	{AAESENC_8, yaes_asm8, Pq_asm8, [13]uint8{0x38, 0xdc, (0)}},
-	{APINSRD_8, yinsrd_asm8, Pq_asm8, [13]uint8{0x3a, 0x22, (00)}},
+	{AAESENC_8, yaes_asm8, Pq_asm8, [13]uint8{0x38, 0xdc, 0}},
+	{APINSRD_8, yinsrd_asm8, Pq_asm8, [13]uint8{0x3a, 0x22, 00}},
 	{APSHUFB_8, ymshufb_asm8, Pq_asm8, [13]uint8{0x38, 0x00}},
 	{AUSEFIELD_8, ynop_asm8, Px_asm8, [13]uint8{0, 0}},
 	{ATYPE_8, nil, 0, [13]uint8{}},
@@ -2517,50 +1605,6 @@ var optab_asm8 = /*	as, ytab, andproto, opcode */
 	{ADUFFCOPY_8, yduff_asm8, Px_asm8, [13]uint8{0xe8}},
 	{ADUFFZERO_8, yduff_asm8, Px_asm8, [13]uint8{0xe8}},
 	{0, nil, 0, [13]uint8{}},
-}
-
-func vaddr_asm8(ctxt *Link, a *Addr, r *Reloc) int32 {
-	var t int
-	var v int32
-	var s *LSym
-	if r != nil {
-		*r = Reloc{}
-	}
-	t = a.typ
-	v = int32(a.offset)
-	if t == int(D_ADDR_8) {
-		t = a.index
-	}
-	switch t {
-	case D_STATIC_8:
-	case D_EXTERN_8:
-		s = a.sym
-		if s != nil {
-			if r == nil {
-				ctxt.diag("need reloc for %D", a)
-				sysfatal("bad code")
-			}
-			r.typ = int(R_ADDR)
-			r.siz = 4
-			r.off = -1
-			r.sym = s
-			r.add = int64(v)
-			v = 0
-		}
-		break
-	case D_INDIR_8 + D_TLS_8:
-		if r == nil {
-			ctxt.diag("need reloc for %D", a)
-			sysfatal("bad code")
-		}
-		r.typ = int(R_TLS_LE)
-		r.siz = 4
-		r.off = -1 // caller must fill in
-		r.add = int64(v)
-		v = 0
-		break
-	}
-	return v
 }
 
 // single-instruction no-ops of various lengths.
@@ -2580,12 +1624,12 @@ var nop_asm8 = [][16]uint8{
 
 // Native Client rejects the repeated 0x66 prefix.
 // {0x66, 0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
-func fillnop_asm8(p []uint8, n int) {
-	var m int
+func fillnop_asm8(p []uint8, n int64) {
+	var m int64
 	for n > 0 {
 		m = n
-		if m > len(nop_asm8) {
-			m = len(nop_asm8)
+		if m > int64(len(nop_asm8)) {
+			m = int64(len(nop_asm8))
 		}
 		copy(p, nop_asm8[m-1][:m])
 		p = p[m:]
@@ -2593,21 +1637,202 @@ func fillnop_asm8(p []uint8, n int) {
 	}
 }
 
-func naclpad_asm8(ctxt *Link, s *LSym, c int32, pad int) int32 {
-	symgrow(ctxt, s, int64(c)+int64(pad))
+func naclpad_asm8(ctxt *Link, s *LSym, c int64, pad int64) int64 {
+	symgrow(ctxt, s, c+pad)
 	fillnop_asm8(s.p[c:], pad)
-	return c + int32(pad)
+	return c + pad
+}
+
+func span8(ctxt *Link, s *LSym) {
+	var p *Prog
+	var q *Prog
+	var c int64
+	var v int64
+	var loop int32
+	var bp []uint8
+	var n int
+	var m int64
+	ctxt.cursym = s
+	if s.text == nil || s.text.link == nil {
+		return
+	}
+	if ycover_asm8[0] == 0 {
+		instinit_asm8()
+	}
+	for p = s.text; p != nil; p = p.link {
+		n = 0
+		if p.to.typ == D_BRANCH_8 {
+			if p.pcond == nil {
+				p.pcond = p
+			}
+		}
+		q = p.pcond
+		if q != nil {
+			if q.back != 2 {
+				n = 1
+			}
+		}
+		p.back = n
+		if p.as == AADJSP_8 {
+			p.to.typ = D_SP_8
+			v = -p.from.offset
+			p.from.offset = v
+			p.as = AADDL_8
+			if v < 0 {
+				p.as = ASUBL_8
+				v = -v
+				p.from.offset = v
+			}
+			if v == 0 {
+				p.as = ANOP_8
+			}
+		}
+	}
+	for p = s.text; p != nil; p = p.link {
+		p.back = 2 // use short branches first time through
+		q = p.pcond
+		if q != nil && (q.back&2 != 0) {
+			p.back |= 1 // backward jump
+		}
+		if p.as == AADJSP_8 {
+			p.to.typ = D_SP_8
+			v = -p.from.offset
+			p.from.offset = v
+			p.as = AADDL_8
+			if v < 0 {
+				p.as = ASUBL_8
+				v = -v
+				p.from.offset = v
+			}
+			if v == 0 {
+				p.as = ANOP_8
+			}
+		}
+	}
+	n = 0
+	for {
+		loop = 0
+		for i := range s.r {
+			s.r[i] = Reloc{}
+		}
+		s.r = s.r[:0]
+		s.p = s.p[:0]
+		c = 0
+		for p = s.text; p != nil; p = p.link {
+			if ctxt.headtype == Hnacl && p.isize > 0 {
+				var deferreturn_asm8 *LSym
+				if deferreturn_asm8 == nil {
+					deferreturn_asm8 = linklookup(ctxt, "runtime.deferreturn", 0)
+				}
+				// pad everything to avoid crossing 32-byte boundary
+				if c>>5 != (c+p.isize-1)>>5 {
+					c = naclpad_asm8(ctxt, s, c, -c&31)
+				}
+				// pad call deferreturn to start at 32-byte boundary
+				// so that subtracting 5 in jmpdefer will jump back
+				// to that boundary and rerun the call.
+				if p.as == ACALL_8 && p.to.sym == deferreturn_asm8 {
+					c = naclpad_asm8(ctxt, s, c, -c&31)
+				}
+				// pad call to end at 32-byte boundary
+				if p.as == ACALL_8 {
+					c = naclpad_asm8(ctxt, s, c, -(c+p.isize)&31)
+				}
+				// the linker treats REP and STOSQ as different instructions
+				// but in fact the REP is a prefix on the STOSQ.
+				// make sure REP has room for 2 more bytes, so that
+				// padding will not be inserted before the next instruction.
+				if p.as == AREP_8 && c>>5 != (c+3-1)>>5 {
+					c = naclpad_asm8(ctxt, s, c, -c&31)
+				}
+				// same for LOCK.
+				// various instructions follow; the longest is 4 bytes.
+				// give ourselves 8 bytes so as to avoid surprises.
+				if p.as == ALOCK_8 && c>>5 != (c+8-1)>>5 {
+					c = naclpad_asm8(ctxt, s, c, -c&31)
+				}
+			}
+			p.pc = c
+			// process forward jumps to p
+			for q = p.comefrom; q != nil; q = q.forwd {
+				v = p.pc - (q.pc + q.mark)
+				if q.back&2 != 0 { // short
+					if v > 127 {
+						loop++
+						q.back ^= 2
+					}
+					if q.as == AJCXZW_8 {
+						s.p[q.pc+2] = uint8(v)
+					} else {
+						s.p[q.pc+1] = uint8(v)
+					}
+				} else {
+					bp = s.p[q.pc+q.mark-4:]
+					bp[0] = uint8(v)
+					bp = bp[1:]
+					bp[0] = uint8(v >> 8)
+					bp = bp[1:]
+					bp[0] = uint8(v >> 16)
+					bp = bp[1:]
+					bp[0] = uint8(v >> 24)
+				}
+			}
+			p.comefrom = nil
+			p.pc = c
+			asmins_asm8(ctxt, p)
+			m = int64(-cap(ctxt.andptr) + cap(ctxt.and[:]))
+			if p.isize != m {
+				p.isize = m
+				loop++
+			}
+			symgrow(ctxt, s, p.pc+m)
+			copy(s.p[p.pc:], ctxt.and[:m])
+			p.mark = m
+			c += m
+		}
+		n++
+		if n > 20 {
+			ctxt.diag("span must be looping")
+			log.Fatalf("bad code")
+		}
+		if !(loop != 0) {
+			break
+		}
+	}
+	if ctxt.headtype == Hnacl {
+		c = naclpad_asm8(ctxt, s, c, -c&31)
+	}
+	c += -c & (FuncAlign_asm8 - 1)
+	s.size = c
+	if false { /* debug['a'] > 1 */
+		var i int
+		fmt.Printf("span1 %s %d (%d tries)\n %.6x", s.name, s.size, n, 0)
+		for i = 0; i < len(s.p); i++ {
+			fmt.Printf(" %.2x", s.p[i])
+			if i%16 == 15 {
+				fmt.Printf("\n  %.6x", uint64(i+1))
+			}
+		}
+		if i%16 != 0 {
+			fmt.Printf("\n")
+		}
+		for i = 0; i < len(s.r); i++ {
+			var r *Reloc
+			r = &s.r[i]
+			fmt.Printf(" rel %#.4x/%d %s%+d\n", uint64(r.off), r.siz, r.sym.name, r.add)
+		}
+	}
 }
 
 func instinit_asm8() {
 	var i int
 	for i = 1; optab_asm8[i].as != 0; i++ {
-		if i != optab_asm8[i].as {
-			sysfatal("phase error in optab: at %A found %A", i, optab_asm8[i].as)
+		if i != int(optab_asm8[i].as) {
+			log.Fatalf("phase error in optab: at %v found %v", Aconv_list8(i), Aconv_list8(int(optab_asm8[i].as)))
 		}
 	}
-	for i = 0; i < int(Ymax_asm8); i++ {
-		ycover_asm8[i*int(Ymax_asm8)+i] = 1
+	for i = 0; i < Ymax_asm8; i++ {
+		ycover_asm8[i*Ymax_asm8+i] = 1
 	}
 	ycover_asm8[Yi0_asm8*Ymax_asm8+Yi8_asm8] = 1
 	ycover_asm8[Yi1_asm8*Ymax_asm8+Yi8_asm8] = 1
@@ -2645,24 +1870,24 @@ func instinit_asm8() {
 	ycover_asm8[Ymr_asm8*Ymax_asm8+Ymm_asm8] = 1
 	ycover_asm8[Ym_asm8*Ymax_asm8+Yxm_asm8] = 1
 	ycover_asm8[Yxr_asm8*Ymax_asm8+Yxm_asm8] = 1
-	for i = 0; i < int(D_NONE_8); i++ {
+	for i = 0; i < D_NONE_8; i++ {
 		reg_asm8[i] = -1
-		if i >= int(D_AL_8) && i <= int(D_BH_8) {
-			reg_asm8[i] = int8((i - int(D_AL_8)) & 7)
+		if i >= D_AL_8 && i <= D_BH_8 {
+			reg_asm8[i] = int((i - D_AL_8) & 7)
 		}
-		if i >= int(D_AX_8) && i <= int(D_DI_8) {
-			reg_asm8[i] = int8((i - int(D_AX_8)) & 7)
+		if i >= D_AX_8 && i <= D_DI_8 {
+			reg_asm8[i] = int((i - D_AX_8) & 7)
 		}
-		if i >= int(D_F0_8) && i <= D_F0_8+7 {
-			reg_asm8[i] = int8((i - int(D_F0_8)) & 7)
+		if i >= D_F0_8 && i <= D_F0_8+7 {
+			reg_asm8[i] = int((i - D_F0_8) & 7)
 		}
-		if i >= int(D_X0_8) && i <= D_X0_8+7 {
-			reg_asm8[i] = int8((i - int(D_X0_8)) & 7)
+		if i >= D_X0_8 && i <= D_X0_8+7 {
+			reg_asm8[i] = int((i - D_X0_8) & 7)
 		}
 	}
 }
 
-func prefixof_asm8(ctxt *Link, a *Addr) int {
+func prefixof_asm8(ctxt *Link, a *Addr) int32 {
 	switch a.typ {
 	case D_INDIR_8 + D_CS_8:
 		return 0x2e
@@ -2683,12 +1908,12 @@ func prefixof_asm8(ctxt *Link, a *Addr) int {
 	case D_INDIR_8 + D_TLS_8:
 		switch ctxt.headtype {
 		default:
-			sysfatal("unknown TLS base register for %s", headstr(ctxt.headtype))
-		case Hdarwin:
-		case Hdragonfly:
-		case Hfreebsd:
-		case Hnetbsd:
-		case Hopenbsd:
+			log.Fatalf("unknown TLS base register for %s", headstr(ctxt.headtype))
+		case Hdarwin,
+			Hdragonfly,
+			Hfreebsd,
+			Hnetbsd,
+			Hopenbsd:
 			return 0x65 // GS
 		}
 	}
@@ -2696,170 +1921,170 @@ func prefixof_asm8(ctxt *Link, a *Addr) int {
 }
 
 func oclass_asm8(a *Addr) int {
-	var v int32
-	if (a.typ >= int(D_INDIR_8) && a.typ < 2*D_INDIR_8) || a.index != int(D_NONE_8) {
-		if a.index != int(D_NONE_8) && a.scale == 0 {
-			if a.typ == int(D_ADDR_8) {
+	var v int64
+	if (a.typ >= D_INDIR_8 && a.typ < 2*D_INDIR_8) || a.index != D_NONE_8 {
+		if a.index != D_NONE_8 && a.scale == 0 {
+			if a.typ == D_ADDR_8 {
 				switch a.index {
-				case D_EXTERN_8:
-				case D_STATIC_8:
-					return int(Yi32_asm8)
-				case D_AUTO_8:
-				case D_PARAM_8:
-					return int(Yiauto_asm8)
+				case D_EXTERN_8,
+					D_STATIC_8:
+					return Yi32_asm8
+				case D_AUTO_8,
+					D_PARAM_8:
+					return Yiauto_asm8
 				}
-				return int(Yxxx_asm8)
+				return Yxxx_asm8
 			}
 			//if(a->type == D_INDIR+D_ADDR)
 			//	print("*Ycol\n");
-			return int(Ycol_asm8)
+			return Ycol_asm8
 		}
-		return int(Ym_asm8)
+		return Ym_asm8
 	}
 	switch a.typ {
 	case D_AL_8:
-		return int(Yal_asm8)
+		return Yal_asm8
 	case D_AX_8:
-		return int(Yax_asm8)
-	case D_CL_8:
-	case D_DL_8:
-	case D_BL_8:
-	case D_AH_8:
-	case D_CH_8:
-	case D_DH_8:
-	case D_BH_8:
-		return int(Yrb_asm8)
+		return Yax_asm8
+	case D_CL_8,
+		D_DL_8,
+		D_BL_8,
+		D_AH_8,
+		D_CH_8,
+		D_DH_8,
+		D_BH_8:
+		return Yrb_asm8
 	case D_CX_8:
-		return int(Ycx_asm8)
-	case D_DX_8:
-	case D_BX_8:
-		return int(Yrx_asm8)
-	case D_SP_8:
-	case D_BP_8:
-	case D_SI_8:
-	case D_DI_8:
-		return int(Yrl_asm8)
+		return Ycx_asm8
+	case D_DX_8,
+		D_BX_8:
+		return Yrx_asm8
+	case D_SP_8,
+		D_BP_8,
+		D_SI_8,
+		D_DI_8:
+		return Yrl_asm8
 	case D_F0_8 + 0:
-		return int(Yf0_asm8)
-	case D_F0_8 + 1:
-	case D_F0_8 + 2:
-	case D_F0_8 + 3:
-	case D_F0_8 + 4:
-	case D_F0_8 + 5:
-	case D_F0_8 + 6:
-	case D_F0_8 + 7:
-		return int(Yrf_asm8)
-	case D_X0_8 + 0:
-	case D_X0_8 + 1:
-	case D_X0_8 + 2:
-	case D_X0_8 + 3:
-	case D_X0_8 + 4:
-	case D_X0_8 + 5:
-	case D_X0_8 + 6:
-	case D_X0_8 + 7:
-		return int(Yxr_asm8)
+		return Yf0_asm8
+	case D_F0_8 + 1,
+		D_F0_8 + 2,
+		D_F0_8 + 3,
+		D_F0_8 + 4,
+		D_F0_8 + 5,
+		D_F0_8 + 6,
+		D_F0_8 + 7:
+		return Yrf_asm8
+	case D_X0_8 + 0,
+		D_X0_8 + 1,
+		D_X0_8 + 2,
+		D_X0_8 + 3,
+		D_X0_8 + 4,
+		D_X0_8 + 5,
+		D_X0_8 + 6,
+		D_X0_8 + 7:
+		return Yxr_asm8
 	case D_NONE_8:
-		return int(Ynone_asm8)
+		return Ynone_asm8
 	case D_CS_8:
-		return int(Ycs_asm8)
+		return Ycs_asm8
 	case D_SS_8:
-		return int(Yss_asm8)
+		return Yss_asm8
 	case D_DS_8:
-		return int(Yds_asm8)
+		return Yds_asm8
 	case D_ES_8:
-		return int(Yes_asm8)
+		return Yes_asm8
 	case D_FS_8:
-		return int(Yfs_asm8)
+		return Yfs_asm8
 	case D_GS_8:
-		return int(Ygs_asm8)
+		return Ygs_asm8
 	case D_TLS_8:
-		return int(Ytls_asm8)
+		return Ytls_asm8
 	case D_GDTR_8:
-		return int(Ygdtr_asm8)
+		return Ygdtr_asm8
 	case D_IDTR_8:
-		return int(Yidtr_asm8)
+		return Yidtr_asm8
 	case D_LDTR_8:
-		return int(Yldtr_asm8)
+		return Yldtr_asm8
 	case D_MSW_8:
-		return int(Ymsw_asm8)
+		return Ymsw_asm8
 	case D_TASK_8:
-		return int(Ytask_asm8)
+		return Ytask_asm8
 	case D_CR_8 + 0:
-		return int(Ycr0_asm8)
+		return Ycr0_asm8
 	case D_CR_8 + 1:
-		return int(Ycr1_asm8)
+		return Ycr1_asm8
 	case D_CR_8 + 2:
-		return int(Ycr2_asm8)
+		return Ycr2_asm8
 	case D_CR_8 + 3:
-		return int(Ycr3_asm8)
+		return Ycr3_asm8
 	case D_CR_8 + 4:
-		return int(Ycr4_asm8)
+		return Ycr4_asm8
 	case D_CR_8 + 5:
-		return int(Ycr5_asm8)
+		return Ycr5_asm8
 	case D_CR_8 + 6:
-		return int(Ycr6_asm8)
+		return Ycr6_asm8
 	case D_CR_8 + 7:
-		return int(Ycr7_asm8)
+		return Ycr7_asm8
 	case D_DR_8 + 0:
-		return int(Ydr0_asm8)
+		return Ydr0_asm8
 	case D_DR_8 + 1:
-		return int(Ydr1_asm8)
+		return Ydr1_asm8
 	case D_DR_8 + 2:
-		return int(Ydr2_asm8)
+		return Ydr2_asm8
 	case D_DR_8 + 3:
-		return int(Ydr3_asm8)
+		return Ydr3_asm8
 	case D_DR_8 + 4:
-		return int(Ydr4_asm8)
+		return Ydr4_asm8
 	case D_DR_8 + 5:
-		return int(Ydr5_asm8)
+		return Ydr5_asm8
 	case D_DR_8 + 6:
-		return int(Ydr6_asm8)
+		return Ydr6_asm8
 	case D_DR_8 + 7:
-		return int(Ydr7_asm8)
+		return Ydr7_asm8
 	case D_TR_8 + 0:
-		return int(Ytr0_asm8)
+		return Ytr0_asm8
 	case D_TR_8 + 1:
-		return int(Ytr1_asm8)
+		return Ytr1_asm8
 	case D_TR_8 + 2:
-		return int(Ytr2_asm8)
+		return Ytr2_asm8
 	case D_TR_8 + 3:
-		return int(Ytr3_asm8)
+		return Ytr3_asm8
 	case D_TR_8 + 4:
-		return int(Ytr4_asm8)
+		return Ytr4_asm8
 	case D_TR_8 + 5:
-		return int(Ytr5_asm8)
+		return Ytr5_asm8
 	case D_TR_8 + 6:
-		return int(Ytr6_asm8)
+		return Ytr6_asm8
 	case D_TR_8 + 7:
-		return int(Ytr7_asm8)
-	case D_EXTERN_8:
-	case D_STATIC_8:
-	case D_AUTO_8:
-	case D_PARAM_8:
-		return int(Ym_asm8)
-	case D_CONST_8:
-	case D_CONST2_8:
-	case D_ADDR_8:
+		return Ytr7_asm8
+	case D_EXTERN_8,
+		D_STATIC_8,
+		D_AUTO_8,
+		D_PARAM_8:
+		return Ym_asm8
+	case D_CONST_8,
+		D_CONST2_8,
+		D_ADDR_8:
 		if a.sym == nil {
-			v = int32(a.offset)
+			v = a.offset
 			if v == 0 {
-				return int(Yi0_asm8)
+				return Yi0_asm8
 			}
 			if v == 1 {
-				return int(Yi1_asm8)
+				return Yi1_asm8
 			}
 			if v >= -128 && v <= 127 {
-				return int(Yi8_asm8)
+				return Yi8_asm8
 			}
 		}
-		return int(Yi32_asm8)
+		return Yi32_asm8
 	case D_BRANCH_8:
-		return int(Ybr_asm8)
+		return Ybr_asm8
 	}
-	return int(Yxxx_asm8)
+	return Yxxx_asm8
 }
 
-func asmidx_asm8(ctxt *Link, scale int, index int, base int) {
+func asmidx_asm8(ctxt *Link, scale int64, index int64, base int64) {
 	var i int
 	switch index {
 	default:
@@ -2867,14 +2092,14 @@ func asmidx_asm8(ctxt *Link, scale int, index int, base int) {
 	case D_NONE_8:
 		i = 4 << 3
 		goto bas
-	case D_AX_8:
-	case D_CX_8:
-	case D_DX_8:
-	case D_BX_8:
-	case D_BP_8:
-	case D_SI_8:
-	case D_DI_8:
-		i = int(reg_asm8[index]) << 3
+	case D_AX_8,
+		D_CX_8,
+		D_DX_8,
+		D_BX_8,
+		D_BP_8,
+		D_SI_8,
+		D_DI_8:
+		i = reg_asm8[index] << 3
 		break
 	}
 	switch scale {
@@ -2883,13 +2108,11 @@ func asmidx_asm8(ctxt *Link, scale int, index int, base int) {
 	case 1:
 		break
 	case 2:
-		i |= (1 << 6)
-		break
+		i |= 1 << 6
 	case 4:
-		i |= (2 << 6)
-		break
+		i |= 2 << 6
 	case 8:
-		i |= (3 << 6)
+		i |= 3 << 6
 		break
 	}
 bas:
@@ -2898,16 +2121,15 @@ bas:
 		goto bad
 	case D_NONE_8: /* must be mod=00 */
 		i |= 5
-		break
-	case D_AX_8:
-	case D_CX_8:
-	case D_DX_8:
-	case D_BX_8:
-	case D_SP_8:
-	case D_BP_8:
-	case D_SI_8:
-	case D_DI_8:
-		i |= int(reg_asm8[base])
+	case D_AX_8,
+		D_CX_8,
+		D_DX_8,
+		D_BX_8,
+		D_SP_8,
+		D_BP_8,
+		D_SI_8,
+		D_DI_8:
+		i |= reg_asm8[base]
 		break
 	}
 	ctxt.andptr[0] = uint8(i)
@@ -2920,7 +2142,7 @@ bad:
 	return
 }
 
-func put4_asm8(ctxt *Link, v int32) {
+func put4_asm8(ctxt *Link, v int64) {
 	ctxt.andptr[0] = uint8(v)
 	ctxt.andptr[1] = uint8(v >> 8)
 	ctxt.andptr[2] = uint8(v >> 16)
@@ -2932,145 +2154,186 @@ func relput4_asm8(ctxt *Link, p *Prog, a *Addr) {
 	var v int64
 	var rel Reloc
 	var r *Reloc
-	v = int64(vaddr_asm8(ctxt, a, &rel))
+	v = vaddr_asm8(ctxt, a, &rel)
 	if rel.siz != 0 {
 		if rel.siz != 4 {
 			ctxt.diag("bad reloc")
 		}
 		r = addrel(ctxt.cursym)
 		*r = rel
-		r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+		r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 	}
-	put4_asm8(ctxt, int32(v))
+	put4_asm8(ctxt, v)
+}
+
+func vaddr_asm8(ctxt *Link, a *Addr, r *Reloc) int64 {
+	var t int64
+	var v int64
+	var s *LSym
+	if r != nil {
+		*r = Reloc{}
+	}
+	t = a.typ
+	v = a.offset
+	if t == D_ADDR_8 {
+		t = a.index
+	}
+	switch t {
+	case D_STATIC_8,
+		D_EXTERN_8:
+		s = a.sym
+		if s != nil {
+			if r == nil {
+				ctxt.diag("need reloc for %D", a)
+				log.Fatalf("bad code")
+			}
+			r.typ = R_ADDR
+			r.siz = 4
+			r.off = -1
+			r.sym = s
+			r.add = v
+			v = 0
+		}
+	case D_INDIR_8 + D_TLS_8:
+		if r == nil {
+			ctxt.diag("need reloc for %D", a)
+			log.Fatalf("bad code")
+		}
+		r.typ = R_TLS_LE
+		r.siz = 4
+		r.off = -1 // caller must fill in
+		r.add = v
+		v = 0
+		break
+	}
+	return v
 }
 
 func asmand_asm8(ctxt *Link, a *Addr, r int) {
-	var v int32
-	var t int
-	var scale int
+	var v int64
+	var t int64
+	var scale int64
 	var rel Reloc
-	v = int32(a.offset)
+	v = a.offset
 	t = a.typ
 	rel.siz = 0
-	if a.index != int(D_NONE_8) && a.index != int(D_TLS_8) {
-		if t < int(D_INDIR_8) || t >= 2*D_INDIR_8 {
+	if a.index != D_NONE_8 && a.index != D_TLS_8 {
+		if t < D_INDIR_8 || t >= 2*D_INDIR_8 {
 			switch t {
 			default:
 				goto bad
-			case D_STATIC_8:
-			case D_EXTERN_8:
-				t = int(D_NONE_8)
+			case D_STATIC_8,
+				D_EXTERN_8:
+				t = D_NONE_8
 				v = vaddr_asm8(ctxt, a, &rel)
-				break
-			case D_AUTO_8:
-			case D_PARAM_8:
-				t = int(D_SP_8)
+			case D_AUTO_8,
+				D_PARAM_8:
+				t = D_SP_8
 				break
 			}
 		} else {
-			t -= int(D_INDIR_8)
+			t -= D_INDIR_8
 		}
-		if t == int(D_NONE_8) {
-			ctxt.andptr[0] = uint8((0 << 6) | (4 << 0) | (r << 3))
+		if t == D_NONE_8 {
+			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			asmidx_asm8(ctxt, a.scale, a.index, t)
 			goto putrelv
 		}
-		if v == 0 && rel.siz == 0 && t != int(D_BP_8) {
-			ctxt.andptr[0] = uint8((0 << 6) | (4 << 0) | (r << 3))
+		if v == 0 && rel.siz == 0 && t != D_BP_8 {
+			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			asmidx_asm8(ctxt, a.scale, a.index, t)
 			return
 		}
 		if v >= -128 && v < 128 && rel.siz == 0 {
-			ctxt.andptr[0] = uint8((1 << 6) | (4 << 0) | (r << 3))
+			ctxt.andptr[0] = uint8(1<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			asmidx_asm8(ctxt, a.scale, a.index, t)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			return
 		}
-		ctxt.andptr[0] = uint8((2 << 6) | (4 << 0) | (r << 3))
+		ctxt.andptr[0] = uint8(2<<6 | 4<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmidx_asm8(ctxt, a.scale, a.index, t)
 		goto putrelv
 	}
-	if t >= int(D_AL_8) && t <= int(D_F7_8) || t >= int(D_X0_8) && t <= int(D_X7_8) {
+	if t >= D_AL_8 && t <= D_F7_8 || t >= D_X0_8 && t <= D_X7_8 {
 		if v != 0 {
 			goto bad
 		}
-		ctxt.andptr[0] = uint8((3 << 6) | int(uint8(reg_asm8[t])<<0) | (r << 3))
+		ctxt.andptr[0] = uint8(3<<6 | reg_asm8[t]<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
 		return
 	}
 	scale = a.scale
-	if t < int(D_INDIR_8) || t >= 2*D_INDIR_8 {
+	if t < D_INDIR_8 || t >= 2*D_INDIR_8 {
 		switch a.typ {
 		default:
 			goto bad
-		case D_STATIC_8:
-		case D_EXTERN_8:
-			t = int(D_NONE_8)
+		case D_STATIC_8,
+			D_EXTERN_8:
+			t = D_NONE_8
 			v = vaddr_asm8(ctxt, a, &rel)
-			break
-		case D_AUTO_8:
-		case D_PARAM_8:
-			t = int(D_SP_8)
+		case D_AUTO_8,
+			D_PARAM_8:
+			t = D_SP_8
 			break
 		}
 		scale = 1
 	} else {
-		t -= int(D_INDIR_8)
+		t -= D_INDIR_8
 	}
-	if t == int(D_TLS_8) {
+	if t == D_TLS_8 {
 		v = vaddr_asm8(ctxt, a, &rel)
 	}
-	if t == int(D_NONE_8) || (D_CS_8 <= int(t) && t <= int(D_GS_8)) || t == int(D_TLS_8) {
-		ctxt.andptr[0] = uint8((0 << 6) | (5 << 0) | (r << 3))
+	if t == D_NONE_8 || (D_CS_8 <= t && t <= D_GS_8) || t == D_TLS_8 {
+		ctxt.andptr[0] = uint8(0<<6 | 5<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
 		goto putrelv
 	}
-	if t == int(D_SP_8) {
+	if t == D_SP_8 {
 		if v == 0 && rel.siz == 0 {
-			ctxt.andptr[0] = uint8((0 << 6) | (4 << 0) | (r << 3))
+			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm8(ctxt, scale, int(D_NONE_8), t)
+			asmidx_asm8(ctxt, scale, D_NONE_8, t)
 			return
 		}
 		if v >= -128 && v < 128 && rel.siz == 0 {
-			ctxt.andptr[0] = uint8((1 << 6) | (4 << 0) | (r << 3))
+			ctxt.andptr[0] = uint8(1<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm8(ctxt, scale, int(D_NONE_8), t)
+			asmidx_asm8(ctxt, scale, D_NONE_8, t)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			return
 		}
-		ctxt.andptr[0] = uint8((2 << 6) | (4 << 0) | (r << 3))
+		ctxt.andptr[0] = uint8(2<<6 | 4<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmidx_asm8(ctxt, scale, int(D_NONE_8), t)
+		asmidx_asm8(ctxt, scale, D_NONE_8, t)
 		goto putrelv
 	}
-	if t >= int(D_AX_8) && t <= int(D_DI_8) {
-		if a.index == int(D_TLS_8) {
+	if t >= D_AX_8 && t <= D_DI_8 {
+		if a.index == D_TLS_8 {
 			rel = Reloc{}
-			rel.typ = int(R_TLS_IE)
+			rel.typ = R_TLS_IE
 			rel.siz = 4
-			rel.sym = (*LSym)(nil)
-			rel.add = int64(v)
+			rel.sym = nil
+			rel.add = v
 			v = 0
 		}
-		if v == 0 && rel.siz == 0 && t != int(D_BP_8) {
-			ctxt.andptr[0] = uint8((0 << 6) | int(uint8(reg_asm8[t])<<0) | (r << 3))
+		if v == 0 && rel.siz == 0 && t != D_BP_8 {
+			ctxt.andptr[0] = uint8(0<<6 | reg_asm8[t]<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			return
 		}
 		if v >= -128 && v < 128 && rel.siz == 0 {
-			ctxt.andptr[0] = uint8((1 << 6) | int(uint8(reg_asm8[t])<<0) | (r << 3))
+			ctxt.andptr[0] = uint8(1<<6 | reg_asm8[t]<<0 | r<<3)
 			ctxt.andptr[1] = uint8(v)
 			ctxt.andptr = ctxt.andptr[2:]
 			return
 		}
-		ctxt.andptr[0] = uint8((2 << 6) | int(uint8(reg_asm8[t])<<0) | (r << 3))
+		ctxt.andptr[0] = uint8(2<<6 | reg_asm8[t]<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
 		goto putrelv
 	}
@@ -3084,7 +2347,7 @@ putrelv:
 		}
 		r = addrel(ctxt.cursym)
 		*r = rel
-		r.off = ctxt.curp.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+		r.off = ctxt.curp.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 	}
 	put4_asm8(ctxt, v)
 	return
@@ -3093,6 +2356,10 @@ bad:
 	return
 }
 
+const (
+	E_asm8 = 0xff
+)
+
 var ymovtab_asm8 = []uint8{
 	/* push */
 	APUSHL_8,
@@ -3100,7 +2367,7 @@ var ymovtab_asm8 = []uint8{
 	Ynone_asm8,
 	0,
 	0x0e,
-	E_asm6,
+	E_asm8,
 	0,
 	0,
 	APUSHL_8,
@@ -3108,7 +2375,7 @@ var ymovtab_asm8 = []uint8{
 	Ynone_asm8,
 	0,
 	0x16,
-	E_asm6,
+	E_asm8,
 	0,
 	0,
 	APUSHL_8,
@@ -3116,7 +2383,7 @@ var ymovtab_asm8 = []uint8{
 	Ynone_asm8,
 	0,
 	0x1e,
-	E_asm6,
+	E_asm8,
 	0,
 	0,
 	APUSHL_8,
@@ -3124,7 +2391,7 @@ var ymovtab_asm8 = []uint8{
 	Ynone_asm8,
 	0,
 	0x06,
-	E_asm6,
+	E_asm8,
 	0,
 	0,
 	APUSHL_8,
@@ -3133,7 +2400,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	0x0f,
 	0xa0,
-	E_asm6,
+	E_asm8,
 	0,
 	APUSHL_8,
 	Ygs_asm8,
@@ -3141,7 +2408,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	0x0f,
 	0xa8,
-	E_asm6,
+	E_asm8,
 	0,
 	APUSHW_8,
 	Ycs_asm8,
@@ -3149,7 +2416,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	Pe_asm8,
 	0x0e,
-	E_asm6,
+	E_asm8,
 	0,
 	APUSHW_8,
 	Yss_asm8,
@@ -3157,7 +2424,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	Pe_asm8,
 	0x16,
-	E_asm6,
+	E_asm8,
 	0,
 	APUSHW_8,
 	Yds_asm8,
@@ -3165,7 +2432,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	Pe_asm8,
 	0x1e,
-	E_asm6,
+	E_asm8,
 	0,
 	APUSHW_8,
 	Yes_asm8,
@@ -3173,7 +2440,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	Pe_asm8,
 	0x06,
-	E_asm6,
+	E_asm8,
 	0,
 	APUSHW_8,
 	Yfs_asm8,
@@ -3182,7 +2449,7 @@ var ymovtab_asm8 = []uint8{
 	Pe_asm8,
 	0x0f,
 	0xa0,
-	E_asm6,
+	E_asm8,
 	APUSHW_8,
 	Ygs_asm8,
 	Ynone_asm8,
@@ -3190,14 +2457,14 @@ var ymovtab_asm8 = []uint8{
 	Pe_asm8,
 	0x0f,
 	0xa8,
-	E_asm6,
+	E_asm8,
 	/* pop */
 	APOPL_8,
 	Ynone_asm8,
 	Yds_asm8,
 	0,
 	0x1f,
-	E_asm6,
+	E_asm8,
 	0,
 	0,
 	APOPL_8,
@@ -3205,7 +2472,7 @@ var ymovtab_asm8 = []uint8{
 	Yes_asm8,
 	0,
 	0x07,
-	E_asm6,
+	E_asm8,
 	0,
 	0,
 	APOPL_8,
@@ -3213,7 +2480,7 @@ var ymovtab_asm8 = []uint8{
 	Yss_asm8,
 	0,
 	0x17,
-	E_asm6,
+	E_asm8,
 	0,
 	0,
 	APOPL_8,
@@ -3222,7 +2489,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	0x0f,
 	0xa1,
-	E_asm6,
+	E_asm8,
 	0,
 	APOPL_8,
 	Ynone_asm8,
@@ -3230,7 +2497,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	0x0f,
 	0xa9,
-	E_asm6,
+	E_asm8,
 	0,
 	APOPW_8,
 	Ynone_asm8,
@@ -3238,7 +2505,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	Pe_asm8,
 	0x1f,
-	E_asm6,
+	E_asm8,
 	0,
 	APOPW_8,
 	Ynone_asm8,
@@ -3246,7 +2513,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	Pe_asm8,
 	0x07,
-	E_asm6,
+	E_asm8,
 	0,
 	APOPW_8,
 	Ynone_asm8,
@@ -3254,7 +2521,7 @@ var ymovtab_asm8 = []uint8{
 	0,
 	Pe_asm8,
 	0x17,
-	E_asm6,
+	E_asm8,
 	0,
 	APOPW_8,
 	Ynone_asm8,
@@ -3263,7 +2530,7 @@ var ymovtab_asm8 = []uint8{
 	Pe_asm8,
 	0x0f,
 	0xa1,
-	E_asm6,
+	E_asm8,
 	APOPW_8,
 	Ynone_asm8,
 	Ygs_asm8,
@@ -3271,7 +2538,7 @@ var ymovtab_asm8 = []uint8{
 	Pe_asm8,
 	0x0f,
 	0xa9,
-	E_asm6,
+	E_asm8,
 	/* mov seg */
 	AMOVW_8,
 	Yes_asm8,
@@ -3507,7 +2774,7 @@ var ymovtab_asm8 = []uint8{
 	0x0f,
 	0x26,
 	6,
-	E_asm6,
+	E_asm8,
 	AMOVL_8,
 	Yml_asm8,
 	Ytr7_asm8,
@@ -3515,7 +2782,7 @@ var ymovtab_asm8 = []uint8{
 	0x0f,
 	0x26,
 	7,
-	E_asm6,
+	E_asm8,
 	/* lgdt, sgdt, lidt, sidt */
 	AMOVL_8,
 	Ym_asm8,
@@ -3667,7 +2934,7 @@ var ymovtab_asm8 = []uint8{
 // which is not referenced in a->type.
 // If a is empty, it returns BX to account for MULB-like instructions
 // that might use DX and AX.
-func byteswapreg_asm8(ctxt *Link, a *Addr) int {
+func byteswapreg_asm8(ctxt *Link, a *Addr) int64 {
 	var cana int
 	var canb int
 	var canc int
@@ -3680,66 +2947,59 @@ func byteswapreg_asm8(ctxt *Link, a *Addr) int {
 	case D_NONE_8:
 		cand = 0
 		cana = cand
-		break
-	case D_AX_8:
-	case D_AL_8:
-	case D_AH_8:
-	case D_INDIR_8 + D_AX_8:
+	case D_AX_8,
+		D_AL_8,
+		D_AH_8,
+		D_INDIR_8 + D_AX_8:
 		cana = 0
-		break
-	case D_BX_8:
-	case D_BL_8:
-	case D_BH_8:
-	case D_INDIR_8 + D_BX_8:
+	case D_BX_8,
+		D_BL_8,
+		D_BH_8,
+		D_INDIR_8 + D_BX_8:
 		canb = 0
-		break
-	case D_CX_8:
-	case D_CL_8:
-	case D_CH_8:
-	case D_INDIR_8 + D_CX_8:
+	case D_CX_8,
+		D_CL_8,
+		D_CH_8,
+		D_INDIR_8 + D_CX_8:
 		canc = 0
-		break
-	case D_DX_8:
-	case D_DL_8:
-	case D_DH_8:
-	case D_INDIR_8 + D_DX_8:
+	case D_DX_8,
+		D_DL_8,
+		D_DH_8,
+		D_INDIR_8 + D_DX_8:
 		cand = 0
 		break
 	}
 	switch a.index {
 	case D_AX_8:
 		cana = 0
-		break
 	case D_BX_8:
 		canb = 0
-		break
 	case D_CX_8:
 		canc = 0
-		break
 	case D_DX_8:
 		cand = 0
 		break
 	}
 	if cana != 0 {
-		return int(D_AX_8)
+		return D_AX_8
 	}
 	if canb != 0 {
-		return int(D_BX_8)
+		return D_BX_8
 	}
 	if canc != 0 {
-		return int(D_CX_8)
+		return D_CX_8
 	}
 	if cand != 0 {
-		return int(D_DX_8)
+		return D_DX_8
 	}
 	ctxt.diag("impossible byte register")
-	sysfatal("bad code")
+	log.Fatalf("bad code")
 	return 0
 }
 
-func subreg_asm8(ctxt *Link, p *Prog, from int, to int) {
+func subreg_asm8(p *Prog, from int64, to int64) {
 	if false { /* debug['Q'] */
-		print("\n%v	s/%R/%R/\n", Pconv_list8(ctxt, p), from, to)
+		fmt.Printf("\n%v\ts/%v/%v/\n", p, Rconv_list8(from), Rconv_list8(to))
 	}
 	if p.from.typ == from {
 		p.from.typ = to
@@ -3757,40 +3017,41 @@ func subreg_asm8(ctxt *Link, p *Prog, from int, to int) {
 		p.to.index = to
 		p.tt = 0
 	}
-	from += int(D_INDIR_8)
+	from += D_INDIR_8
 	if p.from.typ == from {
-		p.from.typ = to + int(D_INDIR_8)
+		p.from.typ = to + D_INDIR_8
 		p.ft = 0
 	}
 	if p.to.typ == from {
-		p.to.typ = to + int(D_INDIR_8)
+		p.to.typ = to + D_INDIR_8
 		p.tt = 0
 	}
 	if false { /* debug['Q'] */
-		print("%v\n", Pconv_list8(ctxt, p))
+		fmt.Printf("%v\n", p)
 	}
 }
 
-func mediaop_asm8(ctxt *Link, o *Optab_asm8, op int, osize int, z int) int {
+func mediaop_asm8(ctxt *Link, o *Optab_asm8, op int64, osize int, z int64) int64 {
 	switch op {
-	case Pm_asm8:
-	case Pe_asm8:
-	case Pf2_asm8:
-	case Pf3_asm8:
+	case Pm_asm8,
+		Pe_asm8,
+		Pf2_asm8,
+		Pf3_asm8:
 		if osize != 1 {
-			if op != int(Pm_asm8) {
+			if op != Pm_asm8 {
 				ctxt.andptr[0] = uint8(op)
 				ctxt.andptr = ctxt.andptr[1:]
 			}
-			ctxt.andptr[0] = uint8(Pm_asm8)
+			ctxt.andptr[0] = Pm_asm8
 			ctxt.andptr = ctxt.andptr[1:]
 			z++
-			op = int(o.op[z])
+			op = int64(o.op[z])
 			break
 		}
+		fallthrough
 	default:
-		if cap(ctxt.andptr) == cap(ctxt.and) || int(ctxt.and[len(ctxt.andptr)-1]) != Pm_asm8 {
-			ctxt.andptr[0] = uint8(Pm_asm8)
+		if -cap(ctxt.andptr) == -cap(ctxt.and) || ctxt.and[-cap(ctxt.andptr)+cap(ctxt.and[:])-1] != Pm_asm8 {
+			ctxt.andptr[0] = Pm_asm8
 			ctxt.andptr = ctxt.andptr[1:]
 		}
 		break
@@ -3805,42 +3066,42 @@ func doasm_asm8(ctxt *Link, p *Prog) {
 	var q *Prog
 	var pp Prog
 	var t []uint8
-	var z int
-	var op int
+	var z int64
+	var op int64
 	var ft int
 	var tt int
-	var breg int
-	var v int32
+	var breg int64
+	var v int64
 	var pre int32
 	var rel Reloc
 	var r *Reloc
 	var a *Addr
 	ctxt.curp = p // TODO
-	pre = int32(prefixof_asm8(ctxt, &p.from))
+	pre = prefixof_asm8(ctxt, &p.from)
 	if pre != 0 {
 		ctxt.andptr[0] = uint8(pre)
 		ctxt.andptr = ctxt.andptr[1:]
 	}
-	pre = int32(prefixof_asm8(ctxt, &p.to))
+	pre = prefixof_asm8(ctxt, &p.to)
 	if pre != 0 {
 		ctxt.andptr[0] = uint8(pre)
 		ctxt.andptr = ctxt.andptr[1:]
 	}
 	if p.ft == 0 {
-		p.ft = oclass_asm8(&p.from)
+		p.ft = uint8(oclass_asm8(&p.from))
 	}
 	if p.tt == 0 {
-		p.tt = oclass_asm8(&p.to)
+		p.tt = uint8(oclass_asm8(&p.to))
 	}
-	ft = p.ft * int(Ymax_asm8)
-	tt = p.tt * int(Ymax_asm8)
+	ft = int(p.ft) * Ymax_asm8
+	tt = int(p.tt) * Ymax_asm8
 	o = &optab_asm8[p.as]
 	t = o.ytab
 	if t == nil {
-		ctxt.diag("asmins: noproto %v", Pconv_list8(ctxt, p))
+		ctxt.diag("asmins: noproto %P", p)
 		return
 	}
-	for z = 0; t[0] != 0; (func() { z += int(t[3]); t = t[4:] })() {
+	for z = 0; t[0] != 0; (func() { z += int64(t[3]); t = t[4:] })() {
 		if ycover_asm8[ft+int(t[0])] != 0 {
 			if ycover_asm8[tt+int(t[1])] != 0 {
 				goto found
@@ -3851,177 +3112,157 @@ func doasm_asm8(ctxt *Link, p *Prog) {
 found:
 	switch o.prefix {
 	case Pq_asm8: /* 16 bit escape and opcode escape */
-		ctxt.andptr[0] = uint8(Pe_asm8)
+		ctxt.andptr[0] = Pe_asm8
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(Pm_asm8)
+		ctxt.andptr[0] = Pm_asm8
 		ctxt.andptr = ctxt.andptr[1:]
-		break
-	case Pf2_asm8: /* xmm opcode escape */
-	case Pf3_asm8:
+	case Pf2_asm8, /* xmm opcode escape */
+		Pf3_asm8:
 		ctxt.andptr[0] = uint8(o.prefix)
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(Pm_asm8)
+		ctxt.andptr[0] = Pm_asm8
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Pm_asm8: /* opcode escape */
-		ctxt.andptr[0] = uint8(Pm_asm8)
+		ctxt.andptr[0] = Pm_asm8
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Pe_asm8: /* 16 bit escape */
-		ctxt.andptr[0] = uint8(Pe_asm8)
+		ctxt.andptr[0] = Pe_asm8
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Pb_asm8: /* botch */
 		break
 	}
-	op = int(o.op[z])
+	op = int64(o.op[z])
 	switch t[2] {
 	default:
-		ctxt.diag("asmins: unknown z %d %v", t[2], Pconv_list8(ctxt, p))
+		ctxt.diag("asmins: unknown z %d %P", t[2], p)
 		return
 	case Zpseudo_asm8:
 		break
 	case Zlit_asm8:
 		for ; ; z++ {
-			op = int(o.op[z])
+			op = int64(o.op[z])
 			if !(op != 0) {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
 			ctxt.andptr = ctxt.andptr[1:]
 		}
-		break
 	case Zlitm_r_asm8:
 		for ; ; z++ {
-			op = int(o.op[z])
+			op = int64(o.op[z])
 			if !(op != 0) {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
 			ctxt.andptr = ctxt.andptr[1:]
 		}
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
-		break
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 	case Zm_r_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
-		break
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 	case Zm2_r_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = o.op[z+1]
 		ctxt.andptr = ctxt.andptr[1:]
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
-		break
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 	case Zm_r_xm_asm8:
 		mediaop_asm8(ctxt, o, op, int(t[3]), z)
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
-		break
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 	case Zm_r_i_xm_asm8:
 		mediaop_asm8(ctxt, o, op, int(t[3]), z)
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 		ctxt.andptr[0] = uint8(p.to.offset)
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zibm_r_asm8:
 		for {
-			var tmp int = z
+			tmp2 := z
 			z++
-			op = int(o.op[tmp])
-			if !((op) != 0) {
+			op = int64(o.op[tmp2])
+			if !(op != 0) {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
 			ctxt.andptr = ctxt.andptr[1:]
 		}
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 		ctxt.andptr[0] = uint8(p.to.offset)
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zaut_r_asm8:
 		ctxt.andptr[0] = 0x8d
 		ctxt.andptr = ctxt.andptr[1:] /* leal */
-		if p.from.typ != int(D_ADDR_8) {
+		if p.from.typ != D_ADDR_8 {
 			ctxt.diag("asmins: Zaut sb type ADDR")
 		}
 		p.from.typ = p.from.index
-		p.from.index = int(D_NONE_8)
+		p.from.index = D_NONE_8
 		p.ft = 0
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 		p.from.index = p.from.typ
-		p.from.typ = int(D_ADDR_8)
+		p.from.typ = D_ADDR_8
 		p.ft = 0
-		break
 	case Zm_o_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm8(ctxt, &p.from, int(o.op[z+1]))
-		break
 	case Zr_m_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmand_asm8(ctxt, &p.to, int(reg_asm8[p.from.typ]))
-		break
+		asmand_asm8(ctxt, &p.to, reg_asm8[p.from.typ])
 	case Zr_m_xm_asm8:
 		mediaop_asm8(ctxt, o, op, int(t[3]), z)
-		asmand_asm8(ctxt, &p.to, int(reg_asm8[p.from.typ]))
-		break
+		asmand_asm8(ctxt, &p.to, reg_asm8[p.from.typ])
 	case Zr_m_i_xm_asm8:
 		mediaop_asm8(ctxt, o, op, int(t[3]), z)
-		asmand_asm8(ctxt, &p.to, int(reg_asm8[p.from.typ]))
+		asmand_asm8(ctxt, &p.to, reg_asm8[p.from.typ])
 		ctxt.andptr[0] = uint8(p.from.offset)
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zcallindreg_asm8:
 		r = addrel(ctxt.cursym)
 		r.off = p.pc
-		r.typ = int(R_CALLIND)
+		r.typ = R_CALLIND
 		r.siz = 0
 		fallthrough
+	// fallthrough
 	case Zo_m_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm8(ctxt, &p.to, int(o.op[z+1]))
-		break
 	case Zm_ibo_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm8(ctxt, &p.from, int(o.op[z+1]))
-		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.to, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.to, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zibo_m_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm8(ctxt, &p.to, int(o.op[z+1]))
-		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.from, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
-	case Z_ib_asm8:
-	case Zib__asm8:
-		if int(t[2]) == Zib__asm8 {
+	case Z_ib_asm8,
+		Zib__asm8:
+		if t[2] == Zib__asm8 {
 			a = &p.from
 		} else {
 			a = &p.to
 		}
-		v = vaddr_asm8(ctxt, a, (*Reloc)(nil))
+		v = vaddr_asm8(ctxt, a, nil)
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = uint8(v)
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zib_rp_asm8:
-		ctxt.andptr[0] = uint8(op + int(reg_asm8[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + int64(reg_asm8[p.to.typ]))
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.from, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zil_rp_asm8:
-		ctxt.andptr[0] = uint8(op + int(reg_asm8[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + int64(reg_asm8[p.to.typ]))
 		ctxt.andptr = ctxt.andptr[1:]
-		if o.prefix == int(Pe_asm8) {
-			v = vaddr_asm8(ctxt, &p.from, (*Reloc)(nil))
+		if o.prefix == Pe_asm8 {
+			v = vaddr_asm8(ctxt, &p.from, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
@@ -4029,25 +3270,23 @@ found:
 		} else {
 			relput4_asm8(ctxt, p, &p.from)
 		}
-		break
 	case Zib_rr_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmand_asm8(ctxt, &p.to, int(reg_asm8[p.to.typ]))
-		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.from, (*Reloc)(nil)))
+		asmand_asm8(ctxt, &p.to, reg_asm8[p.to.typ])
+		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
-	case Z_il_asm8:
-	case Zil__asm8:
-		if int(t[2]) == Zil__asm8 {
+	case Z_il_asm8,
+		Zil__asm8:
+		if t[2] == Zil__asm8 {
 			a = &p.from
 		} else {
 			a = &p.to
 		}
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		if o.prefix == int(Pe_asm8) {
-			v = vaddr_asm8(ctxt, a, (*Reloc)(nil))
+		if o.prefix == Pe_asm8 {
+			v = vaddr_asm8(ctxt, a, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
@@ -4055,20 +3294,19 @@ found:
 		} else {
 			relput4_asm8(ctxt, p, a)
 		}
-		break
-	case Zm_ilo_asm8:
-	case Zilo_m_asm8:
+	case Zm_ilo_asm8,
+		Zilo_m_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		if int(t[2]) == Zilo_m_asm8 {
+		if t[2] == Zilo_m_asm8 {
 			a = &p.from
 			asmand_asm8(ctxt, &p.to, int(o.op[z+1]))
 		} else {
 			a = &p.to
 			asmand_asm8(ctxt, &p.from, int(o.op[z+1]))
 		}
-		if o.prefix == int(Pe_asm8) {
-			v = vaddr_asm8(ctxt, a, (*Reloc)(nil))
+		if o.prefix == Pe_asm8 {
+			v = vaddr_asm8(ctxt, a, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
@@ -4076,13 +3314,12 @@ found:
 		} else {
 			relput4_asm8(ctxt, p, a)
 		}
-		break
 	case Zil_rr_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmand_asm8(ctxt, &p.to, int(reg_asm8[p.to.typ]))
-		if o.prefix == int(Pe_asm8) {
-			v = vaddr_asm8(ctxt, &p.from, (*Reloc)(nil))
+		asmand_asm8(ctxt, &p.to, reg_asm8[p.to.typ])
+		if o.prefix == Pe_asm8 {
+			v = vaddr_asm8(ctxt, &p.from, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
@@ -4090,49 +3327,44 @@ found:
 		} else {
 			relput4_asm8(ctxt, p, &p.from)
 		}
-		break
 	case Z_rp_asm8:
-		ctxt.andptr[0] = uint8(op + int(reg_asm8[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + int64(reg_asm8[p.to.typ]))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zrp__asm8:
-		ctxt.andptr[0] = uint8(op + int(reg_asm8[p.from.typ]))
+		ctxt.andptr[0] = uint8(op + int64(reg_asm8[p.from.typ]))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zclr_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmand_asm8(ctxt, &p.to, int(reg_asm8[p.to.typ]))
-		break
+		asmand_asm8(ctxt, &p.to, reg_asm8[p.to.typ])
 	case Zcall_asm8:
 		if p.to.sym == nil {
 			ctxt.diag("call without target")
-			sysfatal("bad code")
+			log.Fatalf("bad code")
 		}
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		r = addrel(ctxt.cursym)
-		r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
-		r.typ = int(R_CALL)
+		r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+		r.typ = R_CALL
 		r.siz = 4
 		r.sym = p.to.sym
 		r.add = p.to.offset
 		put4_asm8(ctxt, 0)
-		break
-	case Zbr_asm8:
-	case Zjmp_asm8:
-	case Zloop_asm8:
+	case Zbr_asm8,
+		Zjmp_asm8,
+		Zloop_asm8:
 		if p.to.sym != nil {
-			if int(t[2]) != Zjmp_asm8 {
+			if t[2] != Zjmp_asm8 {
 				ctxt.diag("branch to ATEXT")
-				sysfatal("bad code")
+				log.Fatalf("bad code")
 			}
 			ctxt.andptr[0] = o.op[z+1]
 			ctxt.andptr = ctxt.andptr[1:]
 			r = addrel(ctxt.cursym)
-			r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+			r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 			r.sym = p.to.sym
-			r.typ = int(R_PCREL)
+			r.typ = R_PCREL
 			r.siz = 4
 			put4_asm8(ctxt, 0)
 			break
@@ -4142,12 +3374,12 @@ found:
 		q = p.pcond
 		if q == nil {
 			ctxt.diag("jmp/branch/loop without target")
-			sysfatal("bad code")
+			log.Fatalf("bad code")
 		}
-		if p.back&1 != 0 /*untyped*/ {
-			v = int32(q.pc) - (int32(p.pc) + 2)
+		if p.back&1 != 0 {
+			v = q.pc - (p.pc + 2)
 			if v >= -128 {
-				if p.as == int(AJCXZW_8) {
+				if p.as == AJCXZW_8 {
 					ctxt.andptr[0] = 0x67
 					ctxt.andptr = ctxt.andptr[1:]
 				}
@@ -4155,35 +3387,33 @@ found:
 				ctxt.andptr = ctxt.andptr[1:]
 				ctxt.andptr[0] = uint8(v)
 				ctxt.andptr = ctxt.andptr[1:]
+			} else if t[2] == Zloop_asm8 {
+				ctxt.diag("loop too far: %P", p)
 			} else {
-				if int(t[2]) == Zloop_asm8 {
-					ctxt.diag("loop too far: %v", Pconv_list8(ctxt, p))
-				} else {
-					v -= 5 - 2
-					if int(t[2]) == Zbr_asm8 {
-						ctxt.andptr[0] = 0x0f
-						ctxt.andptr = ctxt.andptr[1:]
-						v--
-					}
-					ctxt.andptr[0] = o.op[z+1]
+				v -= 5 - 2
+				if t[2] == Zbr_asm8 {
+					ctxt.andptr[0] = 0x0f
 					ctxt.andptr = ctxt.andptr[1:]
-					ctxt.andptr[0] = uint8(v)
-					ctxt.andptr = ctxt.andptr[1:]
-					ctxt.andptr[0] = uint8(v >> 8)
-					ctxt.andptr = ctxt.andptr[1:]
-					ctxt.andptr[0] = uint8(v >> 16)
-					ctxt.andptr = ctxt.andptr[1:]
-					ctxt.andptr[0] = uint8(v >> 24)
-					ctxt.andptr = ctxt.andptr[1:]
+					v--
 				}
+				ctxt.andptr[0] = o.op[z+1]
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(v)
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(v >> 8)
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(v >> 16)
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(v >> 24)
+				ctxt.andptr = ctxt.andptr[1:]
 			}
 			break
 		}
 		// Annotate target; will fill in later.
 		p.forwd = q.comefrom
 		q.comefrom = p
-		if p.back&2 != 0 /*untyped*/ { // short
-			if p.as == int(AJCXZW_8) {
+		if p.back&2 != 0 { // short
+			if p.as == AJCXZW_8 {
 				ctxt.andptr[0] = 0x67
 				ctxt.andptr = ctxt.andptr[1:]
 			}
@@ -4191,30 +3421,27 @@ found:
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = 0
 			ctxt.andptr = ctxt.andptr[1:]
+		} else if t[2] == Zloop_asm8 {
+			ctxt.diag("loop too far: %P", p)
 		} else {
-			if int(t[2]) == Zloop_asm8 {
-				ctxt.diag("loop too far: %v", Pconv_list8(ctxt, p))
-			} else {
-				if int(t[2]) == Zbr_asm8 {
-					ctxt.andptr[0] = 0x0f
-					ctxt.andptr = ctxt.andptr[1:]
-				}
-				ctxt.andptr[0] = o.op[z+1]
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0
+			if t[2] == Zbr_asm8 {
+				ctxt.andptr[0] = 0x0f
 				ctxt.andptr = ctxt.andptr[1:]
 			}
+			ctxt.andptr[0] = o.op[z+1]
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.andptr[0] = 0
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.andptr[0] = 0
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.andptr[0] = 0
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.andptr[0] = 0
+			ctxt.andptr = ctxt.andptr[1:]
 		}
-		break
-	case Zcallcon_asm8:
-	case Zjmpcon_asm8:
-		if int(t[2]) == Zcallcon_asm8 {
+	case Zcallcon_asm8,
+		Zjmpcon_asm8:
+		if t[2] == Zcallcon_asm8 {
 			ctxt.andptr[0] = uint8(op)
 			ctxt.andptr = ctxt.andptr[1:]
 		} else {
@@ -4222,32 +3449,30 @@ found:
 			ctxt.andptr = ctxt.andptr[1:]
 		}
 		r = addrel(ctxt.cursym)
-		r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
-		r.typ = int(R_PCREL)
+		r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+		r.typ = R_PCREL
 		r.siz = 4
 		r.add = p.to.offset
 		put4_asm8(ctxt, 0)
-		break
 	case Zcallind_asm8:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = o.op[z+1]
 		ctxt.andptr = ctxt.andptr[1:]
 		r = addrel(ctxt.cursym)
-		r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
-		r.typ = int(R_ADDR)
+		r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+		r.typ = R_ADDR
 		r.siz = 4
 		r.add = p.to.offset
 		r.sym = p.to.sym
 		put4_asm8(ctxt, 0)
-		break
 	case Zbyte_asm8:
 		v = vaddr_asm8(ctxt, &p.from, &rel)
 		if rel.siz != 0 {
-			rel.siz = uint8(op)
+			rel.siz = op
 			r = addrel(ctxt.cursym)
 			*r = rel
-			r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+			r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 		}
 		ctxt.andptr[0] = uint8(v)
 		ctxt.andptr = ctxt.andptr[1:]
@@ -4261,7 +3486,6 @@ found:
 				ctxt.andptr = ctxt.andptr[1:]
 			}
 		}
-		break
 	case Zmov_asm8:
 		goto domov
 	}
@@ -4286,86 +3510,80 @@ domov:
 bad:
 	pp = *p
 	z = p.from.typ
-	if z >= int(D_BP_8) && z <= int(D_DI_8) {
+	if z >= D_BP_8 && z <= D_DI_8 {
 		breg = byteswapreg_asm8(ctxt, &p.to)
-		if (breg) != int(D_AX_8) {
+		if breg != D_AX_8 {
 			ctxt.andptr[0] = 0x87
 			ctxt.andptr = ctxt.andptr[1:] /* xchg lhs,bx */
-			asmand_asm8(ctxt, &p.from, int(reg_asm8[breg]))
-			subreg_asm8(ctxt, &pp, z, breg)
+			asmand_asm8(ctxt, &p.from, reg_asm8[breg])
+			subreg_asm8(&pp, z, breg)
 			doasm_asm8(ctxt, &pp)
 			ctxt.andptr[0] = 0x87
 			ctxt.andptr = ctxt.andptr[1:] /* xchg lhs,bx */
-			asmand_asm8(ctxt, &p.from, int(reg_asm8[breg]))
+			asmand_asm8(ctxt, &p.from, reg_asm8[breg])
 		} else {
-			ctxt.andptr[0] = uint8(0x90 + int(reg_asm8[z]))
+			ctxt.andptr[0] = uint8(0x90 + reg_asm8[z])
 			ctxt.andptr = ctxt.andptr[1:] /* xchg lsh,ax */
-			subreg_asm8(ctxt, &pp, z, int(D_AX_8))
+			subreg_asm8(&pp, z, D_AX_8)
 			doasm_asm8(ctxt, &pp)
-			ctxt.andptr[0] = uint8(0x90 + int(reg_asm8[z]))
+			ctxt.andptr[0] = uint8(0x90 + reg_asm8[z])
 			ctxt.andptr = ctxt.andptr[1:] /* xchg lsh,ax */
 		}
 		return
 	}
 	z = p.to.typ
-	if z >= int(D_BP_8) && z <= int(D_DI_8) {
+	if z >= D_BP_8 && z <= D_DI_8 {
 		breg = byteswapreg_asm8(ctxt, &p.from)
-		if (breg) != int(D_AX_8) {
+		if breg != D_AX_8 {
 			ctxt.andptr[0] = 0x87
 			ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
-			asmand_asm8(ctxt, &p.to, int(reg_asm8[breg]))
-			subreg_asm8(ctxt, &pp, z, breg)
+			asmand_asm8(ctxt, &p.to, reg_asm8[breg])
+			subreg_asm8(&pp, z, breg)
 			doasm_asm8(ctxt, &pp)
 			ctxt.andptr[0] = 0x87
 			ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
-			asmand_asm8(ctxt, &p.to, int(reg_asm8[breg]))
+			asmand_asm8(ctxt, &p.to, reg_asm8[breg])
 		} else {
-			ctxt.andptr[0] = uint8(0x90 + int(reg_asm8[z]))
+			ctxt.andptr[0] = uint8(0x90 + reg_asm8[z])
 			ctxt.andptr = ctxt.andptr[1:] /* xchg rsh,ax */
-			subreg_asm8(ctxt, &pp, z, int(D_AX_8))
+			subreg_asm8(&pp, z, D_AX_8)
 			doasm_asm8(ctxt, &pp)
-			ctxt.andptr[0] = uint8(0x90 + int(reg_asm8[z]))
+			ctxt.andptr[0] = uint8(0x90 + reg_asm8[z])
 			ctxt.andptr = ctxt.andptr[1:] /* xchg rsh,ax */
 		}
 		return
 	}
-	ctxt.diag("doasm: notfound t2=%x from=%x to=%x %v", t[2], p.from.typ, p.to.typ, Pconv_list8(ctxt, p))
+	ctxt.diag("doasm: notfound t2=%ux from=%ux to=%ux %P", t[2], p.from.typ, p.to.typ, p)
 	return
 mfound:
 	switch t[3] {
 	default:
-		ctxt.diag("asmins: unknown mov %d %v", t[3], Pconv_list8(ctxt, p))
-		break
+		ctxt.diag("asmins: unknown mov %d %P", t[3], p)
 	case 0: /* lit */
-		for z = 4; int(t[z]) != E_asm6; z++ {
+		for z = 4; t[z] != E_asm8; z++ {
 			ctxt.andptr[0] = t[z]
 			ctxt.andptr = ctxt.andptr[1:]
 		}
-		break
 	case 1: /* r,m */
 		ctxt.andptr[0] = t[4]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm8(ctxt, &p.to, int(t[5]))
-		break
 	case 2: /* m,r */
 		ctxt.andptr[0] = t[4]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm8(ctxt, &p.from, int(t[5]))
-		break
 	case 3: /* r,m - 2op */
 		ctxt.andptr[0] = t[4]
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = t[5]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm8(ctxt, &p.to, int(t[6]))
-		break
 	case 4: /* m,r - 2op */
 		ctxt.andptr[0] = t[4]
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = t[5]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm8(ctxt, &p.from, int(t[6]))
-		break
 	case 5: /* load full pointer, trash heap */
 		if t[4] != 0 {
 			ctxt.andptr[0] = t[4]
@@ -4377,23 +3595,19 @@ mfound:
 		case D_DS_8:
 			ctxt.andptr[0] = 0xc5
 			ctxt.andptr = ctxt.andptr[1:]
-			break
 		case D_SS_8:
 			ctxt.andptr[0] = 0x0f
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = 0xb2
 			ctxt.andptr = ctxt.andptr[1:]
-			break
 		case D_ES_8:
 			ctxt.andptr[0] = 0xc4
 			ctxt.andptr = ctxt.andptr[1:]
-			break
 		case D_FS_8:
 			ctxt.andptr[0] = 0x0f
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = 0xb4
 			ctxt.andptr = ctxt.andptr[1:]
-			break
 		case D_GS_8:
 			ctxt.andptr[0] = 0x0f
 			ctxt.andptr = ctxt.andptr[1:]
@@ -4401,8 +3615,7 @@ mfound:
 			ctxt.andptr = ctxt.andptr[1:]
 			break
 		}
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
-		break
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 	case 6: /* double shift */
 		z = p.from.typ
 		switch z {
@@ -4413,25 +3626,23 @@ mfound:
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = t[4]
 			ctxt.andptr = ctxt.andptr[1:]
-			asmand_asm8(ctxt, &p.to, int(reg_asm8[p.from.index]))
+			asmand_asm8(ctxt, &p.to, reg_asm8[p.from.index])
 			ctxt.andptr[0] = uint8(p.from.offset)
 			ctxt.andptr = ctxt.andptr[1:]
-			break
-		case D_CL_8:
-		case D_CX_8:
+		case D_CL_8,
+			D_CX_8:
 			ctxt.andptr[0] = 0x0f
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = t[5]
 			ctxt.andptr = ctxt.andptr[1:]
-			asmand_asm8(ctxt, &p.to, int(reg_asm8[p.from.index]))
+			asmand_asm8(ctxt, &p.to, reg_asm8[p.from.index])
 			break
 		}
-		break
 	case 7: /* imul rm,r */
-		if int(t[4]) == Pq_asm8 {
-			ctxt.andptr[0] = uint8(Pe_asm8)
+		if t[4] == Pq_asm8 {
+			ctxt.andptr[0] = Pe_asm8
 			ctxt.andptr = ctxt.andptr[1:]
-			ctxt.andptr[0] = uint8(Pm_asm8)
+			ctxt.andptr[0] = Pm_asm8
 			ctxt.andptr = ctxt.andptr[1:]
 		} else {
 			ctxt.andptr[0] = t[4]
@@ -4439,8 +3650,7 @@ mfound:
 		}
 		ctxt.andptr[0] = t[5]
 		ctxt.andptr = ctxt.andptr[1:]
-		asmand_asm8(ctxt, &p.from, int(reg_asm8[p.to.typ]))
-		break
+		asmand_asm8(ctxt, &p.from, reg_asm8[p.to.typ])
 	// NOTE: The systems listed here are the ones that use the "TLS initial exec" model,
 	// where you load the TLS base register into a register and then index off that
 	// register to access the actual TLS variables. Systems that allow direct TLS access
@@ -4448,46 +3658,44 @@ mfound:
 	case 8: /* mov tls, r */
 		switch ctxt.headtype {
 		default:
-			sysfatal("unknown TLS base location for %s", headstr(ctxt.headtype))
+			log.Fatalf("unknown TLS base location for %s", headstr(ctxt.headtype))
 		// ELF TLS base is 0(GS).
-		case Hlinux:
-		case Hnacl:
+		case Hlinux,
+			Hnacl:
 			pp.from = p.from
-			pp.from.typ = int(D_INDIR_8 + D_GS_8)
+			pp.from.typ = D_INDIR_8 + D_GS_8
 			pp.from.offset = 0
-			pp.from.index = int(D_NONE_8)
+			pp.from.index = D_NONE_8
 			pp.from.scale = 0
 			ctxt.andptr[0] = 0x65
 			ctxt.andptr = ctxt.andptr[1:] // GS
 			ctxt.andptr[0] = 0x8B
 			ctxt.andptr = ctxt.andptr[1:]
-			asmand_asm8(ctxt, &pp.from, int(reg_asm8[p.to.typ]))
-			break
+			asmand_asm8(ctxt, &pp.from, reg_asm8[p.to.typ])
 		case Hplan9:
 			if ctxt.plan9privates == nil {
 				ctxt.plan9privates = linklookup(ctxt, "_privates", 0)
 			}
 			pp.from = Addr{}
-			pp.from.typ = int(D_EXTERN_8)
+			pp.from.typ = D_EXTERN_8
 			pp.from.sym = ctxt.plan9privates
 			pp.from.offset = 0
-			pp.from.index = int(D_NONE_8)
+			pp.from.index = D_NONE_8
 			ctxt.andptr[0] = 0x8B
 			ctxt.andptr = ctxt.andptr[1:]
-			asmand_asm8(ctxt, &pp.from, int(reg_asm8[p.to.typ]))
-			break
+			asmand_asm8(ctxt, &pp.from, reg_asm8[p.to.typ])
 		// Windows TLS base is always 0x14(FS).
 		case Hwindows:
 			pp.from = p.from
-			pp.from.typ = int(D_INDIR_8 + D_FS_8)
+			pp.from.typ = D_INDIR_8 + D_FS_8
 			pp.from.offset = 0x14
-			pp.from.index = int(D_NONE_8)
+			pp.from.index = D_NONE_8
 			pp.from.scale = 0
 			ctxt.andptr[0] = 0x64
 			ctxt.andptr = ctxt.andptr[1:] // FS
 			ctxt.andptr[0] = 0x8B
 			ctxt.andptr = ctxt.andptr[1:]
-			asmand_asm8(ctxt, &pp.from, int(reg_asm8[p.to.typ]))
+			asmand_asm8(ctxt, &pp.from, reg_asm8[p.to.typ])
 			break
 		}
 		break
@@ -4502,4 +3710,44 @@ var naclret_asm8 = []uint8{
 	0xe0, // ANDL $~31, BP
 	0xff,
 	0xe5, // JMP BP
+}
+
+func asmins_asm8(ctxt *Link, p *Prog) {
+	var r *Reloc
+	ctxt.andptr = ctxt.and[:]
+	if p.as == AUSEFIELD_8 {
+		r = addrel(ctxt.cursym)
+		r.off = 0
+		r.sym = p.from.sym
+		r.typ = R_USEFIELD
+		r.siz = 0
+		return
+	}
+	if ctxt.headtype == Hnacl {
+		switch p.as {
+		case ARET_8:
+			copy(ctxt.andptr, naclret_asm8)
+			ctxt.andptr = ctxt.andptr[len(naclret_asm8):]
+			return
+		case ACALL_8,
+			AJMP_8:
+			if D_AX_8 <= p.to.typ && p.to.typ <= D_DI_8 {
+				ctxt.andptr[0] = 0x83
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(0xe0 | (p.to.typ - D_AX_8))
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = 0xe0
+				ctxt.andptr = ctxt.andptr[1:]
+			}
+		case AINT_8:
+			ctxt.andptr[0] = 0xf4
+			ctxt.andptr = ctxt.andptr[1:]
+			return
+		}
+	}
+	doasm_asm8(ctxt, p)
+	if -cap(ctxt.andptr) > -cap(ctxt.and[len(ctxt.and):]) {
+		fmt.Printf("and[] is too short - %d byte instruction\n", -cap(ctxt.andptr)+cap(ctxt.and[:]))
+		log.Fatalf("bad code")
+	}
 }

@@ -1,192 +1,9 @@
 package main
 
-func span6(ctxt *Link, s *LSym) {
-	var p *Prog
-	var q *Prog
-	var c int
-	var v int32
-	var loop int32
-	var bp []uint8
-	var n int
-	var m int
-	var i int
-	ctxt.cursym = s
-	if s.p != nil {
-		return
-	}
-	if ycover_asm6[0] == 0 {
-		instinit_asm6()
-	}
-	for p = ctxt.cursym.text; p != nil; p = p.link {
-		n = 0
-		if p.to.typ == int(D_BRANCH_6) {
-			if p.pcond == nil {
-				p.pcond = p
-			}
-		}
-		q = p.pcond
-		if (q) != nil {
-			if q.back != 2 {
-				n = 1
-			}
-		}
-		p.back = n
-		if p.as == int(AADJSP_6) {
-			p.to.typ = int(D_SP_6)
-			v = int32(-p.from.offset)
-			p.from.offset = int64(v)
-			p.as = spadjop_asm6(ctxt, p, int(AADDL_6), int(AADDQ_6))
-			if v < 0 {
-				p.as = spadjop_asm6(ctxt, p, int(ASUBL_6), int(ASUBQ_6))
-				v = -v
-				p.from.offset = int64(v)
-			}
-			if v == 0 {
-				p.as = int(ANOP_6)
-			}
-		}
-	}
-	for p = s.text; p != nil; p = p.link {
-		p.back = 2 // use short branches first time through
-		q = p.pcond
-		if (q) != nil && (q.back&2 != 0 /*untyped*/) {
-			p.back |= 1 // backward jump
-			q.back |= 4 // loop head
-		}
-		if p.as == int(AADJSP_6) {
-			p.to.typ = int(D_SP_6)
-			v = int32(-p.from.offset)
-			p.from.offset = int64(v)
-			p.as = spadjop_asm6(ctxt, p, int(AADDL_6), int(AADDQ_6))
-			if v < 0 {
-				p.as = spadjop_asm6(ctxt, p, int(ASUBL_6), int(ASUBQ_6))
-				v = -v
-				p.from.offset = int64(v)
-			}
-			if v == 0 {
-				p.as = int(ANOP_6)
-			}
-		}
-	}
-	n = 0
-	for {
-		loop = 0
-		s.r = s.r[:0]
-		s.p = s.p[:0]
-		c = 0
-		for p = s.text; p != nil; p = p.link {
-			if ctxt.headtype == int(Hnacl) && p.isize > 0 {
-				var deferreturn_asm6 *LSym
-				if deferreturn_asm6 == nil {
-					deferreturn_asm6 = linklookup(ctxt, "runtime.deferreturn", 0)
-				}
-				// pad everything to avoid crossing 32-byte boundary
-				if (c >> 5) != ((c + p.isize - 1) >> 5) {
-					c = int(naclpad_asm6(ctxt, s, int32(c), -c&31))
-				}
-				// pad call deferreturn to start at 32-byte boundary
-				// so that subtracting 5 in jmpdefer will jump back
-				// to that boundary and rerun the call.
-				if p.as == int(ACALL_6) && p.to.sym == deferreturn_asm6 {
-					c = int(naclpad_asm6(ctxt, s, int32(c), -c&31))
-				}
-				// pad call to end at 32-byte boundary
-				if p.as == int(ACALL_6) {
-					c = int(naclpad_asm6(ctxt, s, int32(c), -(c+p.isize)&31))
-				}
-				// the linker treats REP and STOSQ as different instructions
-				// but in fact the REP is a prefix on the STOSQ.
-				// make sure REP has room for 2 more bytes, so that
-				// padding will not be inserted before the next instruction.
-				if (p.as == int(AREP_6) || p.as == int(AREPN_6)) && (c>>5) != ((c+3-1)>>5) {
-					c = int(naclpad_asm6(ctxt, s, int32(c), -c&31))
-				}
-				// same for LOCK.
-				// various instructions follow; the longest is 4 bytes.
-				// give ourselves 8 bytes so as to avoid surprises.
-				if p.as == int(ALOCK_6) && (c>>5) != ((c+8-1)>>5) {
-					c = int(naclpad_asm6(ctxt, s, int32(c), -c&31))
-				}
-			}
-			if (p.back&4 != 0 /*untyped*/) && (c&(LoopAlign_asm6-1)) != 0 {
-				// pad with NOPs
-				v = int32(-c) & (int32(LoopAlign_asm6) - 1)
-				if v <= int32(MaxLoopPad_asm6) {
-					symgrow(ctxt, s, int64(c)+int64(v))
-					fillnop_asm6(s.p[c:], int(v))
-					c += int(v)
-				}
-			}
-			p.pc = c
-			// process forward jumps to p
-			for q = p.comefrom; q != nil; q = q.forwd {
-				v = int32(p.pc) - (int32(q.pc) + int32(q.mark))
-				if q.back&2 != 0 /*untyped*/ { // short
-					if v > 127 {
-						loop++
-						q.back ^= 2
-					}
-					if q.as == int(AJCXZL_6) {
-						s.p[q.pc+2] = uint8(v)
-					} else {
-						s.p[q.pc+1] = uint8(v)
-					}
-				} else {
-					bp = s.p[q.pc+q.mark-4:]
-					bp[0] = uint8(v)
-					bp = bp[1:]
-					bp[0] = uint8(v >> 8)
-					bp = bp[1:]
-					bp[0] = uint8(v >> 16)
-					bp = bp[1:]
-					bp[0] = uint8(v >> 24)
-				}
-			}
-			p.comefrom = (*Prog)(nil)
-			p.pc = c
-			asmins_asm6(ctxt, p)
-			m = -cap(ctxt.andptr) + cap(ctxt.and)
-			if p.isize != m {
-				p.isize = m
-				loop++
-			}
-			symgrow(ctxt, s, int64(p.pc)+int64(m))
-			copy(s.p[p.pc:], ctxt.and[:m])
-			p.mark = m
-			c += m
-		}
-		n++
-		if n > 20 {
-			ctxt.diag("span must be looping")
-			sysfatal("loop")
-		}
-		if !(loop != 0) {
-			break
-		}
-	}
-	if ctxt.headtype == int(Hnacl) {
-		c = int(naclpad_asm6(ctxt, s, int32(c), -c&31))
-	}
-	c += -c & int(FuncAlign_asm6-1)
-	s.size = c
-	if false { /* debug['a'] > 1 */
-		print("span1 %s %d (%d tries)\n %.6x", s.name, s.size, n, 0)
-		for i = range s.p {
-			print(" %.2x", s.p[i])
-			if i%16 == 15 {
-				print("\n  %.6x", i+1)
-			}
-		}
-		if i%16 != 0 /*untyped*/ {
-			print("\n")
-		}
-		for i = range s.r {
-			var r *Reloc
-			r = &s.r[i]
-			print(" rel %#.4x/%d %s%+d\n", r.off, r.siz, r.sym.name, r.add)
-		}
-	}
-}
+import (
+	"fmt"
+	"log"
+)
 
 /*
  * this is the ranlib header
@@ -201,7 +18,7 @@ const (
 type Optab_asm6 struct {
 	as     int
 	ytab   []uint8
-	prefix int
+	prefix int64
 	op     [23]uint8
 }
 
@@ -347,171 +164,11 @@ const (
 	Maxand_asm6 = 10
 )
 
-var ycover_asm6 [Ymax_asm6 * Ymax_asm6]int8
+var ycover_asm6 [Ymax_asm6 * Ymax_asm6]uint8
 
 var reg_asm6 [D_NONE_6]int
 
 var regrex_asm6 [D_NONE_6 + 1]int
-
-func asmins_asm6(ctxt *Link, p *Prog) {
-	var n int
-	var np int
-	var c int
-	var and0 []uint8
-	var r *Reloc
-	ctxt.andptr = ctxt.and[:]
-	ctxt.asmode = p.mode
-	if p.as == int(AUSEFIELD_6) {
-		r = addrel(ctxt.cursym)
-		r.off = 0
-		r.siz = 0
-		r.sym = p.from.sym
-		r.typ = int(R_USEFIELD)
-		return
-	}
-	if ctxt.headtype == int(Hnacl) {
-		if p.as == int(AREP_6) {
-			ctxt.rep++
-			return
-		}
-		if p.as == int(AREPN_6) {
-			ctxt.repn++
-			return
-		}
-		if p.as == int(ALOCK_6) {
-			ctxt.lock++
-			return
-		}
-		if p.as != int(ALEAQ_6) && p.as != int(ALEAL_6) {
-			if p.from.index != int(D_NONE_6) && p.from.scale > 0 {
-				nacltrunc_asm6(ctxt, p.from.index)
-			}
-			if p.to.index != int(D_NONE_6) && p.to.scale > 0 {
-				nacltrunc_asm6(ctxt, p.to.index)
-			}
-		}
-		switch p.as {
-		case ARET_6:
-			copy(ctxt.andptr, naclret_asm6)
-			ctxt.andptr = ctxt.andptr[len(naclret_asm6):]
-			return
-		case ACALL_6, AJMP_6:
-			if D_AX_6 <= int(p.to.typ) && p.to.typ <= int(D_DI_6) {
-				// ANDL $~31, reg
-				ctxt.andptr[0] = 0x83
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = uint8(0xe0 | (p.to.typ - int(D_AX_6)))
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0xe0
-				ctxt.andptr = ctxt.andptr[1:]
-				// ADDQ R15, reg
-				ctxt.andptr[0] = 0x4c
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0x01
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = uint8(0xf8 | (p.to.typ - int(D_AX_6)))
-				ctxt.andptr = ctxt.andptr[1:]
-			}
-			if D_R8_6 <= int(p.to.typ) && p.to.typ <= int(D_R15_6) {
-				// ANDL $~31, reg
-				ctxt.andptr[0] = 0x41
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0x83
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = uint8(0xe0 | (p.to.typ - int(D_R8_6)))
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0xe0
-				ctxt.andptr = ctxt.andptr[1:]
-				// ADDQ R15, reg
-				ctxt.andptr[0] = 0x4d
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0x01
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = uint8(0xf8 | (p.to.typ - int(D_R8_6)))
-				ctxt.andptr = ctxt.andptr[1:]
-			}
-			break
-		case AINT_6:
-			ctxt.andptr[0] = 0xf4
-			ctxt.andptr = ctxt.andptr[1:]
-			return
-		case ASCASB_6, ASCASW_6, ASCASL_6, ASCASQ_6, ASTOSB_6, ASTOSW_6, ASTOSL_6, ASTOSQ_6:
-			copy(ctxt.andptr, naclstos_asm6)
-			ctxt.andptr = ctxt.andptr[len(naclstos_asm6):]
-			break
-		case AMOVSB_6, AMOVSW_6, AMOVSL_6, AMOVSQ_6:
-			copy(ctxt.andptr, naclmovs_asm6)
-			ctxt.andptr = ctxt.andptr[len(naclmovs_asm6):]
-			break
-		}
-		if ctxt.rep != 0 {
-			ctxt.andptr[0] = 0xf3
-			ctxt.andptr = ctxt.andptr[1:]
-			ctxt.rep = 0
-		}
-		if ctxt.repn != 0 {
-			ctxt.andptr[0] = 0xf2
-			ctxt.andptr = ctxt.andptr[1:]
-			ctxt.repn = 0
-		}
-		if ctxt.lock != 0 {
-			ctxt.andptr[0] = 0xf0
-			ctxt.andptr = ctxt.andptr[1:]
-			ctxt.lock = 0
-		}
-	}
-	ctxt.rexflag = 0
-	and0 = ctxt.andptr
-	ctxt.asmode = p.mode
-	doasm_asm6(ctxt, p)
-	if ctxt.rexflag != 0 {
-		/*
-		 * as befits the whole approach of the architecture,
-		 * the rex prefix must appear before the first opcode byte
-		 * (and thus after any 66/67/f2/f3/26/2e/3e prefix bytes, but
-		 * before the 0f opcode escape!), or it might be ignored.
-		 * note that the handbook often misleadingly shows 66/f2/f3 in `opcode'.
-		 */
-		if p.mode != 64 {
-			ctxt.diag("asmins: illegal in mode %d: %v", p.mode, Pconv_list6(ctxt, p))
-		}
-		n = -cap(ctxt.andptr) + cap(and0)
-		for np = 0; np < n; np++ {
-			c = int(and0[np])
-			if c != 0xf2 && c != 0xf3 && (c < 0x64 || c > 0x67) && c != 0x2e && c != 0x3e && c != 0x26 {
-				break
-			}
-		}
-		copy(and0[np+1:], and0[np:n])
-		and0[np] = uint8(0x40 | ctxt.rexflag)
-		ctxt.andptr = ctxt.andptr[1:]
-	}
-	n = -cap(ctxt.andptr) + cap(ctxt.and)
-	for i := len(ctxt.cursym.r) - 1; i >= 0; i-- {
-		r := &ctxt.cursym.r[i]
-		if r.off < p.pc {
-			break
-		}
-		if ctxt.rexflag != 0 {
-			r.off++
-		}
-		if r.typ == int(R_PCREL) || r.typ == int(R_CALL) {
-			r.add -= int64(p.pc) + int64(n) - (int64(r.off) + int64(r.siz))
-		}
-	}
-	if ctxt.headtype == int(Hnacl) && p.as != int(ACMPL_6) && p.as != int(ACMPQ_6) {
-		switch p.to.typ {
-		case D_SP_6:
-			copy(ctxt.andptr, naclspfix_asm6)
-			ctxt.andptr = ctxt.andptr[len(naclspfix_asm6):]
-			break
-		case D_BP_6:
-			copy(ctxt.andptr, naclbpfix_asm6)
-			ctxt.andptr = ctxt.andptr[len(naclbpfix_asm6):]
-			break
-		}
-	}
-}
 
 var ynone_asm6 = []uint8{
 	Ynone_asm6,
@@ -1739,27 +1396,27 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AAAD_6, ynone_asm6, P32_asm6, [23]uint8{0xd5, 0x0a}},
 	{AAAM_6, ynone_asm6, P32_asm6, [23]uint8{0xd4, 0x0a}},
 	{AAAS_6, ynone_asm6, P32_asm6, [23]uint8{0x3f}},
-	{AADCB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x14, 0x80, (02), 0x10, 0x10}},
-	{AADCL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, (02), 0x15, 0x81, (02), 0x11, 0x13}},
-	{AADCQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, (02), 0x15, 0x81, (02), 0x11, 0x13}},
-	{AADCW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, (02), 0x15, 0x81, (02), 0x11, 0x13}},
-	{AADDB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x04, 0x80, (00), 0x00, 0x02}},
-	{AADDL_6, yaddl_asm6, Px_asm6, [23]uint8{0x83, (00), 0x05, 0x81, (00), 0x01, 0x03}},
+	{AADCB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x14, 0x80, 02, 0x10, 0x10}},
+	{AADCL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, 02, 0x15, 0x81, 02, 0x11, 0x13}},
+	{AADCQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, 02, 0x15, 0x81, 02, 0x11, 0x13}},
+	{AADCW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, 02, 0x15, 0x81, 02, 0x11, 0x13}},
+	{AADDB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x04, 0x80, 00, 0x00, 0x02}},
+	{AADDL_6, yaddl_asm6, Px_asm6, [23]uint8{0x83, 00, 0x05, 0x81, 00, 0x01, 0x03}},
 	{AADDPD_6, yxm_asm6, Pq_asm6, [23]uint8{0x58}},
 	{AADDPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x58}},
-	{AADDQ_6, yaddl_asm6, Pw_asm6, [23]uint8{0x83, (00), 0x05, 0x81, (00), 0x01, 0x03}},
+	{AADDQ_6, yaddl_asm6, Pw_asm6, [23]uint8{0x83, 00, 0x05, 0x81, 00, 0x01, 0x03}},
 	{AADDSD_6, yxm_asm6, Pf2_asm6, [23]uint8{0x58}},
 	{AADDSS_6, yxm_asm6, Pf3_asm6, [23]uint8{0x58}},
-	{AADDW_6, yaddl_asm6, Pe_asm6, [23]uint8{0x83, (00), 0x05, 0x81, (00), 0x01, 0x03}},
+	{AADDW_6, yaddl_asm6, Pe_asm6, [23]uint8{0x83, 00, 0x05, 0x81, 00, 0x01, 0x03}},
 	{AADJSP_6, nil, 0, [23]uint8{}},
-	{AANDB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x24, 0x80, (04), 0x20, 0x22}},
-	{AANDL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, (04), 0x25, 0x81, (04), 0x21, 0x23}},
+	{AANDB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x24, 0x80, 04, 0x20, 0x22}},
+	{AANDL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, 04, 0x25, 0x81, 04, 0x21, 0x23}},
 	{AANDNPD_6, yxm_asm6, Pq_asm6, [23]uint8{0x55}},
 	{AANDNPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x55}},
 	{AANDPD_6, yxm_asm6, Pq_asm6, [23]uint8{0x54}},
 	{AANDPS_6, yxm_asm6, Pq_asm6, [23]uint8{0x54}},
-	{AANDQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, (04), 0x25, 0x81, (04), 0x21, 0x23}},
-	{AANDW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, (04), 0x25, 0x81, (04), 0x21, 0x23}},
+	{AANDQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, 04, 0x25, 0x81, 04, 0x21, 0x23}},
+	{AANDW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, 04, 0x25, 0x81, 04, 0x21, 0x23}},
 	{AARPL_6, yrl_ml_asm6, P32_asm6, [23]uint8{0x63}},
 	{ABOUNDL_6, yrl_m_asm6, P32_asm6, [23]uint8{0x62}},
 	{ABOUNDW_6, yrl_m_asm6, Pe_asm6, [23]uint8{0x62}},
@@ -1771,20 +1428,20 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{ABSRW_6, yml_rl_asm6, Pq_asm6, [23]uint8{0xbd}},
 	{ABSWAPL_6, ybswap_asm6, Px_asm6, [23]uint8{0x0f, 0xc8}},
 	{ABSWAPQ_6, ybswap_asm6, Pw_asm6, [23]uint8{0x0f, 0xc8}},
-	{ABTCL_6, ybtl_asm6, Pm_asm6, [23]uint8{0xba, (07), 0xbb}},
-	{ABTCQ_6, ybtl_asm6, Pw_asm6, [23]uint8{0x0f, 0xba, (07), 0x0f, 0xbb}},
-	{ABTCW_6, ybtl_asm6, Pq_asm6, [23]uint8{0xba, (07), 0xbb}},
-	{ABTL_6, ybtl_asm6, Pm_asm6, [23]uint8{0xba, (04), 0xa3}},
-	{ABTQ_6, ybtl_asm6, Pw_asm6, [23]uint8{0x0f, 0xba, (04), 0x0f, 0xa3}},
-	{ABTRL_6, ybtl_asm6, Pm_asm6, [23]uint8{0xba, (06), 0xb3}},
-	{ABTRQ_6, ybtl_asm6, Pw_asm6, [23]uint8{0x0f, 0xba, (06), 0x0f, 0xb3}},
-	{ABTRW_6, ybtl_asm6, Pq_asm6, [23]uint8{0xba, (06), 0xb3}},
-	{ABTSL_6, ybtl_asm6, Pm_asm6, [23]uint8{0xba, (05), 0xab}},
-	{ABTSQ_6, ybtl_asm6, Pw_asm6, [23]uint8{0x0f, 0xba, (05), 0x0f, 0xab}},
-	{ABTSW_6, ybtl_asm6, Pq_asm6, [23]uint8{0xba, (05), 0xab}},
-	{ABTW_6, ybtl_asm6, Pq_asm6, [23]uint8{0xba, (04), 0xa3}},
+	{ABTCL_6, ybtl_asm6, Pm_asm6, [23]uint8{0xba, 07, 0xbb}},
+	{ABTCQ_6, ybtl_asm6, Pw_asm6, [23]uint8{0x0f, 0xba, 07, 0x0f, 0xbb}},
+	{ABTCW_6, ybtl_asm6, Pq_asm6, [23]uint8{0xba, 07, 0xbb}},
+	{ABTL_6, ybtl_asm6, Pm_asm6, [23]uint8{0xba, 04, 0xa3}},
+	{ABTQ_6, ybtl_asm6, Pw_asm6, [23]uint8{0x0f, 0xba, 04, 0x0f, 0xa3}},
+	{ABTRL_6, ybtl_asm6, Pm_asm6, [23]uint8{0xba, 06, 0xb3}},
+	{ABTRQ_6, ybtl_asm6, Pw_asm6, [23]uint8{0x0f, 0xba, 06, 0x0f, 0xb3}},
+	{ABTRW_6, ybtl_asm6, Pq_asm6, [23]uint8{0xba, 06, 0xb3}},
+	{ABTSL_6, ybtl_asm6, Pm_asm6, [23]uint8{0xba, 05, 0xab}},
+	{ABTSQ_6, ybtl_asm6, Pw_asm6, [23]uint8{0x0f, 0xba, 05, 0x0f, 0xab}},
+	{ABTSW_6, ybtl_asm6, Pq_asm6, [23]uint8{0xba, 05, 0xab}},
+	{ABTW_6, ybtl_asm6, Pq_asm6, [23]uint8{0xba, 04, 0xa3}},
 	{ABYTE_6, ybyte_asm6, Px_asm6, [23]uint8{1}},
-	{ACALL_6, ycall_asm6, Px_asm6, [23]uint8{0xff, (02), 0xe8}},
+	{ACALL_6, ycall_asm6, Px_asm6, [23]uint8{0xff, 02, 0xe8}},
 	{ACDQ_6, ynone_asm6, Px_asm6, [23]uint8{0x99}},
 	{ACLC_6, ynone_asm6, Px_asm6, [23]uint8{0xf8}},
 	{ACLD_6, ynone_asm6, Px_asm6, [23]uint8{0xfc}},
@@ -1839,18 +1496,18 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{ACMOVWPC_6, yml_rl_asm6, Pq_asm6, [23]uint8{0x4b}},
 	{ACMOVWPL_6, yml_rl_asm6, Pq_asm6, [23]uint8{0x49}},
 	{ACMOVWPS_6, yml_rl_asm6, Pq_asm6, [23]uint8{0x4a}},
-	{ACMPB_6, ycmpb_asm6, Pb_asm6, [23]uint8{0x3c, 0x80, (07), 0x38, 0x3a}},
-	{ACMPL_6, ycmpl_asm6, Px_asm6, [23]uint8{0x83, (07), 0x3d, 0x81, (07), 0x39, 0x3b}},
+	{ACMPB_6, ycmpb_asm6, Pb_asm6, [23]uint8{0x3c, 0x80, 07, 0x38, 0x3a}},
+	{ACMPL_6, ycmpl_asm6, Px_asm6, [23]uint8{0x83, 07, 0x3d, 0x81, 07, 0x39, 0x3b}},
 	{ACMPPD_6, yxcmpi_asm6, Px_asm6, [23]uint8{Pe_asm6, 0xc2}},
 	{ACMPPS_6, yxcmpi_asm6, Pm_asm6, [23]uint8{0xc2, 0}},
-	{ACMPQ_6, ycmpl_asm6, Pw_asm6, [23]uint8{0x83, (07), 0x3d, 0x81, (07), 0x39, 0x3b}},
+	{ACMPQ_6, ycmpl_asm6, Pw_asm6, [23]uint8{0x83, 07, 0x3d, 0x81, 07, 0x39, 0x3b}},
 	{ACMPSB_6, ynone_asm6, Pb_asm6, [23]uint8{0xa6}},
 	{ACMPSD_6, yxcmpi_asm6, Px_asm6, [23]uint8{Pf2_asm6, 0xc2}},
 	{ACMPSL_6, ynone_asm6, Px_asm6, [23]uint8{0xa7}},
 	{ACMPSQ_6, ynone_asm6, Pw_asm6, [23]uint8{0xa7}},
 	{ACMPSS_6, yxcmpi_asm6, Px_asm6, [23]uint8{Pf3_asm6, 0xc2}},
 	{ACMPSW_6, ynone_asm6, Pe_asm6, [23]uint8{0xa7}},
-	{ACMPW_6, ycmpl_asm6, Pe_asm6, [23]uint8{0x83, (07), 0x3d, 0x81, (07), 0x39, 0x3b}},
+	{ACMPW_6, ycmpl_asm6, Pe_asm6, [23]uint8{0x83, 07, 0x3d, 0x81, 07, 0x39, 0x3b}},
 	{ACOMISD_6, yxcmp_asm6, Pe_asm6, [23]uint8{0x2f}},
 	{ACOMISS_6, yxcmp_asm6, Pm_asm6, [23]uint8{0x2f}},
 	{ACPUID_6, ynone_asm6, Pm_asm6, [23]uint8{0xa2}},
@@ -1882,42 +1539,42 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{ADAA_6, ynone_asm6, P32_asm6, [23]uint8{0x27}},
 	{ADAS_6, ynone_asm6, P32_asm6, [23]uint8{0x2f}},
 	{ADATA_6, nil, 0, [23]uint8{}},
-	{ADECB_6, yincb_asm6, Pb_asm6, [23]uint8{0xfe, (01)}},
-	{ADECL_6, yincl_asm6, Px_asm6, [23]uint8{0xff, (01)}},
-	{ADECQ_6, yincl_asm6, Pw_asm6, [23]uint8{0xff, (01)}},
-	{ADECW_6, yincw_asm6, Pe_asm6, [23]uint8{0xff, (01)}},
-	{ADIVB_6, ydivb_asm6, Pb_asm6, [23]uint8{0xf6, (06)}},
-	{ADIVL_6, ydivl_asm6, Px_asm6, [23]uint8{0xf7, (06)}},
+	{ADECB_6, yincb_asm6, Pb_asm6, [23]uint8{0xfe, 01}},
+	{ADECL_6, yincl_asm6, Px_asm6, [23]uint8{0xff, 01}},
+	{ADECQ_6, yincl_asm6, Pw_asm6, [23]uint8{0xff, 01}},
+	{ADECW_6, yincw_asm6, Pe_asm6, [23]uint8{0xff, 01}},
+	{ADIVB_6, ydivb_asm6, Pb_asm6, [23]uint8{0xf6, 06}},
+	{ADIVL_6, ydivl_asm6, Px_asm6, [23]uint8{0xf7, 06}},
 	{ADIVPD_6, yxm_asm6, Pe_asm6, [23]uint8{0x5e}},
 	{ADIVPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x5e}},
-	{ADIVQ_6, ydivl_asm6, Pw_asm6, [23]uint8{0xf7, (06)}},
+	{ADIVQ_6, ydivl_asm6, Pw_asm6, [23]uint8{0xf7, 06}},
 	{ADIVSD_6, yxm_asm6, Pf2_asm6, [23]uint8{0x5e}},
 	{ADIVSS_6, yxm_asm6, Pf3_asm6, [23]uint8{0x5e}},
-	{ADIVW_6, ydivl_asm6, Pe_asm6, [23]uint8{0xf7, (06)}},
+	{ADIVW_6, ydivl_asm6, Pe_asm6, [23]uint8{0xf7, 06}},
 	{AEMMS_6, ynone_asm6, Pm_asm6, [23]uint8{0x77}},
 	{AENTER_6, nil, 0, [23]uint8{}}, /* botch */
-	{AFXRSTOR_6, ysvrs_asm6, Pm_asm6, [23]uint8{0xae, (01), 0xae, (01)}},
-	{AFXSAVE_6, ysvrs_asm6, Pm_asm6, [23]uint8{0xae, (00), 0xae, (00)}},
-	{AFXRSTOR64_6, ysvrs_asm6, Pw_asm6, [23]uint8{0x0f, 0xae, (01), 0x0f, 0xae, (01)}},
-	{AFXSAVE64_6, ysvrs_asm6, Pw_asm6, [23]uint8{0x0f, 0xae, (00), 0x0f, 0xae, (00)}},
+	{AFXRSTOR_6, ysvrs_asm6, Pm_asm6, [23]uint8{0xae, 01, 0xae, 01}},
+	{AFXSAVE_6, ysvrs_asm6, Pm_asm6, [23]uint8{0xae, 00, 0xae, 00}},
+	{AFXRSTOR64_6, ysvrs_asm6, Pw_asm6, [23]uint8{0x0f, 0xae, 01, 0x0f, 0xae, 01}},
+	{AFXSAVE64_6, ysvrs_asm6, Pw_asm6, [23]uint8{0x0f, 0xae, 00, 0x0f, 0xae, 00}},
 	{AGLOBL_6, nil, 0, [23]uint8{}},
 	{AGOK_6, nil, 0, [23]uint8{}},
 	{AHISTORY_6, nil, 0, [23]uint8{}},
 	{AHLT_6, ynone_asm6, Px_asm6, [23]uint8{0xf4}},
-	{AIDIVB_6, ydivb_asm6, Pb_asm6, [23]uint8{0xf6, (07)}},
-	{AIDIVL_6, ydivl_asm6, Px_asm6, [23]uint8{0xf7, (07)}},
-	{AIDIVQ_6, ydivl_asm6, Pw_asm6, [23]uint8{0xf7, (07)}},
-	{AIDIVW_6, ydivl_asm6, Pe_asm6, [23]uint8{0xf7, (07)}},
-	{AIMULB_6, ydivb_asm6, Pb_asm6, [23]uint8{0xf6, (05)}},
-	{AIMULL_6, yimul_asm6, Px_asm6, [23]uint8{0xf7, (05), 0x6b, 0x69, Pm_asm6, 0xaf}},
-	{AIMULQ_6, yimul_asm6, Pw_asm6, [23]uint8{0xf7, (05), 0x6b, 0x69, Pm_asm6, 0xaf}},
-	{AIMULW_6, yimul_asm6, Pe_asm6, [23]uint8{0xf7, (05), 0x6b, 0x69, Pm_asm6, 0xaf}},
-	{AIMUL3Q_6, yimul3_asm6, Pw_asm6, [23]uint8{0x6b, (00)}},
+	{AIDIVB_6, ydivb_asm6, Pb_asm6, [23]uint8{0xf6, 07}},
+	{AIDIVL_6, ydivl_asm6, Px_asm6, [23]uint8{0xf7, 07}},
+	{AIDIVQ_6, ydivl_asm6, Pw_asm6, [23]uint8{0xf7, 07}},
+	{AIDIVW_6, ydivl_asm6, Pe_asm6, [23]uint8{0xf7, 07}},
+	{AIMULB_6, ydivb_asm6, Pb_asm6, [23]uint8{0xf6, 05}},
+	{AIMULL_6, yimul_asm6, Px_asm6, [23]uint8{0xf7, 05, 0x6b, 0x69, Pm_asm6, 0xaf}},
+	{AIMULQ_6, yimul_asm6, Pw_asm6, [23]uint8{0xf7, 05, 0x6b, 0x69, Pm_asm6, 0xaf}},
+	{AIMULW_6, yimul_asm6, Pe_asm6, [23]uint8{0xf7, 05, 0x6b, 0x69, Pm_asm6, 0xaf}},
+	{AIMUL3Q_6, yimul3_asm6, Pw_asm6, [23]uint8{0x6b, 00}},
 	{AINB_6, yin_asm6, Pb_asm6, [23]uint8{0xe4, 0xec}},
-	{AINCB_6, yincb_asm6, Pb_asm6, [23]uint8{0xfe, (00)}},
-	{AINCL_6, yincl_asm6, Px_asm6, [23]uint8{0xff, (00)}},
-	{AINCQ_6, yincl_asm6, Pw_asm6, [23]uint8{0xff, (00)}},
-	{AINCW_6, yincw_asm6, Pe_asm6, [23]uint8{0xff, (00)}},
+	{AINCB_6, yincb_asm6, Pb_asm6, [23]uint8{0xfe, 00}},
+	{AINCL_6, yincl_asm6, Px_asm6, [23]uint8{0xff, 00}},
+	{AINCQ_6, yincl_asm6, Pw_asm6, [23]uint8{0xff, 00}},
+	{AINCW_6, yincw_asm6, Pe_asm6, [23]uint8{0xff, 00}},
 	{AINL_6, yin_asm6, Px_asm6, [23]uint8{0xe5, 0xed}},
 	{AINSB_6, ynone_asm6, Pb_asm6, [23]uint8{0x6c}},
 	{AINSL_6, ynone_asm6, Px_asm6, [23]uint8{0x6d}},
@@ -1928,7 +1585,7 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AIRETL_6, ynone_asm6, Px_asm6, [23]uint8{0xcf}},
 	{AIRETQ_6, ynone_asm6, Pw_asm6, [23]uint8{0xcf}},
 	{AIRETW_6, ynone_asm6, Pe_asm6, [23]uint8{0xcf}},
-	{AJCC_6, yjcond_asm6, Px_asm6, [23]uint8{0x73, 0x83, (00)}},
+	{AJCC_6, yjcond_asm6, Px_asm6, [23]uint8{0x73, 0x83, 00}},
 	{AJCS_6, yjcond_asm6, Px_asm6, [23]uint8{0x72, 0x82}},
 	{AJCXZL_6, yloop_asm6, Px_asm6, [23]uint8{0xe3}},
 	{AJCXZQ_6, yloop_asm6, Px_asm6, [23]uint8{0xe3}},
@@ -1940,17 +1597,17 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AJLS_6, yjcond_asm6, Px_asm6, [23]uint8{0x76, 0x86}},
 	{AJLT_6, yjcond_asm6, Px_asm6, [23]uint8{0x7c, 0x8c}},
 	{AJMI_6, yjcond_asm6, Px_asm6, [23]uint8{0x78, 0x88}},
-	{AJMP_6, yjmp_asm6, Px_asm6, [23]uint8{0xff, (04), 0xeb, 0xe9}},
+	{AJMP_6, yjmp_asm6, Px_asm6, [23]uint8{0xff, 04, 0xeb, 0xe9}},
 	{AJNE_6, yjcond_asm6, Px_asm6, [23]uint8{0x75, 0x85}},
-	{AJOC_6, yjcond_asm6, Px_asm6, [23]uint8{0x71, 0x81, (00)}},
-	{AJOS_6, yjcond_asm6, Px_asm6, [23]uint8{0x70, 0x80, (00)}},
+	{AJOC_6, yjcond_asm6, Px_asm6, [23]uint8{0x71, 0x81, 00}},
+	{AJOS_6, yjcond_asm6, Px_asm6, [23]uint8{0x70, 0x80, 00}},
 	{AJPC_6, yjcond_asm6, Px_asm6, [23]uint8{0x7b, 0x8b}},
 	{AJPL_6, yjcond_asm6, Px_asm6, [23]uint8{0x79, 0x89}},
 	{AJPS_6, yjcond_asm6, Px_asm6, [23]uint8{0x7a, 0x8a}},
 	{ALAHF_6, ynone_asm6, Px_asm6, [23]uint8{0x9f}},
 	{ALARL_6, yml_rl_asm6, Pm_asm6, [23]uint8{0x02}},
 	{ALARW_6, yml_rl_asm6, Pq_asm6, [23]uint8{0x02}},
-	{ALDMXCSR_6, ysvrs_asm6, Pm_asm6, [23]uint8{0xae, (02), 0xae, (02)}},
+	{ALDMXCSR_6, ysvrs_asm6, Pm_asm6, [23]uint8{0xae, 02, 0xae, 02}},
 	{ALEAL_6, ym_rl_asm6, Px_asm6, [23]uint8{0x8d}},
 	{ALEAQ_6, ym_rl_asm6, Pw_asm6, [23]uint8{0x8d}},
 	{ALEAVEL_6, ynone_asm6, P32_asm6, [23]uint8{0xc9}},
@@ -1980,7 +1637,7 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AMINSS_6, yxm_asm6, Pf3_asm6, [23]uint8{0x5d}},
 	{AMOVAPD_6, yxmov_asm6, Pe_asm6, [23]uint8{0x28, 0x29}},
 	{AMOVAPS_6, yxmov_asm6, Pm_asm6, [23]uint8{0x28, 0x29}},
-	{AMOVB_6, ymovb_asm6, Pb_asm6, [23]uint8{0x88, 0x8a, 0xb0, 0xc6, (00)}},
+	{AMOVB_6, ymovb_asm6, Pb_asm6, [23]uint8{0x88, 0x8a, 0xb0, 0xc6, 00}},
 	{AMOVBLSX_6, ymb_rl_asm6, Pm_asm6, [23]uint8{0xbe}},
 	{AMOVBLZX_6, ymb_rl_asm6, Pm_asm6, [23]uint8{0xb6}},
 	{AMOVBQSX_6, ymb_rl_asm6, Pw_asm6, [23]uint8{0x0f, 0xbe}},
@@ -1992,7 +1649,7 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AMOVHLPS_6, yxr_asm6, Pm_asm6, [23]uint8{0x12}},
 	{AMOVHPD_6, yxmov_asm6, Pe_asm6, [23]uint8{0x16, 0x17}},
 	{AMOVHPS_6, yxmov_asm6, Pm_asm6, [23]uint8{0x16, 0x17}},
-	{AMOVL_6, ymovl_asm6, Px_asm6, [23]uint8{0x89, 0x8b, 0x31, 0xb8, 0xc7, (00), 0x6e, 0x7e, Pe_asm6, 0x6e, Pe_asm6, 0x7e, 0}},
+	{AMOVL_6, ymovl_asm6, Px_asm6, [23]uint8{0x89, 0x8b, 0x31, 0xb8, 0xc7, 00, 0x6e, 0x7e, Pe_asm6, 0x6e, Pe_asm6, 0x7e, 0}},
 	{AMOVLHPS_6, yxr_asm6, Pm_asm6, [23]uint8{0x16}},
 	{AMOVLPD_6, yxmov_asm6, Pe_asm6, [23]uint8{0x12, 0x13}},
 	{AMOVLPS_6, yxmov_asm6, Pm_asm6, [23]uint8{0x12, 0x13}},
@@ -2004,7 +1661,7 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AMOVNTPD_6, yxr_ml_asm6, Pe_asm6, [23]uint8{0x2b}},
 	{AMOVNTPS_6, yxr_ml_asm6, Pm_asm6, [23]uint8{0x2b}},
 	{AMOVNTQ_6, ymr_ml_asm6, Pm_asm6, [23]uint8{0xe7}},
-	{AMOVQ_6, ymovq_asm6, Pw_asm6, [23]uint8{0x89, 0x8b, 0x31, 0xc7, (00), 0xb8, 0xc7, (00), 0x6f, 0x7f, 0x6e, 0x7e, Pf2_asm6, 0xd6, Pf3_asm6, 0x7e, Pe_asm6, 0xd6, Pe_asm6, 0x6e, Pe_asm6, 0x7e, 0}},
+	{AMOVQ_6, ymovq_asm6, Pw_asm6, [23]uint8{0x89, 0x8b, 0x31, 0xc7, 00, 0xb8, 0xc7, 00, 0x6f, 0x7f, 0x6e, 0x7e, Pf2_asm6, 0xd6, Pf3_asm6, 0x7e, Pe_asm6, 0xd6, Pe_asm6, 0x6e, Pe_asm6, 0x7e, 0}},
 	{AMOVQOZX_6, ymrxr_asm6, Pf3_asm6, [23]uint8{0xd6, 0x7e}},
 	{AMOVSB_6, ynone_asm6, Pb_asm6, [23]uint8{0xa4}},
 	{AMOVSD_6, yxmov_asm6, Pf2_asm6, [23]uint8{0x10, 0x11}},
@@ -2014,35 +1671,35 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AMOVSW_6, ynone_asm6, Pe_asm6, [23]uint8{0xa5}},
 	{AMOVUPD_6, yxmov_asm6, Pe_asm6, [23]uint8{0x10, 0x11}},
 	{AMOVUPS_6, yxmov_asm6, Pm_asm6, [23]uint8{0x10, 0x11}},
-	{AMOVW_6, ymovw_asm6, Pe_asm6, [23]uint8{0x89, 0x8b, 0x31, 0xb8, 0xc7, (00), 0}},
+	{AMOVW_6, ymovw_asm6, Pe_asm6, [23]uint8{0x89, 0x8b, 0x31, 0xb8, 0xc7, 00, 0}},
 	{AMOVWLSX_6, yml_rl_asm6, Pm_asm6, [23]uint8{0xbf}},
 	{AMOVWLZX_6, yml_rl_asm6, Pm_asm6, [23]uint8{0xb7}},
 	{AMOVWQSX_6, yml_rl_asm6, Pw_asm6, [23]uint8{0x0f, 0xbf}},
 	{AMOVWQZX_6, yml_rl_asm6, Pw_asm6, [23]uint8{0x0f, 0xb7}},
-	{AMULB_6, ydivb_asm6, Pb_asm6, [23]uint8{0xf6, (04)}},
-	{AMULL_6, ydivl_asm6, Px_asm6, [23]uint8{0xf7, (04)}},
+	{AMULB_6, ydivb_asm6, Pb_asm6, [23]uint8{0xf6, 04}},
+	{AMULL_6, ydivl_asm6, Px_asm6, [23]uint8{0xf7, 04}},
 	{AMULPD_6, yxm_asm6, Pe_asm6, [23]uint8{0x59}},
 	{AMULPS_6, yxm_asm6, Ym_asm6, [23]uint8{0x59}},
-	{AMULQ_6, ydivl_asm6, Pw_asm6, [23]uint8{0xf7, (04)}},
+	{AMULQ_6, ydivl_asm6, Pw_asm6, [23]uint8{0xf7, 04}},
 	{AMULSD_6, yxm_asm6, Pf2_asm6, [23]uint8{0x59}},
 	{AMULSS_6, yxm_asm6, Pf3_asm6, [23]uint8{0x59}},
-	{AMULW_6, ydivl_asm6, Pe_asm6, [23]uint8{0xf7, (04)}},
+	{AMULW_6, ydivl_asm6, Pe_asm6, [23]uint8{0xf7, 04}},
 	{ANAME_6, nil, 0, [23]uint8{}},
-	{ANEGB_6, yscond_asm6, Pb_asm6, [23]uint8{0xf6, (03)}},
-	{ANEGL_6, yscond_asm6, Px_asm6, [23]uint8{0xf7, (03)}},
-	{ANEGQ_6, yscond_asm6, Pw_asm6, [23]uint8{0xf7, (03)}},
-	{ANEGW_6, yscond_asm6, Pe_asm6, [23]uint8{0xf7, (03)}},
+	{ANEGB_6, yscond_asm6, Pb_asm6, [23]uint8{0xf6, 03}},
+	{ANEGL_6, yscond_asm6, Px_asm6, [23]uint8{0xf7, 03}},
+	{ANEGQ_6, yscond_asm6, Pw_asm6, [23]uint8{0xf7, 03}},
+	{ANEGW_6, yscond_asm6, Pe_asm6, [23]uint8{0xf7, 03}},
 	{ANOP_6, ynop_asm6, Px_asm6, [23]uint8{0, 0}},
-	{ANOTB_6, yscond_asm6, Pb_asm6, [23]uint8{0xf6, (02)}},
-	{ANOTL_6, yscond_asm6, Px_asm6, [23]uint8{0xf7, (02)}},
-	{ANOTQ_6, yscond_asm6, Pw_asm6, [23]uint8{0xf7, (02)}},
-	{ANOTW_6, yscond_asm6, Pe_asm6, [23]uint8{0xf7, (02)}},
-	{AORB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x0c, 0x80, (01), 0x08, 0x0a}},
-	{AORL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, (01), 0x0d, 0x81, (01), 0x09, 0x0b}},
+	{ANOTB_6, yscond_asm6, Pb_asm6, [23]uint8{0xf6, 02}},
+	{ANOTL_6, yscond_asm6, Px_asm6, [23]uint8{0xf7, 02}},
+	{ANOTQ_6, yscond_asm6, Pw_asm6, [23]uint8{0xf7, 02}},
+	{ANOTW_6, yscond_asm6, Pe_asm6, [23]uint8{0xf7, 02}},
+	{AORB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x0c, 0x80, 01, 0x08, 0x0a}},
+	{AORL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, 01, 0x0d, 0x81, 01, 0x09, 0x0b}},
 	{AORPD_6, yxm_asm6, Pq_asm6, [23]uint8{0x56}},
 	{AORPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x56}},
-	{AORQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, (01), 0x0d, 0x81, (01), 0x09, 0x0b}},
-	{AORW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, (01), 0x0d, 0x81, (01), 0x09, 0x0b}},
+	{AORQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, 01, 0x0d, 0x81, 01, 0x09, 0x0b}},
+	{AORW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, 01, 0x0d, 0x81, 01, 0x09, 0x0b}},
 	{AOUTB_6, yin_asm6, Pb_asm6, [23]uint8{0xe6, 0xee}},
 	{AOUTL_6, yin_asm6, Px_asm6, [23]uint8{0xe7, 0xef}},
 	{AOUTSB_6, ynone_asm6, Pb_asm6, [23]uint8{0x6e}},
@@ -2071,7 +1728,7 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{APCMPGTB_6, ymm_asm6, Py_asm6, [23]uint8{0x64, Pe_asm6, 0x64}},
 	{APCMPGTL_6, ymm_asm6, Py_asm6, [23]uint8{0x66, Pe_asm6, 0x66}},
 	{APCMPGTW_6, ymm_asm6, Py_asm6, [23]uint8{0x65, Pe_asm6, 0x65}},
-	{APEXTRW_6, yextrw_asm6, Pq_asm6, [23]uint8{0xc5, (00)}},
+	{APEXTRW_6, yextrw_asm6, Pq_asm6, [23]uint8{0xc5, 00}},
 	{APF2IL_6, ymfp_asm6, Px_asm6, [23]uint8{0x1d}},
 	{APF2IW_6, ymfp_asm6, Px_asm6, [23]uint8{0x1c}},
 	{API2FL_6, ymfp_asm6, Px_asm6, [23]uint8{0x0d}},
@@ -2092,9 +1749,9 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{APFRSQRT_6, ymfp_asm6, Px_asm6, [23]uint8{0x97}},
 	{APFSUB_6, ymfp_asm6, Px_asm6, [23]uint8{0x9a}},
 	{APFSUBR_6, ymfp_asm6, Px_asm6, [23]uint8{0xaa}},
-	{APINSRW_6, yinsrw_asm6, Pq_asm6, [23]uint8{0xc4, (00)}},
-	{APINSRD_6, yinsr_asm6, Pq_asm6, [23]uint8{0x3a, 0x22, (00)}},
-	{APINSRQ_6, yinsr_asm6, Pq3_asm6, [23]uint8{0x3a, 0x22, (00)}},
+	{APINSRW_6, yinsrw_asm6, Pq_asm6, [23]uint8{0xc4, 00}},
+	{APINSRD_6, yinsr_asm6, Pq_asm6, [23]uint8{0x3a, 0x22, 00}},
+	{APINSRQ_6, yinsr_asm6, Pq3_asm6, [23]uint8{0x3a, 0x22, 00}},
 	{APMADDWL_6, ymm_asm6, Py_asm6, [23]uint8{0xf5, Pe_asm6, 0xf5}},
 	{APMAXSW_6, yxm_asm6, Pe_asm6, [23]uint8{0xee}},
 	{APMAXUB_6, yxm_asm6, Pe_asm6, [23]uint8{0xde}},
@@ -2111,26 +1768,26 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{APOPFL_6, ynone_asm6, P32_asm6, [23]uint8{0x9d}},
 	{APOPFQ_6, ynone_asm6, Py_asm6, [23]uint8{0x9d}},
 	{APOPFW_6, ynone_asm6, Pe_asm6, [23]uint8{0x9d}},
-	{APOPL_6, ypopl_asm6, P32_asm6, [23]uint8{0x58, 0x8f, (00)}},
-	{APOPQ_6, ypopl_asm6, Py_asm6, [23]uint8{0x58, 0x8f, (00)}},
-	{APOPW_6, ypopl_asm6, Pe_asm6, [23]uint8{0x58, 0x8f, (00)}},
+	{APOPL_6, ypopl_asm6, P32_asm6, [23]uint8{0x58, 0x8f, 00}},
+	{APOPQ_6, ypopl_asm6, Py_asm6, [23]uint8{0x58, 0x8f, 00}},
+	{APOPW_6, ypopl_asm6, Pe_asm6, [23]uint8{0x58, 0x8f, 00}},
 	{APOR_6, ymm_asm6, Py_asm6, [23]uint8{0xeb, Pe_asm6, 0xeb}},
 	{APSADBW_6, yxm_asm6, Pq_asm6, [23]uint8{0xf6}},
-	{APSHUFHW_6, yxshuf_asm6, Pf3_asm6, [23]uint8{0x70, (00)}},
-	{APSHUFL_6, yxshuf_asm6, Pq_asm6, [23]uint8{0x70, (00)}},
-	{APSHUFLW_6, yxshuf_asm6, Pf2_asm6, [23]uint8{0x70, (00)}},
-	{APSHUFW_6, ymshuf_asm6, Pm_asm6, [23]uint8{0x70, (00)}},
+	{APSHUFHW_6, yxshuf_asm6, Pf3_asm6, [23]uint8{0x70, 00}},
+	{APSHUFL_6, yxshuf_asm6, Pq_asm6, [23]uint8{0x70, 00}},
+	{APSHUFLW_6, yxshuf_asm6, Pf2_asm6, [23]uint8{0x70, 00}},
+	{APSHUFW_6, ymshuf_asm6, Pm_asm6, [23]uint8{0x70, 00}},
 	{APSHUFB_6, ymshufb_asm6, Pq_asm6, [23]uint8{0x38, 0x00}},
-	{APSLLO_6, ypsdq_asm6, Pq_asm6, [23]uint8{0x73, (07)}},
-	{APSLLL_6, yps_asm6, Py_asm6, [23]uint8{0xf2, 0x72, (06), Pe_asm6, 0xf2, Pe_asm6, 0x72, (06)}},
-	{APSLLQ_6, yps_asm6, Py_asm6, [23]uint8{0xf3, 0x73, (06), Pe_asm6, 0xf3, Pe_asm6, 0x73, (06)}},
-	{APSLLW_6, yps_asm6, Py_asm6, [23]uint8{0xf1, 0x71, (06), Pe_asm6, 0xf1, Pe_asm6, 0x71, (06)}},
-	{APSRAL_6, yps_asm6, Py_asm6, [23]uint8{0xe2, 0x72, (04), Pe_asm6, 0xe2, Pe_asm6, 0x72, (04)}},
-	{APSRAW_6, yps_asm6, Py_asm6, [23]uint8{0xe1, 0x71, (04), Pe_asm6, 0xe1, Pe_asm6, 0x71, (04)}},
-	{APSRLO_6, ypsdq_asm6, Pq_asm6, [23]uint8{0x73, (03)}},
-	{APSRLL_6, yps_asm6, Py_asm6, [23]uint8{0xd2, 0x72, (02), Pe_asm6, 0xd2, Pe_asm6, 0x72, (02)}},
-	{APSRLQ_6, yps_asm6, Py_asm6, [23]uint8{0xd3, 0x73, (02), Pe_asm6, 0xd3, Pe_asm6, 0x73, (02)}},
-	{APSRLW_6, yps_asm6, Py_asm6, [23]uint8{0xd1, 0x71, (02), Pe_asm6, 0xe1, Pe_asm6, 0x71, (02)}},
+	{APSLLO_6, ypsdq_asm6, Pq_asm6, [23]uint8{0x73, 07}},
+	{APSLLL_6, yps_asm6, Py_asm6, [23]uint8{0xf2, 0x72, 06, Pe_asm6, 0xf2, Pe_asm6, 0x72, 06}},
+	{APSLLQ_6, yps_asm6, Py_asm6, [23]uint8{0xf3, 0x73, 06, Pe_asm6, 0xf3, Pe_asm6, 0x73, 06}},
+	{APSLLW_6, yps_asm6, Py_asm6, [23]uint8{0xf1, 0x71, 06, Pe_asm6, 0xf1, Pe_asm6, 0x71, 06}},
+	{APSRAL_6, yps_asm6, Py_asm6, [23]uint8{0xe2, 0x72, 04, Pe_asm6, 0xe2, Pe_asm6, 0x72, 04}},
+	{APSRAW_6, yps_asm6, Py_asm6, [23]uint8{0xe1, 0x71, 04, Pe_asm6, 0xe1, Pe_asm6, 0x71, 04}},
+	{APSRLO_6, ypsdq_asm6, Pq_asm6, [23]uint8{0x73, 03}},
+	{APSRLL_6, yps_asm6, Py_asm6, [23]uint8{0xd2, 0x72, 02, Pe_asm6, 0xd2, Pe_asm6, 0x72, 02}},
+	{APSRLQ_6, yps_asm6, Py_asm6, [23]uint8{0xd3, 0x73, 02, Pe_asm6, 0xd3, Pe_asm6, 0x73, 02}},
+	{APSRLW_6, yps_asm6, Py_asm6, [23]uint8{0xd1, 0x71, 02, Pe_asm6, 0xe1, Pe_asm6, 0x71, 02}},
 	{APSUBB_6, yxm_asm6, Pe_asm6, [23]uint8{0xf8}},
 	{APSUBL_6, yxm_asm6, Pe_asm6, [23]uint8{0xfa}},
 	{APSUBQ_6, yxm_asm6, Pe_asm6, [23]uint8{0xfb}},
@@ -2153,80 +1810,80 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{APUSHFL_6, ynone_asm6, P32_asm6, [23]uint8{0x9c}},
 	{APUSHFQ_6, ynone_asm6, Py_asm6, [23]uint8{0x9c}},
 	{APUSHFW_6, ynone_asm6, Pe_asm6, [23]uint8{0x9c}},
-	{APUSHL_6, ypushl_asm6, P32_asm6, [23]uint8{0x50, 0xff, (06), 0x6a, 0x68}},
-	{APUSHQ_6, ypushl_asm6, Py_asm6, [23]uint8{0x50, 0xff, (06), 0x6a, 0x68}},
-	{APUSHW_6, ypushl_asm6, Pe_asm6, [23]uint8{0x50, 0xff, (06), 0x6a, 0x68}},
+	{APUSHL_6, ypushl_asm6, P32_asm6, [23]uint8{0x50, 0xff, 06, 0x6a, 0x68}},
+	{APUSHQ_6, ypushl_asm6, Py_asm6, [23]uint8{0x50, 0xff, 06, 0x6a, 0x68}},
+	{APUSHW_6, ypushl_asm6, Pe_asm6, [23]uint8{0x50, 0xff, 06, 0x6a, 0x68}},
 	{APXOR_6, ymm_asm6, Py_asm6, [23]uint8{0xef, Pe_asm6, 0xef}},
 	{AQUAD_6, ybyte_asm6, Px_asm6, [23]uint8{8}},
-	{ARCLB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, (02), 0xc0, (02), 0xd2, (02)}},
-	{ARCLL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, (02), 0xc1, (02), 0xd3, (02), 0xd3, (02)}},
-	{ARCLQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, (02), 0xc1, (02), 0xd3, (02), 0xd3, (02)}},
-	{ARCLW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, (02), 0xc1, (02), 0xd3, (02), 0xd3, (02)}},
+	{ARCLB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, 02, 0xc0, 02, 0xd2, 02}},
+	{ARCLL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, 02, 0xc1, 02, 0xd3, 02, 0xd3, 02}},
+	{ARCLQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, 02, 0xc1, 02, 0xd3, 02, 0xd3, 02}},
+	{ARCLW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, 02, 0xc1, 02, 0xd3, 02, 0xd3, 02}},
 	{ARCPPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x53}},
 	{ARCPSS_6, yxm_asm6, Pf3_asm6, [23]uint8{0x53}},
-	{ARCRB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, (03), 0xc0, (03), 0xd2, (03)}},
-	{ARCRL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, (03), 0xc1, (03), 0xd3, (03), 0xd3, (03)}},
-	{ARCRQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, (03), 0xc1, (03), 0xd3, (03), 0xd3, (03)}},
-	{ARCRW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, (03), 0xc1, (03), 0xd3, (03), 0xd3, (03)}},
+	{ARCRB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, 03, 0xc0, 03, 0xd2, 03}},
+	{ARCRL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, 03, 0xc1, 03, 0xd3, 03, 0xd3, 03}},
+	{ARCRQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, 03, 0xc1, 03, 0xd3, 03, 0xd3, 03}},
+	{ARCRW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, 03, 0xc1, 03, 0xd3, 03, 0xd3, 03}},
 	{AREP_6, ynone_asm6, Px_asm6, [23]uint8{0xf3}},
 	{AREPN_6, ynone_asm6, Px_asm6, [23]uint8{0xf2}},
 	{ARET_6, ynone_asm6, Px_asm6, [23]uint8{0xc3}},
 	{ARETFW_6, yret_asm6, Pe_asm6, [23]uint8{0xcb, 0xca}},
 	{ARETFL_6, yret_asm6, Px_asm6, [23]uint8{0xcb, 0xca}},
 	{ARETFQ_6, yret_asm6, Pw_asm6, [23]uint8{0xcb, 0xca}},
-	{AROLB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, (00), 0xc0, (00), 0xd2, (00)}},
-	{AROLL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, (00), 0xc1, (00), 0xd3, (00), 0xd3, (00)}},
-	{AROLQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, (00), 0xc1, (00), 0xd3, (00), 0xd3, (00)}},
-	{AROLW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, (00), 0xc1, (00), 0xd3, (00), 0xd3, (00)}},
-	{ARORB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, (01), 0xc0, (01), 0xd2, (01)}},
-	{ARORL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, (01), 0xc1, (01), 0xd3, (01), 0xd3, (01)}},
-	{ARORQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, (01), 0xc1, (01), 0xd3, (01), 0xd3, (01)}},
-	{ARORW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, (01), 0xc1, (01), 0xd3, (01), 0xd3, (01)}},
+	{AROLB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, 00, 0xc0, 00, 0xd2, 00}},
+	{AROLL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, 00, 0xc1, 00, 0xd3, 00, 0xd3, 00}},
+	{AROLQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, 00, 0xc1, 00, 0xd3, 00, 0xd3, 00}},
+	{AROLW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, 00, 0xc1, 00, 0xd3, 00, 0xd3, 00}},
+	{ARORB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, 01, 0xc0, 01, 0xd2, 01}},
+	{ARORL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, 01, 0xc1, 01, 0xd3, 01, 0xd3, 01}},
+	{ARORQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, 01, 0xc1, 01, 0xd3, 01, 0xd3, 01}},
+	{ARORW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, 01, 0xc1, 01, 0xd3, 01, 0xd3, 01}},
 	{ARSQRTPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x52}},
 	{ARSQRTSS_6, yxm_asm6, Pf3_asm6, [23]uint8{0x52}},
 	{ASAHF_6, ynone_asm6, Px_asm6, [23]uint8{0x86, 0xe0, 0x50, 0x9d}}, /* XCHGB AH,AL; PUSH AX; POPFL */
-	{ASALB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, (04), 0xc0, (04), 0xd2, (04)}},
-	{ASALL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASALQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASALW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASARB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, (07), 0xc0, (07), 0xd2, (07)}},
-	{ASARL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, (07), 0xc1, (07), 0xd3, (07), 0xd3, (07)}},
-	{ASARQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, (07), 0xc1, (07), 0xd3, (07), 0xd3, (07)}},
-	{ASARW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, (07), 0xc1, (07), 0xd3, (07), 0xd3, (07)}},
-	{ASBBB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x1c, 0x80, (03), 0x18, 0x1a}},
-	{ASBBL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, (03), 0x1d, 0x81, (03), 0x19, 0x1b}},
-	{ASBBQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, (03), 0x1d, 0x81, (03), 0x19, 0x1b}},
-	{ASBBW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, (03), 0x1d, 0x81, (03), 0x19, 0x1b}},
+	{ASALB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, 04, 0xc0, 04, 0xd2, 04}},
+	{ASALL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASALQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASALW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASARB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, 07, 0xc0, 07, 0xd2, 07}},
+	{ASARL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, 07, 0xc1, 07, 0xd3, 07, 0xd3, 07}},
+	{ASARQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, 07, 0xc1, 07, 0xd3, 07, 0xd3, 07}},
+	{ASARW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, 07, 0xc1, 07, 0xd3, 07, 0xd3, 07}},
+	{ASBBB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x1c, 0x80, 03, 0x18, 0x1a}},
+	{ASBBL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, 03, 0x1d, 0x81, 03, 0x19, 0x1b}},
+	{ASBBQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, 03, 0x1d, 0x81, 03, 0x19, 0x1b}},
+	{ASBBW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, 03, 0x1d, 0x81, 03, 0x19, 0x1b}},
 	{ASCASB_6, ynone_asm6, Pb_asm6, [23]uint8{0xae}},
 	{ASCASL_6, ynone_asm6, Px_asm6, [23]uint8{0xaf}},
 	{ASCASQ_6, ynone_asm6, Pw_asm6, [23]uint8{0xaf}},
 	{ASCASW_6, ynone_asm6, Pe_asm6, [23]uint8{0xaf}},
-	{ASETCC_6, yscond_asm6, Pm_asm6, [23]uint8{0x93, (00)}},
-	{ASETCS_6, yscond_asm6, Pm_asm6, [23]uint8{0x92, (00)}},
-	{ASETEQ_6, yscond_asm6, Pm_asm6, [23]uint8{0x94, (00)}},
-	{ASETGE_6, yscond_asm6, Pm_asm6, [23]uint8{0x9d, (00)}},
-	{ASETGT_6, yscond_asm6, Pm_asm6, [23]uint8{0x9f, (00)}},
-	{ASETHI_6, yscond_asm6, Pm_asm6, [23]uint8{0x97, (00)}},
-	{ASETLE_6, yscond_asm6, Pm_asm6, [23]uint8{0x9e, (00)}},
-	{ASETLS_6, yscond_asm6, Pm_asm6, [23]uint8{0x96, (00)}},
-	{ASETLT_6, yscond_asm6, Pm_asm6, [23]uint8{0x9c, (00)}},
-	{ASETMI_6, yscond_asm6, Pm_asm6, [23]uint8{0x98, (00)}},
-	{ASETNE_6, yscond_asm6, Pm_asm6, [23]uint8{0x95, (00)}},
-	{ASETOC_6, yscond_asm6, Pm_asm6, [23]uint8{0x91, (00)}},
-	{ASETOS_6, yscond_asm6, Pm_asm6, [23]uint8{0x90, (00)}},
-	{ASETPC_6, yscond_asm6, Pm_asm6, [23]uint8{0x96, (00)}},
-	{ASETPL_6, yscond_asm6, Pm_asm6, [23]uint8{0x99, (00)}},
-	{ASETPS_6, yscond_asm6, Pm_asm6, [23]uint8{0x9a, (00)}},
-	{ASHLB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, (04), 0xc0, (04), 0xd2, (04)}},
-	{ASHLL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASHLQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASHLW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, (04), 0xc1, (04), 0xd3, (04), 0xd3, (04)}},
-	{ASHRB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, (05), 0xc0, (05), 0xd2, (05)}},
-	{ASHRL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, (05), 0xc1, (05), 0xd3, (05), 0xd3, (05)}},
-	{ASHRQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, (05), 0xc1, (05), 0xd3, (05), 0xd3, (05)}},
-	{ASHRW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, (05), 0xc1, (05), 0xd3, (05), 0xd3, (05)}},
-	{ASHUFPD_6, yxshuf_asm6, Pq_asm6, [23]uint8{0xc6, (00)}},
-	{ASHUFPS_6, yxshuf_asm6, Pm_asm6, [23]uint8{0xc6, (00)}},
+	{ASETCC_6, yscond_asm6, Pm_asm6, [23]uint8{0x93, 00}},
+	{ASETCS_6, yscond_asm6, Pm_asm6, [23]uint8{0x92, 00}},
+	{ASETEQ_6, yscond_asm6, Pm_asm6, [23]uint8{0x94, 00}},
+	{ASETGE_6, yscond_asm6, Pm_asm6, [23]uint8{0x9d, 00}},
+	{ASETGT_6, yscond_asm6, Pm_asm6, [23]uint8{0x9f, 00}},
+	{ASETHI_6, yscond_asm6, Pm_asm6, [23]uint8{0x97, 00}},
+	{ASETLE_6, yscond_asm6, Pm_asm6, [23]uint8{0x9e, 00}},
+	{ASETLS_6, yscond_asm6, Pm_asm6, [23]uint8{0x96, 00}},
+	{ASETLT_6, yscond_asm6, Pm_asm6, [23]uint8{0x9c, 00}},
+	{ASETMI_6, yscond_asm6, Pm_asm6, [23]uint8{0x98, 00}},
+	{ASETNE_6, yscond_asm6, Pm_asm6, [23]uint8{0x95, 00}},
+	{ASETOC_6, yscond_asm6, Pm_asm6, [23]uint8{0x91, 00}},
+	{ASETOS_6, yscond_asm6, Pm_asm6, [23]uint8{0x90, 00}},
+	{ASETPC_6, yscond_asm6, Pm_asm6, [23]uint8{0x96, 00}},
+	{ASETPL_6, yscond_asm6, Pm_asm6, [23]uint8{0x99, 00}},
+	{ASETPS_6, yscond_asm6, Pm_asm6, [23]uint8{0x9a, 00}},
+	{ASHLB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, 04, 0xc0, 04, 0xd2, 04}},
+	{ASHLL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASHLQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASHLW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, 04, 0xc1, 04, 0xd3, 04, 0xd3, 04}},
+	{ASHRB_6, yshb_asm6, Pb_asm6, [23]uint8{0xd0, 05, 0xc0, 05, 0xd2, 05}},
+	{ASHRL_6, yshl_asm6, Px_asm6, [23]uint8{0xd1, 05, 0xc1, 05, 0xd3, 05, 0xd3, 05}},
+	{ASHRQ_6, yshl_asm6, Pw_asm6, [23]uint8{0xd1, 05, 0xc1, 05, 0xd3, 05, 0xd3, 05}},
+	{ASHRW_6, yshl_asm6, Pe_asm6, [23]uint8{0xd1, 05, 0xc1, 05, 0xd3, 05, 0xd3, 05}},
+	{ASHUFPD_6, yxshuf_asm6, Pq_asm6, [23]uint8{0xc6, 00}},
+	{ASHUFPS_6, yxshuf_asm6, Pm_asm6, [23]uint8{0xc6, 00}},
 	{ASQRTPD_6, yxm_asm6, Pe_asm6, [23]uint8{0x51}},
 	{ASQRTPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x51}},
 	{ASQRTSD_6, yxm_asm6, Pf2_asm6, [23]uint8{0x51}},
@@ -2234,25 +1891,25 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{ASTC_6, ynone_asm6, Px_asm6, [23]uint8{0xf9}},
 	{ASTD_6, ynone_asm6, Px_asm6, [23]uint8{0xfd}},
 	{ASTI_6, ynone_asm6, Px_asm6, [23]uint8{0xfb}},
-	{ASTMXCSR_6, ysvrs_asm6, Pm_asm6, [23]uint8{0xae, (03), 0xae, (03)}},
+	{ASTMXCSR_6, ysvrs_asm6, Pm_asm6, [23]uint8{0xae, 03, 0xae, 03}},
 	{ASTOSB_6, ynone_asm6, Pb_asm6, [23]uint8{0xaa}},
 	{ASTOSL_6, ynone_asm6, Px_asm6, [23]uint8{0xab}},
 	{ASTOSQ_6, ynone_asm6, Pw_asm6, [23]uint8{0xab}},
 	{ASTOSW_6, ynone_asm6, Pe_asm6, [23]uint8{0xab}},
-	{ASUBB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x2c, 0x80, (05), 0x28, 0x2a}},
-	{ASUBL_6, yaddl_asm6, Px_asm6, [23]uint8{0x83, (05), 0x2d, 0x81, (05), 0x29, 0x2b}},
+	{ASUBB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x2c, 0x80, 05, 0x28, 0x2a}},
+	{ASUBL_6, yaddl_asm6, Px_asm6, [23]uint8{0x83, 05, 0x2d, 0x81, 05, 0x29, 0x2b}},
 	{ASUBPD_6, yxm_asm6, Pe_asm6, [23]uint8{0x5c}},
 	{ASUBPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x5c}},
-	{ASUBQ_6, yaddl_asm6, Pw_asm6, [23]uint8{0x83, (05), 0x2d, 0x81, (05), 0x29, 0x2b}},
+	{ASUBQ_6, yaddl_asm6, Pw_asm6, [23]uint8{0x83, 05, 0x2d, 0x81, 05, 0x29, 0x2b}},
 	{ASUBSD_6, yxm_asm6, Pf2_asm6, [23]uint8{0x5c}},
 	{ASUBSS_6, yxm_asm6, Pf3_asm6, [23]uint8{0x5c}},
-	{ASUBW_6, yaddl_asm6, Pe_asm6, [23]uint8{0x83, (05), 0x2d, 0x81, (05), 0x29, 0x2b}},
+	{ASUBW_6, yaddl_asm6, Pe_asm6, [23]uint8{0x83, 05, 0x2d, 0x81, 05, 0x29, 0x2b}},
 	{ASWAPGS_6, ynone_asm6, Pm_asm6, [23]uint8{0x01, 0xf8}},
 	{ASYSCALL_6, ynone_asm6, Px_asm6, [23]uint8{0x0f, 0x05}}, /* fast syscall */
-	{ATESTB_6, ytestb_asm6, Pb_asm6, [23]uint8{0xa8, 0xf6, (00), 0x84, 0x84}},
-	{ATESTL_6, ytestl_asm6, Px_asm6, [23]uint8{0xa9, 0xf7, (00), 0x85, 0x85}},
-	{ATESTQ_6, ytestl_asm6, Pw_asm6, [23]uint8{0xa9, 0xf7, (00), 0x85, 0x85}},
-	{ATESTW_6, ytestl_asm6, Pe_asm6, [23]uint8{0xa9, 0xf7, (00), 0x85, 0x85}},
+	{ATESTB_6, ytestb_asm6, Pb_asm6, [23]uint8{0xa8, 0xf6, 00, 0x84, 0x84}},
+	{ATESTL_6, ytestl_asm6, Px_asm6, [23]uint8{0xa9, 0xf7, 00, 0x85, 0x85}},
+	{ATESTQ_6, ytestl_asm6, Pw_asm6, [23]uint8{0xa9, 0xf7, 00, 0x85, 0x85}},
+	{ATESTW_6, ytestl_asm6, Pe_asm6, [23]uint8{0xa9, 0xf7, 00, 0x85, 0x85}},
 	{ATEXT_6, ytext_asm6, Px_asm6, [23]uint8{}},
 	{AUCOMISD_6, yxcmp_asm6, Pe_asm6, [23]uint8{0x2e}},
 	{AUCOMISS_6, yxcmp_asm6, Pm_asm6, [23]uint8{0x2e}},
@@ -2260,8 +1917,8 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AUNPCKHPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x15}},
 	{AUNPCKLPD_6, yxm_asm6, Pe_asm6, [23]uint8{0x14}},
 	{AUNPCKLPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x14}},
-	{AVERR_6, ydivl_asm6, Pm_asm6, [23]uint8{0x00, (04)}},
-	{AVERW_6, ydivl_asm6, Pm_asm6, [23]uint8{0x00, (05)}},
+	{AVERR_6, ydivl_asm6, Pm_asm6, [23]uint8{0x00, 04}},
+	{AVERW_6, ydivl_asm6, Pm_asm6, [23]uint8{0x00, 05}},
 	{AWAIT_6, ynone_asm6, Px_asm6, [23]uint8{0x9b}},
 	{AWORD_6, ybyte_asm6, Px_asm6, [23]uint8{2}},
 	{AXCHGB_6, yml_mb_asm6, Pb_asm6, [23]uint8{0x86, 0x86}},
@@ -2269,79 +1926,79 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AXCHGQ_6, yxchg_asm6, Pw_asm6, [23]uint8{0x90, 0x90, 0x87, 0x87}},
 	{AXCHGW_6, yxchg_asm6, Pe_asm6, [23]uint8{0x90, 0x90, 0x87, 0x87}},
 	{AXLAT_6, ynone_asm6, Px_asm6, [23]uint8{0xd7}},
-	{AXORB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x34, 0x80, (06), 0x30, 0x32}},
-	{AXORL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, (06), 0x35, 0x81, (06), 0x31, 0x33}},
+	{AXORB_6, yxorb_asm6, Pb_asm6, [23]uint8{0x34, 0x80, 06, 0x30, 0x32}},
+	{AXORL_6, yxorl_asm6, Px_asm6, [23]uint8{0x83, 06, 0x35, 0x81, 06, 0x31, 0x33}},
 	{AXORPD_6, yxm_asm6, Pe_asm6, [23]uint8{0x57}},
 	{AXORPS_6, yxm_asm6, Pm_asm6, [23]uint8{0x57}},
-	{AXORQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, (06), 0x35, 0x81, (06), 0x31, 0x33}},
-	{AXORW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, (06), 0x35, 0x81, (06), 0x31, 0x33}},
-	{AFMOVB_6, yfmvx_asm6, Px_asm6, [23]uint8{0xdf, (04)}},
-	{AFMOVBP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdf, (06)}},
-	{AFMOVD_6, yfmvd_asm6, Px_asm6, [23]uint8{0xdd, (00), 0xdd, (02), 0xd9, (00), 0xdd, (02)}},
-	{AFMOVDP_6, yfmvdp_asm6, Px_asm6, [23]uint8{0xdd, (03), 0xdd, (03)}},
-	{AFMOVF_6, yfmvf_asm6, Px_asm6, [23]uint8{0xd9, (00), 0xd9, (02)}},
-	{AFMOVFP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xd9, (03)}},
-	{AFMOVL_6, yfmvf_asm6, Px_asm6, [23]uint8{0xdb, (00), 0xdb, (02)}},
-	{AFMOVLP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdb, (03)}},
-	{AFMOVV_6, yfmvx_asm6, Px_asm6, [23]uint8{0xdf, (05)}},
-	{AFMOVVP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdf, (07)}},
-	{AFMOVW_6, yfmvf_asm6, Px_asm6, [23]uint8{0xdf, (00), 0xdf, (02)}},
-	{AFMOVWP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdf, (03)}},
-	{AFMOVX_6, yfmvx_asm6, Px_asm6, [23]uint8{0xdb, (05)}},
-	{AFMOVXP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdb, (07)}},
+	{AXORQ_6, yxorl_asm6, Pw_asm6, [23]uint8{0x83, 06, 0x35, 0x81, 06, 0x31, 0x33}},
+	{AXORW_6, yxorl_asm6, Pe_asm6, [23]uint8{0x83, 06, 0x35, 0x81, 06, 0x31, 0x33}},
+	{AFMOVB_6, yfmvx_asm6, Px_asm6, [23]uint8{0xdf, 04}},
+	{AFMOVBP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdf, 06}},
+	{AFMOVD_6, yfmvd_asm6, Px_asm6, [23]uint8{0xdd, 00, 0xdd, 02, 0xd9, 00, 0xdd, 02}},
+	{AFMOVDP_6, yfmvdp_asm6, Px_asm6, [23]uint8{0xdd, 03, 0xdd, 03}},
+	{AFMOVF_6, yfmvf_asm6, Px_asm6, [23]uint8{0xd9, 00, 0xd9, 02}},
+	{AFMOVFP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xd9, 03}},
+	{AFMOVL_6, yfmvf_asm6, Px_asm6, [23]uint8{0xdb, 00, 0xdb, 02}},
+	{AFMOVLP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdb, 03}},
+	{AFMOVV_6, yfmvx_asm6, Px_asm6, [23]uint8{0xdf, 05}},
+	{AFMOVVP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdf, 07}},
+	{AFMOVW_6, yfmvf_asm6, Px_asm6, [23]uint8{0xdf, 00, 0xdf, 02}},
+	{AFMOVWP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdf, 03}},
+	{AFMOVX_6, yfmvx_asm6, Px_asm6, [23]uint8{0xdb, 05}},
+	{AFMOVXP_6, yfmvp_asm6, Px_asm6, [23]uint8{0xdb, 07}},
 	{AFCOMB_6, nil, 0, [23]uint8{}},
 	{AFCOMBP_6, nil, 0, [23]uint8{}},
-	{AFCOMD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, (02), 0xd8, (02), 0xdc, (02)}},  /* botch */
-	{AFCOMDP_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, (03), 0xd8, (03), 0xdc, (03)}}, /* botch */
-	{AFCOMDPP_6, ycompp_asm6, Px_asm6, [23]uint8{0xde, (03)}},
-	{AFCOMF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, (02)}},
-	{AFCOMFP_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, (03)}},
-	{AFCOML_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, (02)}},
-	{AFCOMLP_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, (03)}},
-	{AFCOMW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, (02)}},
-	{AFCOMWP_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, (03)}},
-	{AFUCOM_6, ycompp_asm6, Px_asm6, [23]uint8{0xdd, (04)}},
-	{AFUCOMP_6, ycompp_asm6, Px_asm6, [23]uint8{0xdd, (05)}},
-	{AFUCOMPP_6, ycompp_asm6, Px_asm6, [23]uint8{0xda, (13)}},
-	{AFADDDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, (00)}},
-	{AFADDW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, (00)}},
-	{AFADDL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, (00)}},
-	{AFADDF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, (00)}},
-	{AFADDD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, (00), 0xd8, (00), 0xdc, (00)}},
-	{AFMULDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, (01)}},
-	{AFMULW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, (01)}},
-	{AFMULL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, (01)}},
-	{AFMULF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, (01)}},
-	{AFMULD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, (01), 0xd8, (01), 0xdc, (01)}},
-	{AFSUBDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, (05)}},
-	{AFSUBW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, (04)}},
-	{AFSUBL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, (04)}},
-	{AFSUBF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, (04)}},
-	{AFSUBD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, (04), 0xd8, (04), 0xdc, (05)}},
-	{AFSUBRDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, (04)}},
-	{AFSUBRW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, (05)}},
-	{AFSUBRL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, (05)}},
-	{AFSUBRF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, (05)}},
-	{AFSUBRD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, (05), 0xd8, (05), 0xdc, (04)}},
-	{AFDIVDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, (07)}},
-	{AFDIVW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, (06)}},
-	{AFDIVL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, (06)}},
-	{AFDIVF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, (06)}},
-	{AFDIVD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, (06), 0xd8, (06), 0xdc, (07)}},
-	{AFDIVRDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, (06)}},
-	{AFDIVRW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, (07)}},
-	{AFDIVRL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, (07)}},
-	{AFDIVRF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, (07)}},
-	{AFDIVRD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, (07), 0xd8, (07), 0xdc, (06)}},
-	{AFXCHD_6, yfxch_asm6, Px_asm6, [23]uint8{0xd9, (01), 0xd9, (01)}},
+	{AFCOMD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, 02, 0xd8, 02, 0xdc, 02}},  /* botch */
+	{AFCOMDP_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, 03, 0xd8, 03, 0xdc, 03}}, /* botch */
+	{AFCOMDPP_6, ycompp_asm6, Px_asm6, [23]uint8{0xde, 03}},
+	{AFCOMF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, 02}},
+	{AFCOMFP_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, 03}},
+	{AFCOML_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, 02}},
+	{AFCOMLP_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, 03}},
+	{AFCOMW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, 02}},
+	{AFCOMWP_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, 03}},
+	{AFUCOM_6, ycompp_asm6, Px_asm6, [23]uint8{0xdd, 04}},
+	{AFUCOMP_6, ycompp_asm6, Px_asm6, [23]uint8{0xdd, 05}},
+	{AFUCOMPP_6, ycompp_asm6, Px_asm6, [23]uint8{0xda, 13}},
+	{AFADDDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, 00}},
+	{AFADDW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, 00}},
+	{AFADDL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, 00}},
+	{AFADDF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, 00}},
+	{AFADDD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, 00, 0xd8, 00, 0xdc, 00}},
+	{AFMULDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, 01}},
+	{AFMULW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, 01}},
+	{AFMULL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, 01}},
+	{AFMULF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, 01}},
+	{AFMULD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, 01, 0xd8, 01, 0xdc, 01}},
+	{AFSUBDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, 05}},
+	{AFSUBW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, 04}},
+	{AFSUBL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, 04}},
+	{AFSUBF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, 04}},
+	{AFSUBD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, 04, 0xd8, 04, 0xdc, 05}},
+	{AFSUBRDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, 04}},
+	{AFSUBRW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, 05}},
+	{AFSUBRL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, 05}},
+	{AFSUBRF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, 05}},
+	{AFSUBRD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, 05, 0xd8, 05, 0xdc, 04}},
+	{AFDIVDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, 07}},
+	{AFDIVW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, 06}},
+	{AFDIVL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, 06}},
+	{AFDIVF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, 06}},
+	{AFDIVD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, 06, 0xd8, 06, 0xdc, 07}},
+	{AFDIVRDP_6, yfaddp_asm6, Px_asm6, [23]uint8{0xde, 06}},
+	{AFDIVRW_6, yfmvx_asm6, Px_asm6, [23]uint8{0xde, 07}},
+	{AFDIVRL_6, yfmvx_asm6, Px_asm6, [23]uint8{0xda, 07}},
+	{AFDIVRF_6, yfmvx_asm6, Px_asm6, [23]uint8{0xd8, 07}},
+	{AFDIVRD_6, yfadd_asm6, Px_asm6, [23]uint8{0xdc, 07, 0xd8, 07, 0xdc, 06}},
+	{AFXCHD_6, yfxch_asm6, Px_asm6, [23]uint8{0xd9, 01, 0xd9, 01}},
 	{AFFREE_6, nil, 0, [23]uint8{}},
-	{AFLDCW_6, ystcw_asm6, Px_asm6, [23]uint8{0xd9, (05), 0xd9, (05)}},
-	{AFLDENV_6, ystcw_asm6, Px_asm6, [23]uint8{0xd9, (04), 0xd9, (04)}},
-	{AFRSTOR_6, ysvrs_asm6, Px_asm6, [23]uint8{0xdd, (04), 0xdd, (04)}},
-	{AFSAVE_6, ysvrs_asm6, Px_asm6, [23]uint8{0xdd, (06), 0xdd, (06)}},
-	{AFSTCW_6, ystcw_asm6, Px_asm6, [23]uint8{0xd9, (07), 0xd9, (07)}},
-	{AFSTENV_6, ystcw_asm6, Px_asm6, [23]uint8{0xd9, (06), 0xd9, (06)}},
-	{AFSTSW_6, ystsw_asm6, Px_asm6, [23]uint8{0xdd, (07), 0xdf, 0xe0}},
+	{AFLDCW_6, ystcw_asm6, Px_asm6, [23]uint8{0xd9, 05, 0xd9, 05}},
+	{AFLDENV_6, ystcw_asm6, Px_asm6, [23]uint8{0xd9, 04, 0xd9, 04}},
+	{AFRSTOR_6, ysvrs_asm6, Px_asm6, [23]uint8{0xdd, 04, 0xdd, 04}},
+	{AFSAVE_6, ysvrs_asm6, Px_asm6, [23]uint8{0xdd, 06, 0xdd, 06}},
+	{AFSTCW_6, ystcw_asm6, Px_asm6, [23]uint8{0xd9, 07, 0xd9, 07}},
+	{AFSTENV_6, ystcw_asm6, Px_asm6, [23]uint8{0xd9, 06, 0xd9, 06}},
+	{AFSTSW_6, ystsw_asm6, Px_asm6, [23]uint8{0xdd, 07, 0xdf, 0xe0}},
 	{AF2XM1_6, ynone_asm6, Px_asm6, [23]uint8{0xd9, 0xf0}},
 	{AFABS_6, ynone_asm6, Px_asm6, [23]uint8{0xd9, 0xe1}},
 	{AFCHS_6, ynone_asm6, Px_asm6, [23]uint8{0xd9, 0xe0}},
@@ -2376,9 +2033,9 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{ACMPXCHGL_6, yrl_ml_asm6, Px_asm6, [23]uint8{0x0f, 0xb1}},
 	{ACMPXCHGW_6, yrl_ml_asm6, Pe_asm6, [23]uint8{0x0f, 0xb1}},
 	{ACMPXCHGQ_6, yrl_ml_asm6, Pw_asm6, [23]uint8{0x0f, 0xb1}},
-	{ACMPXCHG8B_6, yscond_asm6, Pm_asm6, [23]uint8{0xc7, (01)}},
+	{ACMPXCHG8B_6, yscond_asm6, Pm_asm6, [23]uint8{0xc7, 01}},
 	{AINVD_6, ynone_asm6, Pm_asm6, [23]uint8{0x08}},
-	{AINVLPG_6, ymbs_asm6, Pm_asm6, [23]uint8{0x01, (07)}},
+	{AINVLPG_6, ymbs_asm6, Pm_asm6, [23]uint8{0x01, 07}},
 	{ALFENCE_6, ynone_asm6, Pm_asm6, [23]uint8{0xae, 0xe8}},
 	{AMFENCE_6, ynone_asm6, Pm_asm6, [23]uint8{0xae, 0xf0}},
 	{AMOVNTIL_6, yrl_ml_asm6, Pm_asm6, [23]uint8{0xc3}},
@@ -2397,19 +2054,19 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 	{AXADDW_6, yrl_ml_asm6, Pe_asm6, [23]uint8{0x0f, 0xc1}},
 	{ACRC32B_6, ycrc32l_asm6, Px_asm6, [23]uint8{0xf2, 0x0f, 0x38, 0xf0, 0}},
 	{ACRC32Q_6, ycrc32l_asm6, Pw_asm6, [23]uint8{0xf2, 0x0f, 0x38, 0xf1, 0}},
-	{APREFETCHT0_6, yprefetch_asm6, Pm_asm6, [23]uint8{0x18, (01)}},
-	{APREFETCHT1_6, yprefetch_asm6, Pm_asm6, [23]uint8{0x18, (02)}},
-	{APREFETCHT2_6, yprefetch_asm6, Pm_asm6, [23]uint8{0x18, (03)}},
-	{APREFETCHNTA_6, yprefetch_asm6, Pm_asm6, [23]uint8{0x18, (00)}},
+	{APREFETCHT0_6, yprefetch_asm6, Pm_asm6, [23]uint8{0x18, 01}},
+	{APREFETCHT1_6, yprefetch_asm6, Pm_asm6, [23]uint8{0x18, 02}},
+	{APREFETCHT2_6, yprefetch_asm6, Pm_asm6, [23]uint8{0x18, 03}},
+	{APREFETCHNTA_6, yprefetch_asm6, Pm_asm6, [23]uint8{0x18, 00}},
 	{AMOVQL_6, yrl_ml_asm6, Px_asm6, [23]uint8{0x89}},
 	{AUNDEF_6, ynone_asm6, Px_asm6, [23]uint8{0x0f, 0x0b}},
-	{AAESENC_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xdc, (0)}},
-	{AAESENCLAST_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xdd, (0)}},
-	{AAESDEC_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xde, (0)}},
-	{AAESDECLAST_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xdf, (0)}},
-	{AAESIMC_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xdb, (0)}},
-	{AAESKEYGENASSIST_6, yaes2_asm6, Pq_asm6, [23]uint8{0x3a, 0xdf, (0)}},
-	{APSHUFD_6, yaes2_asm6, Pq_asm6, [23]uint8{0x70, (0)}},
+	{AAESENC_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xdc, 0}},
+	{AAESENCLAST_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xdd, 0}},
+	{AAESDEC_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xde, 0}},
+	{AAESDECLAST_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xdf, 0}},
+	{AAESIMC_6, yaes_asm6, Pq_asm6, [23]uint8{0x38, 0xdb, 0}},
+	{AAESKEYGENASSIST_6, yaes2_asm6, Pq_asm6, [23]uint8{0x3a, 0xdf, 0}},
+	{APSHUFD_6, yaes2_asm6, Pq_asm6, [23]uint8{0x70, 0}},
 	{APCLMULQDQ_6, yxshuf_asm6, Pq_asm6, [23]uint8{0x3a, 0x44, 0}},
 	{AUSEFIELD_6, ynop_asm6, Px_asm6, [23]uint8{0, 0}},
 	{ATYPE_6, nil, 0, [23]uint8{}},
@@ -2425,74 +2082,6 @@ var optab_asm6 = /*	as, ytab, andproto, opcode */
 }
 
 var opindex_asm6 [ALAST_6 + 1]*Optab_asm6
-
-/*
-static void
-relput8(Prog *p, Addr *a)
-{
-	vlong v;
-	Reloc rel, *r;
-
-	v = vaddr(ctxt, a, &rel);
-	if(rel.siz != 0) {
-		r = addrel(ctxt->cursym);
-		*r = rel;
-		r->siz = 8;
-		r->off = p->pc + ctxt->andptr - ctxt->and;
-	}
-	put8(ctxt, v);
-}
-*/
-func vaddr_asm6(ctxt *Link, a *Addr, r *Reloc) int64 {
-	var t int
-	var v int64
-	var s *LSym
-	if r != nil {
-		*r = Reloc{}
-	}
-	t = a.typ
-	v = a.offset
-	if t == int(D_ADDR_6) {
-		t = a.index
-	}
-	switch t {
-	case D_STATIC_6, D_EXTERN_6:
-		s = a.sym
-		if r == nil {
-			ctxt.diag("need reloc for %D", a)
-			sysfatal("reloc")
-		}
-		r.siz = 4  // TODO: 8 for external symbols
-		r.off = -1 // caller must fill in
-		r.sym = s
-		r.add = v
-		v = 0
-		if ctxt.flag_shared != 0 || ctxt.headtype == int(Hnacl) {
-			if s.typ == int(STLSBSS) {
-				r.xadd = r.add - int64(r.siz)
-				r.typ = int(R_TLS)
-				r.xsym = s
-			} else {
-				r.typ = int(R_PCREL)
-			}
-		} else {
-			r.typ = int(R_ADDR)
-		}
-		break
-	case D_INDIR_6 + D_TLS_6:
-		if r == nil {
-			ctxt.diag("need reloc for %D", a)
-			sysfatal("reloc")
-		}
-		r.typ = int(R_TLS_LE)
-		r.siz = 4
-		r.off = -1 // caller must fill in
-		r.add = v
-		v = 0
-		break
-	}
-	return v
-}
 
 // single-instruction no-ops of various lengths.
 // constructed by hand and disassembled with gdb to verify.
@@ -2511,12 +2100,12 @@ var nop_asm6 = [][16]uint8{
 
 // Native Client rejects the repeated 0x66 prefix.
 // {0x66, 0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
-func fillnop_asm6(p []uint8, n int) {
-	var m int
+func fillnop_asm6(p []uint8, n int64) {
+	var m int64
 	for n > 0 {
 		m = n
-		if m > len(nop_asm6) {
-			m = len(nop_asm6)
+		if m > int64(len(nop_asm6)) {
+			m = int64(len(nop_asm6))
 		}
 		copy(p, nop_asm6[m-1][:m])
 		p = p[m:]
@@ -2524,18 +2113,222 @@ func fillnop_asm6(p []uint8, n int) {
 	}
 }
 
+func naclpad_asm6(ctxt *Link, s *LSym, c int64, pad int64) int64 {
+	symgrow(ctxt, s, c+pad)
+	fillnop_asm6(s.p[c:], pad)
+	return c + pad
+}
+
+func spadjop_asm6(ctxt *Link, p *Prog, l int, q int) int {
+	if p.mode != 64 || ctxt.arch.ptrsize == 4 {
+		return l
+	}
+	return q
+}
+
+func span6(ctxt *Link, s *LSym) {
+	var p *Prog
+	var q *Prog
+	var c int64
+	var v int64
+	var loop int32
+	var bp []uint8
+	var n int
+	var m int64
+	ctxt.cursym = s
+	if s.p != nil {
+		return
+	}
+	if ycover_asm6[0] == 0 {
+		instinit_asm6()
+	}
+	for p = ctxt.cursym.text; p != nil; p = p.link {
+		n = 0
+		if p.to.typ == D_BRANCH_6 {
+			if p.pcond == nil {
+				p.pcond = p
+			}
+		}
+		q = p.pcond
+		if q != nil {
+			if q.back != 2 {
+				n = 1
+			}
+		}
+		p.back = n
+		if p.as == AADJSP_6 {
+			p.to.typ = D_SP_6
+			v = -p.from.offset
+			p.from.offset = v
+			p.as = spadjop_asm6(ctxt, p, AADDL_6, AADDQ_6)
+			if v < 0 {
+				p.as = spadjop_asm6(ctxt, p, ASUBL_6, ASUBQ_6)
+				v = -v
+				p.from.offset = v
+			}
+			if v == 0 {
+				p.as = ANOP_6
+			}
+		}
+	}
+	for p = s.text; p != nil; p = p.link {
+		p.back = 2 // use short branches first time through
+		q = p.pcond
+		if q != nil && (q.back&2 != 0) {
+			p.back |= 1 // backward jump
+			q.back |= 4 // loop head
+		}
+		if p.as == AADJSP_6 {
+			p.to.typ = D_SP_6
+			v = -p.from.offset
+			p.from.offset = v
+			p.as = spadjop_asm6(ctxt, p, AADDL_6, AADDQ_6)
+			if v < 0 {
+				p.as = spadjop_asm6(ctxt, p, ASUBL_6, ASUBQ_6)
+				v = -v
+				p.from.offset = v
+			}
+			if v == 0 {
+				p.as = ANOP_6
+			}
+		}
+	}
+	n = 0
+	for {
+		loop = 0
+		for i := range s.r {
+			s.r[i] = Reloc{}
+		}
+		s.r = s.r[:0]
+		s.p = s.p[:0]
+		c = 0
+		for p = s.text; p != nil; p = p.link {
+			if ctxt.headtype == Hnacl && p.isize > 0 {
+				var deferreturn_asm6 *LSym
+				if deferreturn_asm6 == nil {
+					deferreturn_asm6 = linklookup(ctxt, "runtime.deferreturn", 0)
+				}
+				// pad everything to avoid crossing 32-byte boundary
+				if c>>5 != (c+p.isize-1)>>5 {
+					c = naclpad_asm6(ctxt, s, c, -c&31)
+				}
+				// pad call deferreturn to start at 32-byte boundary
+				// so that subtracting 5 in jmpdefer will jump back
+				// to that boundary and rerun the call.
+				if p.as == ACALL_6 && p.to.sym == deferreturn_asm6 {
+					c = naclpad_asm6(ctxt, s, c, -c&31)
+				}
+				// pad call to end at 32-byte boundary
+				if p.as == ACALL_6 {
+					c = naclpad_asm6(ctxt, s, c, -(c+p.isize)&31)
+				}
+				// the linker treats REP and STOSQ as different instructions
+				// but in fact the REP is a prefix on the STOSQ.
+				// make sure REP has room for 2 more bytes, so that
+				// padding will not be inserted before the next instruction.
+				if (p.as == AREP_6 || p.as == AREPN_6) && c>>5 != (c+3-1)>>5 {
+					c = naclpad_asm6(ctxt, s, c, -c&31)
+				}
+				// same for LOCK.
+				// various instructions follow; the longest is 4 bytes.
+				// give ourselves 8 bytes so as to avoid surprises.
+				if p.as == ALOCK_6 && c>>5 != (c+8-1)>>5 {
+					c = naclpad_asm6(ctxt, s, c, -c&31)
+				}
+			}
+			if (p.back&4 != 0) && c&(LoopAlign_asm6-1) != 0 {
+				// pad with NOPs
+				v = -c & (LoopAlign_asm6 - 1)
+				if v <= MaxLoopPad_asm6 {
+					symgrow(ctxt, s, c+v)
+					fillnop_asm6(s.p[c:], v)
+					c += v
+				}
+			}
+			p.pc = c
+			// process forward jumps to p
+			for q = p.comefrom; q != nil; q = q.forwd {
+				v = p.pc - (q.pc + q.mark)
+				if q.back&2 != 0 { // short
+					if v > 127 {
+						loop++
+						q.back ^= 2
+					}
+					if q.as == AJCXZL_6 {
+						s.p[q.pc+2] = uint8(v)
+					} else {
+						s.p[q.pc+1] = uint8(v)
+					}
+				} else {
+					bp = s.p[q.pc+q.mark-4:]
+					bp[0] = uint8(v)
+					bp = bp[1:]
+					bp[0] = uint8(v >> 8)
+					bp = bp[1:]
+					bp[0] = uint8(v >> 16)
+					bp = bp[1:]
+					bp[0] = uint8(v >> 24)
+				}
+			}
+			p.comefrom = nil
+			p.pc = c
+			asmins_asm6(ctxt, p)
+			m = int64(-cap(ctxt.andptr) + cap(ctxt.and[:]))
+			if p.isize != m {
+				p.isize = m
+				loop++
+			}
+			symgrow(ctxt, s, p.pc+m)
+			copy(s.p[p.pc:], ctxt.and[:m])
+			p.mark = m
+			c += m
+		}
+		n++
+		if n > 20 {
+			ctxt.diag("span must be looping")
+			log.Fatalf("loop")
+		}
+		if !(loop != 0) {
+			break
+		}
+	}
+	if ctxt.headtype == Hnacl {
+		c = naclpad_asm6(ctxt, s, c, -c&31)
+	}
+	c += -c & (FuncAlign_asm6 - 1)
+	s.size = c
+	if false { /* debug['a'] > 1 */
+		var i int
+		fmt.Printf("span1 %s %d (%d tries)\n %.6x", s.name, s.size, n, 0)
+		for i = range s.p {
+			fmt.Printf(" %.2x", s.p[i])
+			if i%16 == 15 {
+				fmt.Printf("\n  %.6x", uint64(i+1))
+			}
+		}
+		if i%16 != 0 {
+			fmt.Printf("\n")
+		}
+		for i = range s.r {
+			var r *Reloc
+			r = &s.r[i]
+			fmt.Printf(" rel %#.4x/%d %s%+d\n", uint64(r.off), r.siz, r.sym.name, r.add)
+		}
+	}
+}
+
 func instinit_asm6() {
 	var c int
-	var i int
+	var i int64
 	for i = 1; optab_asm6[i].as != 0; i++ {
 		c = optab_asm6[i].as
 		if opindex_asm6[c] != nil {
-			sysfatal("phase error in optab: %d (%A)", i, c)
+			log.Fatalf("phase error in optab: %d (%v)", i, Aconv_list6(c))
 		}
 		opindex_asm6[c] = &optab_asm6[i]
 	}
-	for i = 0; i < int(Ymax_asm6); i++ {
-		ycover_asm6[i*int(Ymax_asm6)+i] = 1
+	for i = 0; i < Ymax_asm6; i++ {
+		ycover_asm6[i*Ymax_asm6+i] = 1
 	}
 	ycover_asm6[Yi0_asm6*Ymax_asm6+Yi8_asm6] = 1
 	ycover_asm6[Yi1_asm6*Ymax_asm6+Yi8_asm6] = 1
@@ -2585,55 +2378,42 @@ func instinit_asm6() {
 	ycover_asm6[Ymr_asm6*Ymax_asm6+Ymm_asm6] = 1
 	ycover_asm6[Ym_asm6*Ymax_asm6+Yxm_asm6] = 1
 	ycover_asm6[Yxr_asm6*Ymax_asm6+Yxm_asm6] = 1
-	for i = 0; i < int(D_NONE_6); i++ {
+	for i = 0; i < D_NONE_6; i++ {
 		reg_asm6[i] = -1
-		if i >= int(D_AL_6) && i <= int(D_R15B_6) {
-			reg_asm6[i] = (i - int(D_AL_6)) & 7
-			if i >= int(D_SPB_6) && i <= int(D_DIB_6) {
+		if i >= D_AL_6 && i <= D_R15B_6 {
+			reg_asm6[i] = int((i - D_AL_6) & 7)
+			if i >= D_SPB_6 && i <= D_DIB_6 {
 				regrex_asm6[i] = 0x40
 			}
-			if i >= int(D_R8B_6) && i <= int(D_R15B_6) {
-				regrex_asm6[i] = int(Rxr_asm6 | Rxx_asm6 | Rxb_asm6)
+			if i >= D_R8B_6 && i <= D_R15B_6 {
+				regrex_asm6[i] = Rxr_asm6 | Rxx_asm6 | Rxb_asm6
 			}
 		}
-		if i >= int(D_AH_6) && i <= int(D_BH_6) {
-			reg_asm6[i] = 4 + ((i - int(D_AH_6)) & 7)
+		if i >= D_AH_6 && i <= D_BH_6 {
+			reg_asm6[i] = int(4 + ((i - D_AH_6) & 7))
 		}
-		if i >= int(D_AX_6) && i <= int(D_R15_6) {
-			reg_asm6[i] = (i - int(D_AX_6)) & 7
-			if i >= int(D_R8_6) {
-				regrex_asm6[i] = int(Rxr_asm6 | Rxx_asm6 | Rxb_asm6)
+		if i >= D_AX_6 && i <= D_R15_6 {
+			reg_asm6[i] = int((i - D_AX_6) & 7)
+			if i >= D_R8_6 {
+				regrex_asm6[i] = Rxr_asm6 | Rxx_asm6 | Rxb_asm6
 			}
 		}
-		if i >= int(D_F0_6) && i <= D_F0_6+7 {
-			reg_asm6[i] = (i - int(D_F0_6)) & 7
+		if i >= D_F0_6 && i <= D_F0_6+7 {
+			reg_asm6[i] = int((i - D_F0_6) & 7)
 		}
-		if i >= int(D_M0_6) && i <= D_M0_6+7 {
-			reg_asm6[i] = (i - int(D_M0_6)) & 7
+		if i >= D_M0_6 && i <= D_M0_6+7 {
+			reg_asm6[i] = int((i - D_M0_6) & 7)
 		}
-		if i >= int(D_X0_6) && i <= D_X0_6+15 {
-			reg_asm6[i] = (i - int(D_X0_6)) & 7
+		if i >= D_X0_6 && i <= D_X0_6+15 {
+			reg_asm6[i] = int((i - D_X0_6) & 7)
 			if i >= D_X0_6+8 {
-				regrex_asm6[i] = int(Rxr_asm6 | Rxx_asm6 | Rxb_asm6)
+				regrex_asm6[i] = Rxr_asm6 | Rxx_asm6 | Rxb_asm6
 			}
 		}
 		if i >= D_CR_6+8 && i <= D_CR_6+15 {
-			regrex_asm6[i] = int(Rxr_asm6)
+			regrex_asm6[i] = Rxr_asm6
 		}
 	}
-}
-
-func naclpad_asm6(ctxt *Link, s *LSym, c int32, pad int) int32 {
-	symgrow(ctxt, s, int64(c)+int64(pad))
-	fillnop_asm6(s.p[c:], pad)
-	return c + int32(pad)
-}
-
-func spadjop_asm6(ctxt *Link, p *Prog, l int, q int) int {
-	if p.mode != 64 || ctxt.arch.ptrsize == 4 {
-		return l
-	}
-	return q
 }
 
 func prefixof_asm6(ctxt *Link, a *Addr) int {
@@ -2657,8 +2437,13 @@ func prefixof_asm6(ctxt *Link, a *Addr) int {
 	case D_INDIR_6 + D_TLS_6:
 		switch ctxt.headtype {
 		default:
-			sysfatal("unknown TLS base register for %s", headstr(ctxt.headtype))
-		case Hdragonfly, Hfreebsd, Hlinux, Hnetbsd, Hopenbsd, Hsolaris:
+			log.Fatalf("unknown TLS base register for %s", headstr(ctxt.headtype))
+		case Hdragonfly,
+			Hfreebsd,
+			Hlinux,
+			Hnetbsd,
+			Hopenbsd,
+			Hsolaris:
 			return 0x64 // FS
 		case Hdarwin:
 			return 0x65 // GS
@@ -2681,168 +2466,230 @@ func prefixof_asm6(ctxt *Link, a *Addr) int {
 
 func oclass_asm6(ctxt *Link, a *Addr) int {
 	var v int64
-	var l int32
-	if a.typ >= int(D_INDIR_6) || a.index != int(D_NONE_6) {
-		if a.index != int(D_NONE_6) && a.scale == 0 {
-			if a.typ == int(D_ADDR_6) {
+	var l int64
+	if a.typ >= D_INDIR_6 || a.index != D_NONE_6 {
+		if a.index != D_NONE_6 && a.scale == 0 {
+			if a.typ == D_ADDR_6 {
 				switch a.index {
-				case D_EXTERN_6, D_STATIC_6:
-					if ctxt.flag_shared != 0 || ctxt.headtype == int(Hnacl) {
-						return int(Yiauto_asm6)
+				case D_EXTERN_6,
+					D_STATIC_6:
+					if ctxt.flag_shared != 0 || ctxt.headtype == Hnacl {
+						return Yiauto_asm6
 					} else {
-						return int(Yi32_asm6) /* TO DO: Yi64 */
+						return Yi32_asm6 /* TO DO: Yi64 */
 					}
-				case D_AUTO_6, D_PARAM_6:
-					return int(Yiauto_asm6)
+					fallthrough
+				case D_AUTO_6,
+					D_PARAM_6:
+					return Yiauto_asm6
 				}
-				return int(Yxxx_asm6)
+				return Yxxx_asm6
 			}
-			return int(Ycol_asm6)
+			return Ycol_asm6
 		}
-		return int(Ym_asm6)
+		return Ym_asm6
 	}
 	switch a.typ {
 	case D_AL_6:
-		return int(Yal_asm6)
+		return Yal_asm6
 	case D_AX_6:
-		return int(Yax_asm6)
+		return Yax_asm6
 	/*
 		case D_SPB:
 	*/
-	case D_BPB_6, D_SIB_6, D_DIB_6, D_R8B_6, D_R9B_6, D_R10B_6, D_R11B_6, D_R12B_6, D_R13B_6, D_R14B_6, D_R15B_6:
+	case D_BPB_6,
+		D_SIB_6,
+		D_DIB_6,
+		D_R8B_6,
+		D_R9B_6,
+		D_R10B_6,
+		D_R11B_6,
+		D_R12B_6,
+		D_R13B_6,
+		D_R14B_6,
+		D_R15B_6:
 		if ctxt.asmode != 64 {
-			return int(Yxxx_asm6)
+			return Yxxx_asm6
 		}
-	case D_DL_6, D_BL_6, D_AH_6, D_CH_6, D_DH_6, D_BH_6:
-		return int(Yrb_asm6)
+		fallthrough
+	case D_DL_6,
+		D_BL_6,
+		D_AH_6,
+		D_CH_6,
+		D_DH_6,
+		D_BH_6:
+		return Yrb_asm6
 	case D_CL_6:
-		return int(Ycl_asm6)
+		return Ycl_asm6
 	case D_CX_6:
-		return int(Ycx_asm6)
-	case D_DX_6, D_BX_6:
-		return int(Yrx_asm6)
-	case D_R8_6: /* not really Yrl */
-	case D_R9_6, D_R10_6, D_R11_6, D_R12_6, D_R13_6, D_R14_6, D_R15_6:
+		return Ycx_asm6
+	case D_DX_6,
+		D_BX_6:
+		return Yrx_asm6
+	case D_R8_6, /* not really Yrl */
+		D_R9_6,
+		D_R10_6,
+		D_R11_6,
+		D_R12_6,
+		D_R13_6,
+		D_R14_6,
+		D_R15_6:
 		if ctxt.asmode != 64 {
-			return int(Yxxx_asm6)
+			return Yxxx_asm6
 		}
-	case D_SP_6, D_BP_6, D_SI_6, D_DI_6:
-		return int(Yrl_asm6)
+		fallthrough
+	case D_SP_6,
+		D_BP_6,
+		D_SI_6,
+		D_DI_6:
+		return Yrl_asm6
 	case D_F0_6 + 0:
-		return int(Yf0_asm6)
-	case D_F0_6 + 1, D_F0_6 + 2, D_F0_6 + 3, D_F0_6 + 4, D_F0_6 + 5, D_F0_6 + 6, D_F0_6 + 7:
-		return int(Yrf_asm6)
-	case D_M0_6 + 0, D_M0_6 + 1, D_M0_6 + 2, D_M0_6 + 3, D_M0_6 + 4, D_M0_6 + 5, D_M0_6 + 6, D_M0_6 + 7:
-		return int(Ymr_asm6)
-	case D_X0_6 + 0, D_X0_6 + 1, D_X0_6 + 2, D_X0_6 + 3, D_X0_6 + 4, D_X0_6 + 5, D_X0_6 + 6, D_X0_6 + 7, D_X0_6 + 8, D_X0_6 + 9, D_X0_6 + 10, D_X0_6 + 11, D_X0_6 + 12, D_X0_6 + 13, D_X0_6 + 14, D_X0_6 + 15:
-		return int(Yxr_asm6)
+		return Yf0_asm6
+	case D_F0_6 + 1,
+		D_F0_6 + 2,
+		D_F0_6 + 3,
+		D_F0_6 + 4,
+		D_F0_6 + 5,
+		D_F0_6 + 6,
+		D_F0_6 + 7:
+		return Yrf_asm6
+	case D_M0_6 + 0,
+		D_M0_6 + 1,
+		D_M0_6 + 2,
+		D_M0_6 + 3,
+		D_M0_6 + 4,
+		D_M0_6 + 5,
+		D_M0_6 + 6,
+		D_M0_6 + 7:
+		return Ymr_asm6
+	case D_X0_6 + 0,
+		D_X0_6 + 1,
+		D_X0_6 + 2,
+		D_X0_6 + 3,
+		D_X0_6 + 4,
+		D_X0_6 + 5,
+		D_X0_6 + 6,
+		D_X0_6 + 7,
+		D_X0_6 + 8,
+		D_X0_6 + 9,
+		D_X0_6 + 10,
+		D_X0_6 + 11,
+		D_X0_6 + 12,
+		D_X0_6 + 13,
+		D_X0_6 + 14,
+		D_X0_6 + 15:
+		return Yxr_asm6
 	case D_NONE_6:
-		return int(Ynone_asm6)
+		return Ynone_asm6
 	case D_CS_6:
-		return int(Ycs_asm6)
+		return Ycs_asm6
 	case D_SS_6:
-		return int(Yss_asm6)
+		return Yss_asm6
 	case D_DS_6:
-		return int(Yds_asm6)
+		return Yds_asm6
 	case D_ES_6:
-		return int(Yes_asm6)
+		return Yes_asm6
 	case D_FS_6:
-		return int(Yfs_asm6)
+		return Yfs_asm6
 	case D_GS_6:
-		return int(Ygs_asm6)
+		return Ygs_asm6
 	case D_TLS_6:
-		return int(Ytls_asm6)
+		return Ytls_asm6
 	case D_GDTR_6:
-		return int(Ygdtr_asm6)
+		return Ygdtr_asm6
 	case D_IDTR_6:
-		return int(Yidtr_asm6)
+		return Yidtr_asm6
 	case D_LDTR_6:
-		return int(Yldtr_asm6)
+		return Yldtr_asm6
 	case D_MSW_6:
-		return int(Ymsw_asm6)
+		return Ymsw_asm6
 	case D_TASK_6:
-		return int(Ytask_asm6)
+		return Ytask_asm6
 	case D_CR_6 + 0:
-		return int(Ycr0_asm6)
+		return Ycr0_asm6
 	case D_CR_6 + 1:
-		return int(Ycr1_asm6)
+		return Ycr1_asm6
 	case D_CR_6 + 2:
-		return int(Ycr2_asm6)
+		return Ycr2_asm6
 	case D_CR_6 + 3:
-		return int(Ycr3_asm6)
+		return Ycr3_asm6
 	case D_CR_6 + 4:
-		return int(Ycr4_asm6)
+		return Ycr4_asm6
 	case D_CR_6 + 5:
-		return int(Ycr5_asm6)
+		return Ycr5_asm6
 	case D_CR_6 + 6:
-		return int(Ycr6_asm6)
+		return Ycr6_asm6
 	case D_CR_6 + 7:
-		return int(Ycr7_asm6)
+		return Ycr7_asm6
 	case D_CR_6 + 8:
-		return int(Ycr8_asm6)
+		return Ycr8_asm6
 	case D_DR_6 + 0:
-		return int(Ydr0_asm6)
+		return Ydr0_asm6
 	case D_DR_6 + 1:
-		return int(Ydr1_asm6)
+		return Ydr1_asm6
 	case D_DR_6 + 2:
-		return int(Ydr2_asm6)
+		return Ydr2_asm6
 	case D_DR_6 + 3:
-		return int(Ydr3_asm6)
+		return Ydr3_asm6
 	case D_DR_6 + 4:
-		return int(Ydr4_asm6)
+		return Ydr4_asm6
 	case D_DR_6 + 5:
-		return int(Ydr5_asm6)
+		return Ydr5_asm6
 	case D_DR_6 + 6:
-		return int(Ydr6_asm6)
+		return Ydr6_asm6
 	case D_DR_6 + 7:
-		return int(Ydr7_asm6)
+		return Ydr7_asm6
 	case D_TR_6 + 0:
-		return int(Ytr0_asm6)
+		return Ytr0_asm6
 	case D_TR_6 + 1:
-		return int(Ytr1_asm6)
+		return Ytr1_asm6
 	case D_TR_6 + 2:
-		return int(Ytr2_asm6)
+		return Ytr2_asm6
 	case D_TR_6 + 3:
-		return int(Ytr3_asm6)
+		return Ytr3_asm6
 	case D_TR_6 + 4:
-		return int(Ytr4_asm6)
+		return Ytr4_asm6
 	case D_TR_6 + 5:
-		return int(Ytr5_asm6)
+		return Ytr5_asm6
 	case D_TR_6 + 6:
-		return int(Ytr6_asm6)
+		return Ytr6_asm6
 	case D_TR_6 + 7:
-		return int(Ytr7_asm6)
-	case D_EXTERN_6, D_STATIC_6, D_AUTO_6, D_PARAM_6:
-		return int(Ym_asm6)
-	case D_CONST_6, D_ADDR_6:
+		return Ytr7_asm6
+	case D_EXTERN_6,
+		D_STATIC_6,
+		D_AUTO_6,
+		D_PARAM_6:
+		return Ym_asm6
+	case D_CONST_6,
+		D_ADDR_6:
 		if a.sym == nil {
 			v = a.offset
 			if v == 0 {
-				return int(Yi0_asm6)
+				return Yi0_asm6
 			}
 			if v == 1 {
-				return int(Yi1_asm6)
+				return Yi1_asm6
 			}
 			if v >= -128 && v <= 127 {
-				return int(Yi8_asm6)
+				return Yi8_asm6
 			}
-			l = int32(v)
+			l = int64(int32(v))
 			if int64(l) == v {
-				return int(Ys32_asm6) /* can sign extend */
+				return Ys32_asm6 /* can sign extend */
 			}
-			if (v >> 32) == 0 {
-				return int(Yi32_asm6) /* unsigned */
+			if v>>32 == 0 {
+				return Yi32_asm6 /* unsigned */
 			}
-			return int(Yi64_asm6)
+			return Yi64_asm6
 		}
-		return int(Yi32_asm6) /* TO DO: D_ADDR as Yi64 */
+		return Yi32_asm6 /* TO DO: D_ADDR as Yi64 */
 	case D_BRANCH_6:
-		return int(Ybr_asm6)
+		return Ybr_asm6
 	}
-	return int(Yxxx_asm6)
+	return Yxxx_asm6
 }
 
-func asmidx_asm6(ctxt *Link, scale int, index int, base int) {
+func asmidx_asm6(ctxt *Link, scale int64, index int64, base int64) {
 	var i int
 	switch index {
 	default:
@@ -2850,11 +2697,25 @@ func asmidx_asm6(ctxt *Link, scale int, index int, base int) {
 	case D_NONE_6:
 		i = 4 << 3
 		goto bas
-	case D_R8_6, D_R9_6, D_R10_6, D_R11_6, D_R12_6, D_R13_6, D_R14_6, D_R15_6:
+	case D_R8_6,
+		D_R9_6,
+		D_R10_6,
+		D_R11_6,
+		D_R12_6,
+		D_R13_6,
+		D_R14_6,
+		D_R15_6:
 		if ctxt.asmode != 64 {
 			goto bad
 		}
-	case D_AX_6, D_CX_6, D_DX_6, D_BX_6, D_BP_6, D_SI_6, D_DI_6:
+		fallthrough
+	case D_AX_6,
+		D_CX_6,
+		D_DX_6,
+		D_BX_6,
+		D_BP_6,
+		D_SI_6,
+		D_DI_6:
 		i = reg_asm6[index] << 3
 		break
 	}
@@ -2864,13 +2725,11 @@ func asmidx_asm6(ctxt *Link, scale int, index int, base int) {
 	case 1:
 		break
 	case 2:
-		i |= (1 << 6)
-		break
+		i |= 1 << 6
 	case 4:
-		i |= (2 << 6)
-		break
+		i |= 2 << 6
 	case 8:
-		i |= (3 << 6)
+		i |= 3 << 6
 		break
 	}
 bas:
@@ -2879,12 +2738,26 @@ bas:
 		goto bad
 	case D_NONE_6: /* must be mod=00 */
 		i |= 5
-		break
-	case D_R8_6, D_R9_6, D_R10_6, D_R11_6, D_R12_6, D_R13_6, D_R14_6, D_R15_6:
+	case D_R8_6,
+		D_R9_6,
+		D_R10_6,
+		D_R11_6,
+		D_R12_6,
+		D_R13_6,
+		D_R14_6,
+		D_R15_6:
 		if ctxt.asmode != 64 {
 			goto bad
 		}
-	case D_AX_6, D_CX_6, D_DX_6, D_BX_6, D_SP_6, D_BP_6, D_SI_6, D_DI_6:
+		fallthrough
+	case D_AX_6,
+		D_CX_6,
+		D_DX_6,
+		D_BX_6,
+		D_SP_6,
+		D_BP_6,
+		D_SI_6,
+		D_DI_6:
 		i |= reg_asm6[base]
 		break
 	}
@@ -2898,7 +2771,7 @@ bad:
 	return
 }
 
-func put4_asm6(ctxt *Link, v int32) {
+func put4_asm6(ctxt *Link, v int64) {
 	ctxt.andptr[0] = uint8(v)
 	ctxt.andptr[1] = uint8(v >> 8)
 	ctxt.andptr[2] = uint8(v >> 16)
@@ -2917,9 +2790,9 @@ func relput4_asm6(ctxt *Link, p *Prog, a *Addr) {
 		}
 		r = addrel(ctxt.cursym)
 		*r = rel
-		r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+		r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 	}
-	put4_asm6(ctxt, int32(v))
+	put4_asm6(ctxt, v)
 }
 
 func put8_asm6(ctxt *Link, v int64) {
@@ -2934,144 +2807,214 @@ func put8_asm6(ctxt *Link, v int64) {
 	ctxt.andptr = ctxt.andptr[8:]
 }
 
+/*
+static void
+relput8(Prog *p, Addr *a)
+{
+	vlong v;
+	Reloc rel, *r;
+
+	v = vaddr(ctxt, a, &rel);
+	if(rel.siz != 0) {
+		r = addrel(ctxt->cursym);
+		*r = rel;
+		r->siz = 8;
+		r->off = p->pc + ctxt->andptr - ctxt->and;
+	}
+	put8(ctxt, v);
+}
+*/
+func vaddr_asm6(ctxt *Link, a *Addr, r *Reloc) int64 {
+	var t int64
+	var v int64
+	var s *LSym
+	if r != nil {
+		*r = Reloc{}
+	}
+	t = a.typ
+	v = a.offset
+	if t == D_ADDR_6 {
+		t = a.index
+	}
+	switch t {
+	case D_STATIC_6,
+		D_EXTERN_6:
+		s = a.sym
+		if r == nil {
+			ctxt.diag("need reloc for %D", a)
+			log.Fatalf("reloc")
+		}
+		r.siz = 4  // TODO: 8 for external symbols
+		r.off = -1 // caller must fill in
+		r.sym = s
+		r.add = v
+		v = 0
+		if ctxt.flag_shared != 0 || ctxt.headtype == Hnacl {
+			if s.typ == STLSBSS {
+				r.xadd = r.add - r.siz
+				r.typ = R_TLS
+				r.xsym = s
+			} else {
+				r.typ = R_PCREL
+			}
+		} else {
+			r.typ = R_ADDR
+		}
+	case D_INDIR_6 + D_TLS_6:
+		if r == nil {
+			ctxt.diag("need reloc for %D", a)
+			log.Fatalf("reloc")
+		}
+		r.typ = R_TLS_LE
+		r.siz = 4
+		r.off = -1 // caller must fill in
+		r.add = v
+		v = 0
+		break
+	}
+	return v
+}
+
 func asmandsz_asm6(ctxt *Link, a *Addr, r int, rex int, m64 int) {
-	var v int32
-	var t int
-	var scale int
+	var v int64
+	var t int64
+	var scale int64
 	var rel Reloc
-	rex &= (0x40 | int(Rxr_asm6))
-	v = int32(a.offset)
+	rex &= 0x40 | Rxr_asm6
+	v = a.offset
 	t = a.typ
 	rel.siz = 0
-	if a.index != int(D_NONE_6) && a.index != int(D_TLS_6) {
-		if t < int(D_INDIR_6) {
+	if a.index != D_NONE_6 && a.index != D_TLS_6 {
+		if t < D_INDIR_6 {
 			switch t {
 			default:
 				goto bad
-			case D_STATIC_6, D_EXTERN_6:
-				if ctxt.flag_shared != 0 || ctxt.headtype == int(Hnacl) {
+			case D_STATIC_6,
+				D_EXTERN_6:
+				if ctxt.flag_shared != 0 || ctxt.headtype == Hnacl {
 					goto bad
 				}
-				t = int(D_NONE_6)
-				v = int32(vaddr_asm6(ctxt, a, &rel))
-				break
-			case D_AUTO_6, D_PARAM_6:
-				t = int(D_SP_6)
+				t = D_NONE_6
+				v = vaddr_asm6(ctxt, a, &rel)
+			case D_AUTO_6,
+				D_PARAM_6:
+				t = D_SP_6
 				break
 			}
 		} else {
-			t -= int(D_INDIR_6)
+			t -= D_INDIR_6
 		}
-		ctxt.rexflag |= (regrex_asm6[int(a.index)] & int(Rxx_asm6)) | (regrex_asm6[t] & int(Rxb_asm6)) | rex
-		if t == int(D_NONE_6) {
-			ctxt.andptr[0] = uint8((0 << 6) | (4 << 0) | (r << 3))
+		ctxt.rexflag |= regrex_asm6[int(a.index)]&Rxx_asm6 | regrex_asm6[t]&Rxb_asm6 | rex
+		if t == D_NONE_6 {
+			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			asmidx_asm6(ctxt, a.scale, a.index, t)
 			goto putrelv
 		}
-		if v == 0 && rel.siz == 0 && t != int(D_BP_6) && t != int(D_R13_6) {
-			ctxt.andptr[0] = uint8((0 << 6) | (4 << 0) | (r << 3))
+		if v == 0 && rel.siz == 0 && t != D_BP_6 && t != D_R13_6 {
+			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			asmidx_asm6(ctxt, a.scale, a.index, t)
 			return
 		}
 		if v >= -128 && v < 128 && rel.siz == 0 {
-			ctxt.andptr[0] = uint8((1 << 6) | (4 << 0) | (r << 3))
+			ctxt.andptr[0] = uint8(1<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			asmidx_asm6(ctxt, a.scale, a.index, t)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			return
 		}
-		ctxt.andptr[0] = uint8((2 << 6) | (4 << 0) | (r << 3))
+		ctxt.andptr[0] = uint8(2<<6 | 4<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmidx_asm6(ctxt, a.scale, a.index, t)
 		goto putrelv
 	}
-	if t >= int(D_AL_6) && t <= D_X0_6+15 {
+	if t >= D_AL_6 && t <= D_X0_6+15 {
 		if v != 0 {
 			goto bad
 		}
-		ctxt.andptr[0] = uint8((3 << 6) | (reg_asm6[t] << 0) | (r << 3))
+		ctxt.andptr[0] = uint8(3<<6 | reg_asm6[t]<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.rexflag |= (regrex_asm6[t] & (0x40 | int(Rxb_asm6))) | rex
+		ctxt.rexflag |= regrex_asm6[t]&(0x40|Rxb_asm6) | rex
 		return
 	}
 	scale = a.scale
-	if t < int(D_INDIR_6) {
+	if t < D_INDIR_6 {
 		switch a.typ {
 		default:
 			goto bad
-		case D_STATIC_6, D_EXTERN_6:
-			t = int(D_NONE_6)
-			v = int32(vaddr_asm6(ctxt, a, &rel))
-			break
-		case D_AUTO_6, D_PARAM_6:
-			t = int(D_SP_6)
+		case D_STATIC_6,
+			D_EXTERN_6:
+			t = D_NONE_6
+			v = vaddr_asm6(ctxt, a, &rel)
+		case D_AUTO_6,
+			D_PARAM_6:
+			t = D_SP_6
 			break
 		}
 		scale = 1
 	} else {
-		t -= int(D_INDIR_6)
+		t -= D_INDIR_6
 	}
-	if t == int(D_TLS_6) {
-		v = int32(vaddr_asm6(ctxt, a, &rel))
+	if t == D_TLS_6 {
+		v = vaddr_asm6(ctxt, a, &rel)
 	}
-	ctxt.rexflag |= (regrex_asm6[t] & int(Rxb_asm6)) | rex
-	if t == int(D_NONE_6) || (D_CS_6 <= int(t) && t <= int(D_GS_6)) || t == int(D_TLS_6) {
-		if (ctxt.flag_shared != 0 || ctxt.headtype == int(Hnacl)) && t == int(D_NONE_6) && (a.typ == int(D_STATIC_6) || a.typ == int(D_EXTERN_6)) || ctxt.asmode != 64 {
-			ctxt.andptr[0] = uint8((0 << 6) | (5 << 0) | (r << 3))
+	ctxt.rexflag |= regrex_asm6[t]&Rxb_asm6 | rex
+	if t == D_NONE_6 || (D_CS_6 <= t && t <= D_GS_6) || t == D_TLS_6 {
+		if (ctxt.flag_shared != 0 || ctxt.headtype == Hnacl) && t == D_NONE_6 && (a.typ == D_STATIC_6 || a.typ == D_EXTERN_6) || ctxt.asmode != 64 {
+			ctxt.andptr[0] = uint8(0<<6 | 5<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			goto putrelv
 		}
 		/* temporary */
-		ctxt.andptr[0] = uint8((0 << 6) | (4 << 0) | (r << 3))
+		ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:] /* sib present */
-		ctxt.andptr[0] = uint8((0 << 6) | (4 << 3) | (5 << 0))
+		ctxt.andptr[0] = 0<<6 | 4<<3 | 5<<0
 		ctxt.andptr = ctxt.andptr[1:] /* DS:d32 */
 		goto putrelv
 	}
-	if t == int(D_SP_6) || t == int(D_R12_6) {
+	if t == D_SP_6 || t == D_R12_6 {
 		if v == 0 {
-			ctxt.andptr[0] = uint8((0 << 6) | (reg_asm6[t] << 0) | (r << 3))
+			ctxt.andptr[0] = uint8(0<<6 | reg_asm6[t]<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm6(ctxt, scale, int(D_NONE_6), t)
+			asmidx_asm6(ctxt, scale, D_NONE_6, t)
 			return
 		}
 		if v >= -128 && v < 128 {
-			ctxt.andptr[0] = uint8((1 << 6) | (reg_asm6[t] << 0) | (r << 3))
+			ctxt.andptr[0] = uint8(1<<6 | reg_asm6[t]<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm6(ctxt, scale, int(D_NONE_6), t)
+			asmidx_asm6(ctxt, scale, D_NONE_6, t)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			return
 		}
-		ctxt.andptr[0] = uint8((2 << 6) | (reg_asm6[t] << 0) | (r << 3))
+		ctxt.andptr[0] = uint8(2<<6 | reg_asm6[t]<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmidx_asm6(ctxt, scale, int(D_NONE_6), t)
+		asmidx_asm6(ctxt, scale, D_NONE_6, t)
 		goto putrelv
 	}
-	if t >= int(D_AX_6) && t <= int(D_R15_6) {
-		if a.index == int(D_TLS_6) {
+	if t >= D_AX_6 && t <= D_R15_6 {
+		if a.index == D_TLS_6 {
 			rel = Reloc{}
-			rel.typ = int(R_TLS_IE)
+			rel.typ = R_TLS_IE
 			rel.siz = 4
-			rel.sym = (*LSym)(nil)
-			rel.add = int64(v)
+			rel.sym = nil
+			rel.add = v
 			v = 0
 		}
-		if v == 0 && rel.siz == 0 && t != int(D_BP_6) && t != int(D_R13_6) {
-			ctxt.andptr[0] = uint8((0 << 6) | (reg_asm6[t] << 0) | (r << 3))
+		if v == 0 && rel.siz == 0 && t != D_BP_6 && t != D_R13_6 {
+			ctxt.andptr[0] = uint8(0<<6 | reg_asm6[t]<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
 			return
 		}
 		if v >= -128 && v < 128 && rel.siz == 0 {
-			ctxt.andptr[0] = uint8((1 << 6) | (reg_asm6[t] << 0) | (r << 3))
+			ctxt.andptr[0] = uint8(1<<6 | reg_asm6[t]<<0 | r<<3)
 			ctxt.andptr[1] = uint8(v)
 			ctxt.andptr = ctxt.andptr[2:]
 			return
 		}
-		ctxt.andptr[0] = uint8((2 << 6) | (reg_asm6[t] << 0) | (r << 3))
+		ctxt.andptr[0] = uint8(2<<6 | reg_asm6[t]<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
 		goto putrelv
 	}
@@ -3085,7 +3028,7 @@ putrelv:
 		}
 		r = addrel(ctxt.cursym)
 		*r = rel
-		r.off = ctxt.curp.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+		r.off = ctxt.curp.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 	}
 	put4_asm6(ctxt, v)
 	return
@@ -3102,9 +3045,9 @@ func asmando_asm6(ctxt *Link, a *Addr, o int) {
 	asmandsz_asm6(ctxt, a, o, 0, 0)
 }
 
-func bytereg_asm6(a *Addr, t *int) {
-	if a.index == int(D_NONE_6) && (a.typ >= int(D_AX_6) && a.typ <= int(D_R15_6)) {
-		a.typ = int(D_AL_6 + int(a.typ-int(D_AX_6)))
+func bytereg_asm6(a *Addr, t *uint8) {
+	if a.index == D_NONE_6 && (a.typ >= D_AX_6 && a.typ <= D_R15_6) {
+		a.typ = D_AL_6 + (a.typ - D_AX_6)
 		*t = 0
 	}
 }
@@ -3229,18 +3172,21 @@ var ymovtab_asm6 = []Movtab_asm6{
 
 func isax_asm6(a *Addr) int {
 	switch a.typ {
-	case D_AX_6, D_AL_6, D_AH_6, D_INDIR_6 + D_AX_6:
+	case D_AX_6,
+		D_AL_6,
+		D_AH_6,
+		D_INDIR_6 + D_AX_6:
 		return 1
 	}
-	if a.index == int(D_AX_6) {
+	if a.index == D_AX_6 {
 		return 1
 	}
 	return 0
 }
 
-func subreg_asm6(ctxt *Link, p *Prog, from int, to int) {
+func subreg_asm6(p *Prog, from int64, to int64) {
 	if false { /*debug['Q']*/
-		print("\n%v	s/%R/%R/\n", Pconv_list6(ctxt, p), from, to)
+		fmt.Printf("\n%v\ts/%v/%v/\n", p, Rconv_list6(from), Rconv_list6(to))
 	}
 	if p.from.typ == from {
 		p.from.typ = to
@@ -3254,35 +3200,39 @@ func subreg_asm6(ctxt *Link, p *Prog, from int, to int) {
 	if p.to.index == from {
 		p.to.index = to
 	}
-	from += int(D_INDIR_6)
+	from += D_INDIR_6
 	if p.from.typ == from {
-		p.from.typ = to + int(D_INDIR_6)
+		p.from.typ = to + D_INDIR_6
 	}
 	if p.to.typ == from {
-		p.to.typ = to + int(D_INDIR_6)
+		p.to.typ = to + D_INDIR_6
 	}
 	if false { /*debug['Q']*/
-		print("%v\n", Pconv_list6(ctxt, p))
+		fmt.Printf("%v\n", p)
 	}
 }
 
-func mediaop_asm6(ctxt *Link, o *Optab_asm6, op int, osize int, z int) int {
+func mediaop_asm6(ctxt *Link, o *Optab_asm6, op int64, osize int, z int64) int64 {
 	switch op {
-	case Pm_asm6, Pe_asm6, Pf2_asm6, Pf3_asm6:
+	case Pm_asm6,
+		Pe_asm6,
+		Pf2_asm6,
+		Pf3_asm6:
 		if osize != 1 {
-			if op != int(Pm_asm6) {
+			if op != Pm_asm6 {
 				ctxt.andptr[0] = uint8(op)
 				ctxt.andptr = ctxt.andptr[1:]
 			}
-			ctxt.andptr[0] = uint8(Pm_asm6)
+			ctxt.andptr[0] = Pm_asm6
 			ctxt.andptr = ctxt.andptr[1:]
 			z++
-			op = int(o.op[z])
+			op = int64(o.op[z])
 			break
 		}
+		fallthrough
 	default:
-		if cap(ctxt.andptr) == cap(ctxt.and) || int(ctxt.and[len(ctxt.andptr)-1]) != Pm_asm6 {
-			ctxt.andptr[0] = uint8(Pm_asm6)
+		if -cap(ctxt.andptr) == -cap(ctxt.and) || ctxt.and[-cap(ctxt.andptr)+cap(ctxt.and[:])-1] != Pm_asm6 {
+			ctxt.andptr[0] = Pm_asm6
 			ctxt.andptr = ctxt.andptr[1:]
 		}
 		break
@@ -3298,11 +3248,11 @@ func doasm_asm6(ctxt *Link, p *Prog) {
 	var pp Prog
 	var t []uint8
 	var mo []Movtab_asm6
-	var z int
-	var op int
+	var z int64
+	var op int64
 	var ft int
 	var tt int
-	var xo bool
+	var xo int
 	var l int
 	var pre int
 	var v int64
@@ -3312,7 +3262,7 @@ func doasm_asm6(ctxt *Link, p *Prog) {
 	ctxt.curp = p // TODO
 	o = opindex_asm6[p.as]
 	if o == nil {
-		ctxt.diag("asmins: missing op %v", Pconv_list6(ctxt, p))
+		ctxt.diag("asmins: missing op %P", p)
 		return
 	}
 	pre = prefixof_asm6(ctxt, &p.from)
@@ -3326,20 +3276,20 @@ func doasm_asm6(ctxt *Link, p *Prog) {
 		ctxt.andptr = ctxt.andptr[1:]
 	}
 	if p.ft == 0 {
-		p.ft = oclass_asm6(ctxt, &p.from)
+		p.ft = uint8(oclass_asm6(ctxt, &p.from))
 	}
 	if p.tt == 0 {
-		p.tt = oclass_asm6(ctxt, &p.to)
+		p.tt = uint8(oclass_asm6(ctxt, &p.to))
 	}
-	ft = p.ft * int(Ymax_asm6)
-	tt = p.tt * int(Ymax_asm6)
+	ft = int(p.ft) * Ymax_asm6
+	tt = int(p.tt) * Ymax_asm6
 	t = o.ytab
 	if t == nil {
-		ctxt.diag("asmins: noproto %v", Pconv_list6(ctxt, p))
+		ctxt.diag("asmins: noproto %P", p)
 		return
 	}
-	xo = o.op[0] == 0x0f
-	for z = 0; t[0] != 0; (func() { z += int(t[3]) + int(bool2int(xo)); t = t[4:] })() {
+	xo = bool2int(o.op[0] == 0x0f)
+	for z = 0; t[0] != 0; (func() { z += int64(t[3]) + int64(xo); t = t[4:] })() {
 		if ycover_asm6[ft+int(t[0])] != 0 {
 			if ycover_asm6[tt+int(t[1])] != 0 {
 				goto found
@@ -3350,84 +3300,75 @@ func doasm_asm6(ctxt *Link, p *Prog) {
 found:
 	switch o.prefix {
 	case Pq_asm6: /* 16 bit escape and opcode escape */
-		ctxt.andptr[0] = uint8(Pe_asm6)
+		ctxt.andptr[0] = Pe_asm6
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(Pm_asm6)
+		ctxt.andptr[0] = Pm_asm6
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Pq3_asm6: /* 16 bit escape, Rex.w, and opcode escape */
-		ctxt.andptr[0] = uint8(Pe_asm6)
+		ctxt.andptr[0] = Pe_asm6
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(Pw_asm6)
+		ctxt.andptr[0] = Pw_asm6
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(Pm_asm6)
+		ctxt.andptr[0] = Pm_asm6
 		ctxt.andptr = ctxt.andptr[1:]
-		break
-	case Pf2_asm6: /* xmm opcode escape */
-	case Pf3_asm6:
+	case Pf2_asm6, /* xmm opcode escape */
+		Pf3_asm6:
 		ctxt.andptr[0] = uint8(o.prefix)
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(Pm_asm6)
+		ctxt.andptr[0] = Pm_asm6
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Pm_asm6: /* opcode escape */
-		ctxt.andptr[0] = uint8(Pm_asm6)
+		ctxt.andptr[0] = Pm_asm6
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Pe_asm6: /* 16 bit escape */
-		ctxt.andptr[0] = uint8(Pe_asm6)
+		ctxt.andptr[0] = Pe_asm6
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Pw_asm6: /* 64-bit escape */
 		if p.mode != 64 {
-			ctxt.diag("asmins: illegal 64: %v", Pconv_list6(ctxt, p))
+			ctxt.diag("asmins: illegal 64: %P", p)
 		}
-		ctxt.rexflag |= int(Pw_asm6)
-		break
+		ctxt.rexflag |= Pw_asm6
 	case Pb_asm6: /* botch */
 		bytereg_asm6(&p.from, &p.ft)
 		bytereg_asm6(&p.to, &p.tt)
-		break
 	case P32_asm6: /* 32 bit but illegal if 64-bit mode */
 		if p.mode == 64 {
-			ctxt.diag("asmins: illegal in 64-bit mode: %v", Pconv_list6(ctxt, p))
+			ctxt.diag("asmins: illegal in 64-bit mode: %P", p)
 		}
-		break
 	case Py_asm6: /* 64-bit only, no prefix */
 		if p.mode != 64 {
-			ctxt.diag("asmins: illegal in %d-bit mode: %v", p.mode, Pconv_list6(ctxt, p))
+			ctxt.diag("asmins: illegal in %d-bit mode: %P", p.mode, p)
 		}
 		break
 	}
-	if z >= len(o.op) {
-		sysfatal("asmins bad table %v", Pconv_list6(ctxt, p))
+	if z >= int64(len(o.op)) {
+		log.Fatalf("asmins bad table %v", p)
 	}
-	op = int(o.op[z])
+	op = int64(o.op[z])
 	if op == 0x0f {
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		z++
-		op = int(o.op[z])
+		op = int64(o.op[z])
 	}
 	switch t[2] {
 	default:
-		ctxt.diag("asmins: unknown z %d %v", t[2], Pconv_list6(ctxt, p))
+		ctxt.diag("asmins: unknown z %d %P", t[2], p)
 		return
 	case Zpseudo_asm6:
 		break
 	case Zlit_asm6:
 		for ; ; z++ {
-			op = int(o.op[z])
+			op = int64(o.op[z])
 			if !(op != 0) {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
 			ctxt.andptr = ctxt.andptr[1:]
 		}
-		break
 	case Zlitm_r_asm6:
 		for ; ; z++ {
-			op = int(o.op[z])
+			op = int64(o.op[z])
 			if !(op != 0) {
 				break
 			}
@@ -3435,37 +3376,32 @@ found:
 			ctxt.andptr = ctxt.andptr[1:]
 		}
 		asmand_asm6(ctxt, &p.from, &p.to)
-		break
 	case Zmb_r_asm6:
 		bytereg_asm6(&p.from, &p.ft)
+		fallthrough
 	/* fall through */
 	case Zm_r_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm6(ctxt, &p.from, &p.to)
-		break
 	case Zm2_r_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = o.op[z+1]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm6(ctxt, &p.from, &p.to)
-		break
 	case Zm_r_xm_asm6:
 		mediaop_asm6(ctxt, o, op, int(t[3]), z)
 		asmand_asm6(ctxt, &p.from, &p.to)
-		break
 	case Zm_r_xm_nr_asm6:
 		ctxt.rexflag = 0
 		mediaop_asm6(ctxt, o, op, int(t[3]), z)
 		asmand_asm6(ctxt, &p.from, &p.to)
-		break
 	case Zm_r_i_xm_asm6:
 		mediaop_asm6(ctxt, o, op, int(t[3]), z)
 		asmand_asm6(ctxt, &p.from, &p.to)
 		ctxt.andptr[0] = uint8(p.to.offset)
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zm_r_3d_asm6:
 		ctxt.andptr[0] = 0x0f
 		ctxt.andptr = ctxt.andptr[1:]
@@ -3474,13 +3410,12 @@ found:
 		asmand_asm6(ctxt, &p.from, &p.to)
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zibm_r_asm6:
 		for {
-			var tmp int = z
+			tmp1 := z
 			z++
-			op = int(o.op[tmp])
-			if !((op) != 0) {
+			op = int64(o.op[tmp1])
+			if !(op != 0) {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
@@ -3489,104 +3424,92 @@ found:
 		asmand_asm6(ctxt, &p.from, &p.to)
 		ctxt.andptr[0] = uint8(p.to.offset)
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zaut_r_asm6:
 		ctxt.andptr[0] = 0x8d
 		ctxt.andptr = ctxt.andptr[1:] /* leal */
-		if p.from.typ != int(D_ADDR_6) {
+		if p.from.typ != D_ADDR_6 {
 			ctxt.diag("asmins: Zaut sb type ADDR")
 		}
 		p.from.typ = p.from.index
-		p.from.index = int(D_NONE_6)
+		p.from.index = D_NONE_6
 		asmand_asm6(ctxt, &p.from, &p.to)
 		p.from.index = p.from.typ
-		p.from.typ = int(D_ADDR_6)
-		break
+		p.from.typ = D_ADDR_6
 	case Zm_o_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmando_asm6(ctxt, &p.from, int(o.op[z+1]))
-		break
 	case Zr_m_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm6(ctxt, &p.to, &p.from)
-		break
 	case Zr_m_xm_asm6:
 		mediaop_asm6(ctxt, o, op, int(t[3]), z)
 		asmand_asm6(ctxt, &p.to, &p.from)
-		break
 	case Zr_m_xm_nr_asm6:
 		ctxt.rexflag = 0
 		mediaop_asm6(ctxt, o, op, int(t[3]), z)
 		asmand_asm6(ctxt, &p.to, &p.from)
-		break
 	case Zr_m_i_xm_asm6:
 		mediaop_asm6(ctxt, o, op, int(t[3]), z)
 		asmand_asm6(ctxt, &p.to, &p.from)
 		ctxt.andptr[0] = uint8(p.from.offset)
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zo_m_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmando_asm6(ctxt, &p.to, int(o.op[z+1]))
-		break
 	case Zcallindreg_asm6:
 		r = addrel(ctxt.cursym)
 		r.off = p.pc
-		r.typ = int(R_CALLIND)
+		r.typ = R_CALLIND
 		r.siz = 0
 		fallthrough
+	// fallthrough
 	case Zo_m64_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmandsz_asm6(ctxt, &p.to, int(o.op[z+1]), 0, 1)
-		break
 	case Zm_ibo_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmando_asm6(ctxt, &p.from, int(o.op[z+1]))
-		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.to, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.to, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zibo_m_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmando_asm6(ctxt, &p.to, int(o.op[z+1]))
-		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zibo_m_xm_asm6:
 		z = mediaop_asm6(ctxt, o, op, int(t[3]), z)
 		asmando_asm6(ctxt, &p.to, int(o.op[z+1]))
-		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
-	case Z_ib_asm6, Zib__asm6:
-		if int(t[2]) == Zib__asm6 {
+	case Z_ib_asm6,
+		Zib__asm6:
+		if t[2] == Zib__asm6 {
 			a = &p.from
 		} else {
 			a = &p.to
 		}
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, a, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, a, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zib_rp_asm6:
-		ctxt.rexflag |= regrex_asm6[p.to.typ] & int(Rxb_asm6|0x40)
-		ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
+		ctxt.rexflag |= regrex_asm6[p.to.typ] & (Rxb_asm6 | 0x40)
+		ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.to.typ]))
 		ctxt.andptr = ctxt.andptr[1:]
-		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zil_rp_asm6:
-		ctxt.rexflag |= regrex_asm6[p.to.typ] & int(Rxb_asm6)
-		ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
+		ctxt.rexflag |= regrex_asm6[p.to.typ] & Rxb_asm6
+		ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.to.typ]))
 		ctxt.andptr = ctxt.andptr[1:]
-		if o.prefix == int(Pe_asm6) {
-			v = vaddr_asm6(ctxt, &p.from, (*Reloc)(nil))
+		if o.prefix == Pe_asm6 {
+			v = vaddr_asm6(ctxt, &p.from, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
@@ -3594,73 +3517,68 @@ found:
 		} else {
 			relput4_asm6(ctxt, p, &p.from)
 		}
-		break
 	case Zo_iw_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		if p.from.typ != int(D_NONE_6) {
-			v = vaddr_asm6(ctxt, &p.from, (*Reloc)(nil))
+		if p.from.typ != D_NONE_6 {
+			v = vaddr_asm6(ctxt, &p.from, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
 			ctxt.andptr = ctxt.andptr[1:]
 		}
-		break
 	case Ziq_rp_asm6:
 		v = vaddr_asm6(ctxt, &p.from, &rel)
 		l = int(v >> 32)
 		if l == 0 && rel.siz != 8 {
 			//p->mark |= 0100;
-			//print("zero: %x %v\n", v, Pconv_list6(ctxt, p));
-			ctxt.rexflag &^= (0x40 | int(Rxw_asm6))
-			ctxt.rexflag |= regrex_asm6[p.to.typ] & int(Rxb_asm6)
+			//print("zero: %llux %P\n", v, p);
+			ctxt.rexflag &^= (0x40 | Rxw_asm6)
+			ctxt.rexflag |= regrex_asm6[p.to.typ] & Rxb_asm6
 			ctxt.andptr[0] = uint8(0xb8 + reg_asm6[p.to.typ])
 			ctxt.andptr = ctxt.andptr[1:]
 			if rel.typ != 0 {
 				r = addrel(ctxt.cursym)
 				*r = rel
-				r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+				r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 			}
-			put4_asm6(ctxt, int32(v))
+			put4_asm6(ctxt, v)
+		} else if l == -1 && uint64(v)&(uint64(1)<<31) != 0 { /* sign extend */
+			//p->mark |= 0100;
+			//print("sign: %llux %P\n", v, p);
+			ctxt.andptr[0] = 0xc7
+			ctxt.andptr = ctxt.andptr[1:]
+			asmando_asm6(ctxt, &p.to, 0)
+			put4_asm6(ctxt, v) /* need all 8 */
 		} else {
-			if l == -1 && (uint64(v)&(uint64(1)<<31)) != 0 { /* sign extend */
-				//p->mark |= 0100;
-				//print("sign: %x %v\n", v, Pconv_list6(ctxt, p));
-				ctxt.andptr[0] = 0xc7
-				ctxt.andptr = ctxt.andptr[1:]
-				asmando_asm6(ctxt, &p.to, 0)
-				put4_asm6(ctxt, int32(v)) /* need all 8 */
-			} else {
-				//print("all: %x %v\n", v, Pconv_list6(ctxt, p));
-				ctxt.rexflag |= regrex_asm6[p.to.typ] & int(Rxb_asm6)
-				ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
-				ctxt.andptr = ctxt.andptr[1:]
-				if rel.typ != 0 {
-					r = addrel(ctxt.cursym)
-					*r = rel
-					r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
-				}
-				put8_asm6(ctxt, v)
+			//print("all: %llux %P\n", v, p);
+			ctxt.rexflag |= regrex_asm6[p.to.typ] & Rxb_asm6
+			ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.to.typ]))
+			ctxt.andptr = ctxt.andptr[1:]
+			if rel.typ != 0 {
+				r = addrel(ctxt.cursym)
+				*r = rel
+				r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 			}
+			put8_asm6(ctxt, v)
 		}
-		break
 	case Zib_rr_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm6(ctxt, &p.to, &p.to)
-		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, (*Reloc)(nil)))
+		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
-	case Z_il_asm6, Zil__asm6:
-		if int(t[2]) == Zil__asm6 {
+	case Z_il_asm6,
+		Zil__asm6:
+		if t[2] == Zil__asm6 {
 			a = &p.from
 		} else {
 			a = &p.to
 		}
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		if o.prefix == int(Pe_asm6) {
-			v = vaddr_asm6(ctxt, a, (*Reloc)(nil))
+		if o.prefix == Pe_asm6 {
+			v = vaddr_asm6(ctxt, a, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
@@ -3668,19 +3586,19 @@ found:
 		} else {
 			relput4_asm6(ctxt, p, a)
 		}
-		break
-	case Zm_ilo_asm6, Zilo_m_asm6:
+	case Zm_ilo_asm6,
+		Zilo_m_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
-		if int(t[2]) == Zilo_m_asm6 {
+		if t[2] == Zilo_m_asm6 {
 			a = &p.from
 			asmando_asm6(ctxt, &p.to, int(o.op[z+1]))
 		} else {
 			a = &p.to
 			asmando_asm6(ctxt, &p.from, int(o.op[z+1]))
 		}
-		if o.prefix == int(Pe_asm6) {
-			v = vaddr_asm6(ctxt, a, (*Reloc)(nil))
+		if o.prefix == Pe_asm6 {
+			v = vaddr_asm6(ctxt, a, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
@@ -3688,13 +3606,12 @@ found:
 		} else {
 			relput4_asm6(ctxt, p, a)
 		}
-		break
 	case Zil_rr_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm6(ctxt, &p.to, &p.to)
-		if o.prefix == int(Pe_asm6) {
-			v = vaddr_asm6(ctxt, &p.from, (*Reloc)(nil))
+		if o.prefix == Pe_asm6 {
+			v = vaddr_asm6(ctxt, &p.from, nil)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = uint8(v >> 8)
@@ -3702,50 +3619,47 @@ found:
 		} else {
 			relput4_asm6(ctxt, p, &p.from)
 		}
-		break
 	case Z_rp_asm6:
-		ctxt.rexflag |= regrex_asm6[p.to.typ] & int(Rxb_asm6|0x40)
-		ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
+		ctxt.rexflag |= regrex_asm6[p.to.typ] & (Rxb_asm6 | 0x40)
+		ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.to.typ]))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zrp__asm6:
-		ctxt.rexflag |= regrex_asm6[p.from.typ] & int(Rxb_asm6|0x40)
-		ctxt.andptr[0] = uint8(op + reg_asm6[p.from.typ])
+		ctxt.rexflag |= regrex_asm6[p.from.typ] & (Rxb_asm6 | 0x40)
+		ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.from.typ]))
 		ctxt.andptr = ctxt.andptr[1:]
-		break
 	case Zclr_asm6:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		asmand_asm6(ctxt, &p.to, &p.to)
-		break
 	case Zcall_asm6:
 		if p.to.sym == nil {
 			ctxt.diag("call without target")
-			sysfatal("bad code")
+			log.Fatalf("bad code")
 		}
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		r = addrel(ctxt.cursym)
-		r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+		r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 		r.sym = p.to.sym
 		r.add = p.to.offset
-		r.typ = int(R_CALL)
+		r.typ = R_CALL
 		r.siz = 4
 		put4_asm6(ctxt, 0)
-		break
 	// TODO: jump across functions needs reloc
-	case Zbr_asm6, Zjmp_asm6, Zloop_asm6:
+	case Zbr_asm6,
+		Zjmp_asm6,
+		Zloop_asm6:
 		if p.to.sym != nil {
-			if int(t[2]) != Zjmp_asm6 {
+			if t[2] != Zjmp_asm6 {
 				ctxt.diag("branch to ATEXT")
-				sysfatal("bad code")
+				log.Fatalf("bad code")
 			}
 			ctxt.andptr[0] = o.op[z+1]
 			ctxt.andptr = ctxt.andptr[1:]
 			r = addrel(ctxt.cursym)
-			r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+			r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 			r.sym = p.to.sym
-			r.typ = int(R_PCREL)
+			r.typ = R_PCREL
 			r.siz = 4
 			put4_asm6(ctxt, 0)
 			break
@@ -3756,12 +3670,12 @@ found:
 		q = p.pcond
 		if q == nil {
 			ctxt.diag("jmp/branch/loop without target")
-			sysfatal("bad code")
+			log.Fatalf("bad code")
 		}
-		if p.back&1 != 0 /*untyped*/ {
-			v = int64(q.pc) - (int64(p.pc) + 2)
+		if p.back&1 != 0 {
+			v = q.pc - (p.pc + 2)
 			if v >= -128 {
-				if p.as == int(AJCXZL_6) {
+				if p.as == AJCXZL_6 {
 					ctxt.andptr[0] = 0x67
 					ctxt.andptr = ctxt.andptr[1:]
 				}
@@ -3769,35 +3683,33 @@ found:
 				ctxt.andptr = ctxt.andptr[1:]
 				ctxt.andptr[0] = uint8(v)
 				ctxt.andptr = ctxt.andptr[1:]
+			} else if t[2] == Zloop_asm6 {
+				ctxt.diag("loop too far: %P", p)
 			} else {
-				if int(t[2]) == Zloop_asm6 {
-					ctxt.diag("loop too far: %v", Pconv_list6(ctxt, p))
-				} else {
-					v -= 5 - 2
-					if int(t[2]) == Zbr_asm6 {
-						ctxt.andptr[0] = 0x0f
-						ctxt.andptr = ctxt.andptr[1:]
-						v--
-					}
-					ctxt.andptr[0] = o.op[z+1]
+				v -= 5 - 2
+				if t[2] == Zbr_asm6 {
+					ctxt.andptr[0] = 0x0f
 					ctxt.andptr = ctxt.andptr[1:]
-					ctxt.andptr[0] = uint8(v)
-					ctxt.andptr = ctxt.andptr[1:]
-					ctxt.andptr[0] = uint8(v >> 8)
-					ctxt.andptr = ctxt.andptr[1:]
-					ctxt.andptr[0] = uint8(v >> 16)
-					ctxt.andptr = ctxt.andptr[1:]
-					ctxt.andptr[0] = uint8(v >> 24)
-					ctxt.andptr = ctxt.andptr[1:]
+					v--
 				}
+				ctxt.andptr[0] = o.op[z+1]
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(v)
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(v >> 8)
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(v >> 16)
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(v >> 24)
+				ctxt.andptr = ctxt.andptr[1:]
 			}
 			break
 		}
 		// Annotate target; will fill in later.
 		p.forwd = q.comefrom
 		q.comefrom = p
-		if p.back&2 != 0 /*untyped*/ { // short
-			if p.as == int(AJCXZL_6) {
+		if p.back&2 != 0 { // short
+			if p.as == AJCXZL_6 {
 				ctxt.andptr[0] = 0x67
 				ctxt.andptr = ctxt.andptr[1:]
 			}
@@ -3805,25 +3717,23 @@ found:
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = 0
 			ctxt.andptr = ctxt.andptr[1:]
+		} else if t[2] == Zloop_asm6 {
+			ctxt.diag("loop too far: %P", p)
 		} else {
-			if int(t[2]) == Zloop_asm6 {
-				ctxt.diag("loop too far: %v", Pconv_list6(ctxt, p))
-			} else {
-				if int(t[2]) == Zbr_asm6 {
-					ctxt.andptr[0] = 0x0f
-					ctxt.andptr = ctxt.andptr[1:]
-				}
-				ctxt.andptr[0] = o.op[z+1]
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0
-				ctxt.andptr = ctxt.andptr[1:]
-				ctxt.andptr[0] = 0
+			if t[2] == Zbr_asm6 {
+				ctxt.andptr[0] = 0x0f
 				ctxt.andptr = ctxt.andptr[1:]
 			}
+			ctxt.andptr[0] = o.op[z+1]
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.andptr[0] = 0
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.andptr[0] = 0
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.andptr[0] = 0
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.andptr[0] = 0
+			ctxt.andptr = ctxt.andptr[1:]
 		}
 		break
 		/*
@@ -3844,14 +3754,14 @@ found:
 				*ctxt->andptr++ = v>>24;
 			}
 		*/
-		break
+
 	case Zbyte_asm6:
 		v = vaddr_asm6(ctxt, &p.from, &rel)
 		if rel.siz != 0 {
-			rel.siz = uint8(op)
+			rel.siz = op
 			r = addrel(ctxt.cursym)
 			*r = rel
-			r.off = p.pc - (-cap(ctxt.andptr) + cap(ctxt.and))
+			r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 		}
 		ctxt.andptr[0] = uint8(v)
 		ctxt.andptr = ctxt.andptr[1:]
@@ -3900,14 +3810,14 @@ bad:
 		 */
 		pp = *p
 		z = p.from.typ
-		if z >= int(D_BP_6) && z <= int(D_DI_6) {
-			if isax_asm6(&p.to) != 0 || p.to.typ == int(D_NONE_6) {
+		if z >= D_BP_6 && z <= D_DI_6 {
+			if isax_asm6(&p.to) != 0 || p.to.typ == D_NONE_6 {
 				// We certainly don't want to exchange
 				// with AX if the op is MUL or DIV.
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg lhs,bx */
 				asmando_asm6(ctxt, &p.from, reg_asm6[D_BX_6])
-				subreg_asm6(ctxt, &pp, z, int(D_BX_6))
+				subreg_asm6(&pp, z, D_BX_6)
 				doasm_asm6(ctxt, &pp)
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg lhs,bx */
@@ -3915,7 +3825,7 @@ bad:
 			} else {
 				ctxt.andptr[0] = uint8(0x90 + reg_asm6[z])
 				ctxt.andptr = ctxt.andptr[1:] /* xchg lsh,ax */
-				subreg_asm6(ctxt, &pp, z, int(D_AX_6))
+				subreg_asm6(&pp, z, D_AX_6)
 				doasm_asm6(ctxt, &pp)
 				ctxt.andptr[0] = uint8(0x90 + reg_asm6[z])
 				ctxt.andptr = ctxt.andptr[1:] /* xchg lsh,ax */
@@ -3923,12 +3833,12 @@ bad:
 			return
 		}
 		z = p.to.typ
-		if z >= int(D_BP_6) && z <= int(D_DI_6) {
+		if z >= D_BP_6 && z <= D_DI_6 {
 			if isax_asm6(&p.from) != 0 {
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
 				asmando_asm6(ctxt, &p.to, reg_asm6[D_BX_6])
-				subreg_asm6(ctxt, &pp, z, int(D_BX_6))
+				subreg_asm6(&pp, z, D_BX_6)
 				doasm_asm6(ctxt, &pp)
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
@@ -3936,7 +3846,7 @@ bad:
 			} else {
 				ctxt.andptr[0] = uint8(0x90 + reg_asm6[z])
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rsh,ax */
-				subreg_asm6(ctxt, &pp, z, int(D_AX_6))
+				subreg_asm6(&pp, z, D_AX_6)
 				doasm_asm6(ctxt, &pp)
 				ctxt.andptr[0] = uint8(0x90 + reg_asm6[z])
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rsh,ax */
@@ -3944,45 +3854,39 @@ bad:
 			return
 		}
 	}
-	ctxt.diag("doasm: notfound from=%#x to=%#x ft=%d tt=%d %v", p.from.typ, p.to.typ, ft, tt, Pconv_list6(ctxt, p))
+	ctxt.diag("doasm: notfound from=%ux to=%ux %P", p.from.typ, p.to.typ, p)
 	return
 mfound:
 	switch mo[0].code {
 	default:
-		ctxt.diag("asmins: unknown mov %d %v", mo[0].code, Pconv_list6(ctxt, p))
-		break
+		ctxt.diag("asmins: unknown mov %d %P", mo[0].code, p)
 	case 0: /* lit */
-		for z = 0; int(t[z]) != E_asm6; z++ {
+		for z = 0; t[z] != E_asm6; z++ {
 			ctxt.andptr[0] = t[z]
 			ctxt.andptr = ctxt.andptr[1:]
 		}
-		break
 	case 1: /* r,m */
 		ctxt.andptr[0] = t[0]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmando_asm6(ctxt, &p.to, int(t[1]))
-		break
 	case 2: /* m,r */
 		ctxt.andptr[0] = t[0]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmando_asm6(ctxt, &p.from, int(t[1]))
-		break
 	case 3: /* r,m - 2op */
 		ctxt.andptr[0] = t[0]
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = t[1]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmando_asm6(ctxt, &p.to, int(t[2]))
-		ctxt.rexflag |= regrex_asm6[p.from.typ] & int(Rxr_asm6|0x40)
-		break
+		ctxt.rexflag |= regrex_asm6[p.from.typ] & (Rxr_asm6 | 0x40)
 	case 4: /* m,r - 2op */
 		ctxt.andptr[0] = t[0]
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = t[1]
 		ctxt.andptr = ctxt.andptr[1:]
 		asmando_asm6(ctxt, &p.from, int(t[2]))
-		ctxt.rexflag |= regrex_asm6[p.to.typ] & int(Rxr_asm6|0x40)
-		break
+		ctxt.rexflag |= regrex_asm6[p.to.typ] & (Rxr_asm6 | 0x40)
 	case 5: /* load full pointer, trash heap */
 		if t[0] != 0 {
 			ctxt.andptr[0] = t[0]
@@ -3994,23 +3898,19 @@ mfound:
 		case D_DS_6:
 			ctxt.andptr[0] = 0xc5
 			ctxt.andptr = ctxt.andptr[1:]
-			break
 		case D_SS_6:
 			ctxt.andptr[0] = 0x0f
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = 0xb2
 			ctxt.andptr = ctxt.andptr[1:]
-			break
 		case D_ES_6:
 			ctxt.andptr[0] = 0xc4
 			ctxt.andptr = ctxt.andptr[1:]
-			break
 		case D_FS_6:
 			ctxt.andptr[0] = 0x0f
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = 0xb4
 			ctxt.andptr = ctxt.andptr[1:]
-			break
 		case D_GS_6:
 			ctxt.andptr[0] = 0x0f
 			ctxt.andptr = ctxt.andptr[1:]
@@ -4019,20 +3919,17 @@ mfound:
 			break
 		}
 		asmand_asm6(ctxt, &p.from, &p.to)
-		break
 	case 6: /* double shift */
-		if int(t[0]) == Pw_asm6 {
+		if t[0] == Pw_asm6 {
 			if p.mode != 64 {
-				ctxt.diag("asmins: illegal 64: %v", Pconv_list6(ctxt, p))
+				ctxt.diag("asmins: illegal 64: %P", p)
 			}
-			ctxt.rexflag |= int(Pw_asm6)
+			ctxt.rexflag |= Pw_asm6
 			t = t[1:]
-		} else {
-			if int(t[0]) == Pe_asm6 {
-				ctxt.andptr[0] = uint8(Pe_asm6)
-				ctxt.andptr = ctxt.andptr[1:]
-				t = t[1:]
-			}
+		} else if t[0] == Pe_asm6 {
+			ctxt.andptr[0] = Pe_asm6
+			ctxt.andptr = ctxt.andptr[1:]
+			t = t[1:]
 		}
 		z = p.from.typ
 		switch z {
@@ -4046,8 +3943,8 @@ mfound:
 			asmandsz_asm6(ctxt, &p.to, reg_asm6[int(p.from.index)], regrex_asm6[int(p.from.index)], 0)
 			ctxt.andptr[0] = uint8(p.from.offset)
 			ctxt.andptr = ctxt.andptr[1:]
-			break
-		case D_CL_6, D_CX_6:
+		case D_CL_6,
+			D_CX_6:
 			ctxt.andptr[0] = 0x0f
 			ctxt.andptr = ctxt.andptr[1:]
 			ctxt.andptr[0] = t[1]
@@ -4055,7 +3952,6 @@ mfound:
 			asmandsz_asm6(ctxt, &p.to, reg_asm6[int(p.from.index)], regrex_asm6[int(p.from.index)], 0)
 			break
 		}
-		break
 	// NOTE: The systems listed here are the ones that use the "TLS initial exec" model,
 	// where you load the TLS base register into a register and then index off that
 	// register to access the actual TLS variables. Systems that allow direct TLS access
@@ -4063,43 +3959,41 @@ mfound:
 	case 7: /* mov tls, r */
 		switch ctxt.headtype {
 		default:
-			sysfatal("unknown TLS base location for %s", headstr(ctxt.headtype))
+			log.Fatalf("unknown TLS base location for %s", headstr(ctxt.headtype))
 		case Hplan9:
 			if ctxt.plan9privates == nil {
 				ctxt.plan9privates = linklookup(ctxt, "_privates", 0)
 			}
 			pp.from = Addr{}
-			pp.from.typ = int(D_EXTERN_6)
+			pp.from.typ = D_EXTERN_6
 			pp.from.sym = ctxt.plan9privates
 			pp.from.offset = 0
-			pp.from.index = int(D_NONE_6)
-			ctxt.rexflag |= int(Pw_asm6)
+			pp.from.index = D_NONE_6
+			ctxt.rexflag |= Pw_asm6
 			ctxt.andptr[0] = 0x8B
 			ctxt.andptr = ctxt.andptr[1:]
 			asmand_asm6(ctxt, &pp.from, &p.to)
-			break
 		// TLS base is 0(FS).
 		case Hsolaris: // TODO(rsc): Delete Hsolaris from list. Should not use this code. See progedit in obj6.c.
 			pp.from = p.from
-			pp.from.typ = int(D_INDIR_6 + D_NONE_6)
+			pp.from.typ = D_INDIR_6 + D_NONE_6
 			pp.from.offset = 0
-			pp.from.index = int(D_NONE_6)
+			pp.from.index = D_NONE_6
 			pp.from.scale = 0
-			ctxt.rexflag |= int(Pw_asm6)
+			ctxt.rexflag |= Pw_asm6
 			ctxt.andptr[0] = 0x64
 			ctxt.andptr = ctxt.andptr[1:] // FS
 			ctxt.andptr[0] = 0x8B
 			ctxt.andptr = ctxt.andptr[1:]
 			asmand_asm6(ctxt, &pp.from, &p.to)
-			break
 		// Windows TLS base is always 0x28(GS).
 		case Hwindows:
 			pp.from = p.from
-			pp.from.typ = int(D_INDIR_6 + D_GS_6)
+			pp.from.typ = D_INDIR_6 + D_GS_6
 			pp.from.offset = 0x28
-			pp.from.index = int(D_NONE_6)
+			pp.from.index = D_NONE_6
 			pp.from.scale = 0
-			ctxt.rexflag |= int(Pw_asm6)
+			ctxt.rexflag |= Pw_asm6
 			ctxt.andptr[0] = 0x65
 			ctxt.andptr = ctxt.andptr[1:] // GS
 			ctxt.andptr[0] = 0x8B
@@ -4152,14 +4046,183 @@ var naclstos_asm6 = []uint8{
 	0x3f, // LEAQ (R15)(DI*1), DI
 }
 
-func nacltrunc_asm6(ctxt *Link, reg int) {
-	if reg >= int(D_R8_6) {
+func nacltrunc_asm6(ctxt *Link, reg int64) {
+	if reg >= D_R8_6 {
 		ctxt.andptr[0] = 0x45
 		ctxt.andptr = ctxt.andptr[1:]
 	}
-	reg = (reg - int(D_AX_6)) & 7
+	reg = (reg - D_AX_6) & 7
 	ctxt.andptr[0] = 0x89
 	ctxt.andptr = ctxt.andptr[1:]
-	ctxt.andptr[0] = uint8((3 << 6) | (reg << 3) | reg)
+	ctxt.andptr[0] = uint8(3<<6 | reg<<3 | reg)
 	ctxt.andptr = ctxt.andptr[1:]
+}
+
+func asmins_asm6(ctxt *Link, p *Prog) {
+	var i int
+	var n int
+	var np int
+	var c int
+	var and0 []uint8
+	var r *Reloc
+	ctxt.andptr = ctxt.and[:]
+	ctxt.asmode = p.mode
+	if p.as == AUSEFIELD_6 {
+		r = addrel(ctxt.cursym)
+		r.off = 0
+		r.siz = 0
+		r.sym = p.from.sym
+		r.typ = R_USEFIELD
+		return
+	}
+	if ctxt.headtype == Hnacl {
+		if p.as == AREP_6 {
+			ctxt.rep++
+			return
+		}
+		if p.as == AREPN_6 {
+			ctxt.repn++
+			return
+		}
+		if p.as == ALOCK_6 {
+			ctxt.lock++
+			return
+		}
+		if p.as != ALEAQ_6 && p.as != ALEAL_6 {
+			if p.from.index != D_NONE_6 && p.from.scale > 0 {
+				nacltrunc_asm6(ctxt, p.from.index)
+			}
+			if p.to.index != D_NONE_6 && p.to.scale > 0 {
+				nacltrunc_asm6(ctxt, p.to.index)
+			}
+		}
+		switch p.as {
+		case ARET_6:
+			copy(ctxt.andptr, naclret_asm6)
+			ctxt.andptr = ctxt.andptr[len(naclret_asm6):]
+			return
+		case ACALL_6,
+			AJMP_6:
+			if D_AX_6 <= p.to.typ && p.to.typ <= D_DI_6 {
+				// ANDL $~31, reg
+				ctxt.andptr[0] = 0x83
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(0xe0 | (p.to.typ - D_AX_6))
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = 0xe0
+				ctxt.andptr = ctxt.andptr[1:]
+				// ADDQ R15, reg
+				ctxt.andptr[0] = 0x4c
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = 0x01
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(0xf8 | (p.to.typ - D_AX_6))
+				ctxt.andptr = ctxt.andptr[1:]
+			}
+			if D_R8_6 <= p.to.typ && p.to.typ <= D_R15_6 {
+				// ANDL $~31, reg
+				ctxt.andptr[0] = 0x41
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = 0x83
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(0xe0 | (p.to.typ - D_R8_6))
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = 0xe0
+				ctxt.andptr = ctxt.andptr[1:]
+				// ADDQ R15, reg
+				ctxt.andptr[0] = 0x4d
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = 0x01
+				ctxt.andptr = ctxt.andptr[1:]
+				ctxt.andptr[0] = uint8(0xf8 | (p.to.typ - D_R8_6))
+				ctxt.andptr = ctxt.andptr[1:]
+			}
+		case AINT_6:
+			ctxt.andptr[0] = 0xf4
+			ctxt.andptr = ctxt.andptr[1:]
+			return
+		case ASCASB_6,
+			ASCASW_6,
+			ASCASL_6,
+			ASCASQ_6,
+			ASTOSB_6,
+			ASTOSW_6,
+			ASTOSL_6,
+			ASTOSQ_6:
+			copy(ctxt.andptr, naclstos_asm6)
+			ctxt.andptr = ctxt.andptr[len(naclstos_asm6):]
+		case AMOVSB_6,
+			AMOVSW_6,
+			AMOVSL_6,
+			AMOVSQ_6:
+			copy(ctxt.andptr, naclmovs_asm6)
+			ctxt.andptr = ctxt.andptr[len(naclmovs_asm6):]
+			break
+		}
+		if ctxt.rep != 0 {
+			ctxt.andptr[0] = 0xf3
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.rep = 0
+		}
+		if ctxt.repn != 0 {
+			ctxt.andptr[0] = 0xf2
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.repn = 0
+		}
+		if ctxt.lock != 0 {
+			ctxt.andptr[0] = 0xf0
+			ctxt.andptr = ctxt.andptr[1:]
+			ctxt.lock = 0
+		}
+	}
+	ctxt.rexflag = 0
+	and0 = ctxt.andptr
+	ctxt.asmode = p.mode
+	doasm_asm6(ctxt, p)
+	if ctxt.rexflag != 0 {
+		/*
+		 * as befits the whole approach of the architecture,
+		 * the rex prefix must appear before the first opcode byte
+		 * (and thus after any 66/67/f2/f3/26/2e/3e prefix bytes, but
+		 * before the 0f opcode escape!), or it might be ignored.
+		 * note that the handbook often misleadingly shows 66/f2/f3 in `opcode'.
+		 */
+		if p.mode != 64 {
+			ctxt.diag("asmins: illegal in mode %d: %P", p.mode, p)
+		}
+		n = -cap(ctxt.andptr) + cap(and0)
+		for np = 0; np < n; np++ {
+			c = int(and0[np])
+			if c != 0xf2 && c != 0xf3 && (c < 0x64 || c > 0x67) && c != 0x2e && c != 0x3e && c != 0x26 {
+				break
+			}
+		}
+		copy(and0[np+1:], and0[np:][:n-np])
+		and0[np] = uint8(0x40 | ctxt.rexflag)
+		ctxt.andptr = ctxt.andptr[1:]
+	}
+	n = -cap(ctxt.andptr) + cap(ctxt.and[:])
+	for i = len(ctxt.cursym.r) - 1; i >= 0; i-- {
+		r = &ctxt.cursym.r[i:][0]
+		if r.off < p.pc {
+			break
+		}
+		if ctxt.rexflag != 0 {
+			r.off++
+		}
+		if r.typ == R_PCREL || r.typ == R_CALL {
+			r.add -= p.pc + int64(n) - (r.off + r.siz)
+		}
+	}
+	if ctxt.headtype == Hnacl && p.as != ACMPL_6 && p.as != ACMPQ_6 {
+		switch p.to.typ {
+		case D_SP_6:
+			copy(ctxt.andptr, naclspfix_asm6)
+			ctxt.andptr = ctxt.andptr[len(naclspfix_asm6):]
+		case D_BP_6:
+			copy(ctxt.andptr, naclbpfix_asm6)
+			ctxt.andptr = ctxt.andptr[len(naclbpfix_asm6):]
+			break
+		}
+	}
 }
