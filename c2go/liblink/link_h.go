@@ -1,5 +1,10 @@
 package main
 
+import (
+	"encoding/binary"
+	"fmt"
+)
+
 // Derived from Inferno utils/6l/l.h and related files.
 // http://code.google.com/p/inferno-os/source/browse/utils/6l/l.h
 //
@@ -32,30 +37,31 @@ package main
 type Addr struct {
 	offset int64
 	u      struct {
-		sval   [8]int8
+		sval   string
 		dval   float64
 		branch *Prog
 	}
 	sym     *LSym
 	gotype  *LSym
-	typ     int
-	index   int
-	scale   int
-	reg     int
-	name    int
+	typ     int64
+	index   int64
+	scale   int64
+	reg     int64
+	name    int64
 	class   int
 	etype   uint8
-	offset2 int
+	offset2 int64
 	node    *struct{}
 	width   int64
 }
 
 type Prog struct {
-	pc       int
-	lineno   int
+	ctxt     *Link
+	pc       int64
+	lineno   int32
 	link     *Prog
 	as       int
-	reg      int
+	reg      int64
 	scond    int
 	from     Addr
 	to       Addr
@@ -64,32 +70,36 @@ type Prog struct {
 	pcond    *Prog
 	comefrom *Prog
 	pcrel    *Prog
-	spadj    int
-	mark     int
+	spadj    int64
+	mark     int64
 	back     int
-	ft       int
-	tt       int
+	ft       uint8
+	tt       uint8
 	optab    int
-	isize    int
+	isize    int64
 	width    int8
-	mode     int
+	mode     int64
 	TEXTFLAG uint8
+}
+
+func (p *Prog) Line() string {
+	return linklinefmt(p.ctxt, int(p.lineno), false, false)
 }
 
 type LSym struct {
 	name        string
 	extname     string
-	typ         int
-	version     int
-	dupok       int
+	typ         int64
+	version     int64
+	dupok       int64
 	external    uint8
-	nosplit     uint8
+	nosplit     int64
 	reachable   uint8
 	cgoexport   uint8
 	special     uint8
 	stkcheck    uint8
 	hide        uint8
-	leaf        uint8
+	leaf        int64
 	fnptr       uint8
 	seenglobl   uint8
 	onlist      uint8
@@ -100,10 +110,10 @@ type LSym struct {
 	got         int32
 	align       int32
 	elfsym      int32
-	args        int
-	locals      int
+	args        int64
+	locals      int64
 	value       int64
-	size        int
+	size        int64
 	hash        *LSym
 	allsym      *LSym
 	next        *LSym
@@ -125,10 +135,10 @@ type LSym struct {
 }
 
 type Reloc struct {
-	off  int
-	siz  uint8
+	off  int64
+	siz  int64
 	done uint8
-	typ  int
+	typ  int64
 	add  int64
 	xadd int64
 	sym  *LSym
@@ -138,15 +148,15 @@ type Reloc struct {
 type Auto struct {
 	asym    *LSym
 	link    *Auto
-	aoffset int32
-	typ     int
+	aoffset int64
+	typ     int64
 	gotype  *LSym
 }
 
 type Hist struct {
 	link   *Hist
 	name   string
-	line   int
+	line   int32
 	offset int32
 }
 
@@ -197,33 +207,27 @@ type Link struct {
 	rep            int
 	repn           int
 	lock           int
-	asmode         int
+	asmode         int64
 	andptr         []uint8
 	and            [100]uint8
 	instoffset     int32
 	autosize       int32
 	armsize        int32
-	pc             int
+	pc             int64
 	libdir         []string
-	nlibdir        int
-	maxlibdir      int32
 	library        []Library
 	tlsoffset      int
 	diag           func(string, ...interface{})
-	mode           int
+	mode           int64
 	curauto        *Auto
 	curhist        *Auto
 	cursym         *LSym
-	version        int
+	version        int64
 	textp          *LSym
 	etextp         *LSym
 	histdepth      int32
 	nhistfile      int32
 	filesyms       *LSym
-}
-
-func (ctxt *Link) Pconv(p *Prog) string {
-	return ctxt.arch.Pconv(ctxt, p)
 }
 
 type Plist struct {
@@ -238,29 +242,30 @@ type LinkArch struct {
 	thechar       int
 	addstacksplit func(*Link, *LSym)
 	assemble      func(*Link, *LSym)
-	datasize      func(*Prog) /*0x208314380 6*/ int
+	datasize      func(*Prog) int
 	follow        func(*Link, *LSym)
-	iscall        func(*Prog) /*0x208314380 6*/ bool
-	isdata        func(*Prog) /*0x208314380 6*/ bool
+	iscall        func(*Prog) int
+	isdata        func(*Prog) int
 	prg           func() *Prog
 	progedit      func(*Link, *Prog)
 	settextflag   func(*Prog, int)
-	symtype       func(*Addr) /*0x208314380 6*/ int
-	textflag      func(*Prog) /*0x208314380 6*/ int
-	Pconv         func(*Link, *Prog) string
-	minlc         int
-	ptrsize       int
+	symtype       func(*Addr) int
+	textflag      func(*Prog) int
+	minlc         uint32
+	ptrsize       int64
 	regsize       int
-	D_ADDR        int
-	D_AUTO        int
-	D_BRANCH      int
-	D_CONST       int
-	D_EXTERN      int
-	D_FCONST      int
-	D_NONE        int
-	D_PARAM       int
-	D_SCONST      int
-	D_STATIC      int
+	byteOrder     binary.ByteOrder
+	Pconv         func(*Prog) string
+	D_ADDR        int64
+	D_AUTO        int64
+	D_BRANCH      int64
+	D_CONST       int64
+	D_EXTERN      int64
+	D_FCONST      int64
+	D_NONE        int64
+	D_PARAM       int64
+	D_SCONST      int64
+	D_STATIC      int64
 	ACALL         int
 	ADATA         int
 	AEND          int
@@ -287,15 +292,21 @@ type Pcln struct {
 	pcfile      Pcdata
 	pcline      Pcdata
 	pcdata      []Pcdata
+	npcdata     int64
 	funcdata    []*LSym
 	funcdataoff []int64
+	nfuncdata   int64
 	file        []*LSym
+	nfile       int64
+	mfile       int64
 	lastfile    *LSym
-	lastindex   int32
+	lastindex   int64
 }
 
 type Pcdata struct {
 	p []uint8
+	n int64
+	m int64
 }
 
 type Pciter struct {
@@ -303,7 +314,7 @@ type Pciter struct {
 	p       []uint8
 	pc      uint32
 	nextpc  uint32
-	pcscale int
+	pcscale uint32
 	value   int32
 	start   int
 	done    int
@@ -425,3 +436,30 @@ const (
 // data.c
 // go.c
 // ld.c
+
+const (
+	fmtLong = 1 << iota
+)
+
+const (
+	NOPROF_textflag   = 1
+	DUPOK_textflag    = 2
+	NOSPLIT_textflag  = 4
+	RODATA_textflag   = 8
+	NOPTR_textflag    = 16
+	WRAPPER_textflag  = 32
+	NEEDCTXT_textflag = 64
+)
+
+func (ctxt *Link) prg() *Prog {
+	p := ctxt.arch.prg()
+	p.ctxt = ctxt
+	return p
+}
+
+func (p *Prog) String() string {
+	if p.ctxt == nil {
+		return fmt.Sprintf("PROG MISSING CTXT")
+	}
+	return p.ctxt.arch.Pconv(p)
+}

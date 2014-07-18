@@ -38,7 +38,7 @@ func brchain(ctxt *Link, p *Prog) *Prog {
 		}
 		p = p.pcond
 	}
-	return (*Prog)(nil)
+	return nil
 }
 
 func brloop(ctxt *Link, p *Prog) *Prog {
@@ -51,14 +51,14 @@ func brloop(ctxt *Link, p *Prog) *Prog {
 		}
 		c++
 		if c >= 5000 {
-			return (*Prog)(nil)
+			return nil
 		}
 	}
 	return q
 }
 
 func linkpatch(ctxt *Link, sym *LSym) {
-	var c int
+	var c int64
 	var p *Prog
 	var q *Prog
 	ctxt.cursym = sym
@@ -77,7 +77,7 @@ func linkpatch(ctxt *Link, sym *LSym) {
 		if p.to.sym != nil {
 			continue
 		}
-		c = int(p.to.offset)
+		c = p.to.offset
 		for q = sym.text; q != nil; {
 			if c == q.pc {
 				break
@@ -95,7 +95,7 @@ func linkpatch(ctxt *Link, sym *LSym) {
 			} else {
 				tmp = "<nil>"
 			}
-			ctxt.diag("branch out of range (%#x)\n%v [%s]", c, ctxt.Pconv(p), tmp)
+			ctxt.diag("branch out of range (%#ux)\n%P [%s]", c, p, tmp)
 			p.to.typ = ctxt.arch.D_NONE
 		}
 		p.to.u.branch = q
@@ -107,7 +107,7 @@ func linkpatch(ctxt *Link, sym *LSym) {
 			p.pcond = brloop(ctxt, p.pcond)
 			if p.pcond != nil {
 				if p.to.typ == ctxt.arch.D_BRANCH {
-					p.to.offset = int64(p.pcond.pc)
+					p.to.offset = p.pcond.pc
 				}
 			}
 		}

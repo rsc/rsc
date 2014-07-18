@@ -1,57 +1,11 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
+	"log"
 	"math"
 )
-
-var linkamd64 = LinkArch{
-	name:    "amd64",
-	thechar: '6',
-
-	addstacksplit: addstacksplit_obj6,
-	assemble:      span6,
-	datasize:      datasize_obj6,
-	follow:        follow_obj6,
-	iscall:        iscall_obj6,
-	isdata:        isdata_obj6,
-	prg:           prg_obj6,
-	progedit:      progedit_obj6,
-	settextflag:   settextflag_obj6,
-	symtype:       symtype_obj6,
-	textflag:      textflag_obj6,
-	Pconv:         Pconv_list6,
-
-	minlc:   1,
-	ptrsize: 8,
-	regsize: 8,
-
-	D_ADDR:   D_ADDR_6,
-	D_AUTO:   D_AUTO_6,
-	D_BRANCH: D_BRANCH_6,
-	D_CONST:  D_CONST_6,
-	D_EXTERN: D_EXTERN_6,
-	D_FCONST: D_FCONST_6,
-	D_NONE:   D_NONE_6,
-	D_PARAM:  D_PARAM_6,
-	D_SCONST: D_SCONST_6,
-	D_STATIC: D_STATIC_6,
-
-	ACALL:     ACALL_6,
-	ADATA:     ADATA_6,
-	AEND:      AEND_6,
-	AFUNCDATA: AFUNCDATA_6,
-	AGLOBL:    AGLOBL_6,
-	AJMP:      AJMP_6,
-	ANOP:      ANOP_6,
-	APCDATA:   APCDATA_6,
-	ARET:      ARET_6,
-	ATEXT:     ATEXT_6,
-	ATYPE:     ATYPE_6,
-	AUSEFIELD: AUSEFIELD_6,
-}
-
-var linkamd64p32 LinkArch
 
 // Inferno utils/6l/pass.c
 // http://code.google.com/p/inferno-os/source/browse/utils/6l/pass.c
@@ -96,80 +50,44 @@ var zprg_obj6 = Prog{
 }
 
 func nopout_obj6(p *Prog) {
-	p.as = int(ANOP_6)
-	p.from.typ = int(D_NONE_6)
-	p.to.typ = int(D_NONE_6)
+	p.as = ANOP_6
+	p.from.typ = D_NONE_6
+	p.to.typ = D_NONE_6
 }
 
 func symtype_obj6(a *Addr) int {
-	var t int
+	var t int64
 	t = a.typ
-	if t == int(D_ADDR_6) {
+	if t == D_ADDR_6 {
 		t = a.index
 	}
-	return t
+	return int(t)
 }
 
-func isdata_obj6(p *Prog) bool {
-	return p.as == int(ADATA_6) || p.as == int(AGLOBL_6)
+func isdata_obj6(p *Prog) int {
+	return bool2int(p.as == ADATA_6 || p.as == AGLOBL_6)
 }
 
-func iscall_obj6(p *Prog) bool {
-	return p.as == int(ACALL_6)
+func iscall_obj6(p *Prog) int {
+	return bool2int(p.as == ACALL_6)
 }
 
 func datasize_obj6(p *Prog) int {
-	return p.from.scale
+	return int(p.from.scale)
 }
 
 func textflag_obj6(p *Prog) int {
-	return p.from.scale
+	return int(p.from.scale)
 }
 
 func settextflag_obj6(p *Prog, f int) {
-	p.from.scale = f
-}
-
-func nacladdr_obj6(ctxt *Link, p *Prog, a *Addr) {
-	if p.as == int(ALEAL_6) || p.as == int(ALEAQ_6) {
-		return
-	}
-	if a.typ == int(D_BP_6) || a.typ == int(D_INDIR_6+D_BP_6) {
-		ctxt.diag("invalid address: %v", ctxt.Pconv(p))
-		return
-	}
-	if a.typ == int(D_INDIR_6+D_TLS_6) {
-		a.typ = int(D_INDIR_6 + D_BP_6)
-	} else {
-		if a.typ == int(D_TLS_6) {
-			a.typ = int(D_BP_6)
-		}
-	}
-	if D_INDIR_6 <= int(a.typ) && a.typ <= int(D_INDIR_6+D_INDIR_6) {
-		switch a.typ {
-		// all ok
-		case D_INDIR_6 + D_BP_6:
-		case D_INDIR_6 + D_SP_6:
-		case D_INDIR_6 + int(D_R15_6):
-			break
-		default:
-			if a.index != int(D_NONE_6) {
-				ctxt.diag("invalid address %v", ctxt.Pconv(p))
-			}
-			a.index = a.typ - int(D_INDIR_6)
-			if a.index != int(D_NONE_6) {
-				a.scale = 1
-			}
-			a.typ = int(D_INDIR_6 + int(D_R15_6))
-			break
-		}
-	}
+	p.from.scale = int64(f)
 }
 
 func canuselocaltls_obj6(ctxt *Link) int {
 	switch ctxt.headtype {
-	case Hplan9:
-	case Hwindows:
+	case Hplan9,
+		Hwindows:
 		return 0
 	}
 	return 1
@@ -223,18 +141,18 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 		// TODO(rsc): Remove the Hsolaris special case. It exists only to
 		// guarantee we are producing byte-identical binaries as before this code.
 		// But it should be unnecessary.
-		if (p.as == int(AMOVQ_6) || p.as == int(AMOVL_6)) && p.from.typ == int(D_TLS_6) && D_AX_6 <= int(p.to.typ) && p.to.typ <= int(D_R15_6) && ctxt.headtype != int(Hsolaris) {
+		if (p.as == AMOVQ_6 || p.as == AMOVL_6) && p.from.typ == D_TLS_6 && D_AX_6 <= p.to.typ && p.to.typ <= D_R15_6 && ctxt.headtype != Hsolaris {
 			nopout_obj6(p)
 		}
-		if p.from.index == int(D_TLS_6) && D_INDIR_6+D_AX_6 <= int(p.from.typ) && p.from.typ <= int(D_INDIR_6+int(D_R15_6)) {
-			p.from.typ = int(D_INDIR_6 + D_TLS_6)
+		if p.from.index == D_TLS_6 && D_INDIR_6+D_AX_6 <= p.from.typ && p.from.typ <= D_INDIR_6+D_R15_6 {
+			p.from.typ = D_INDIR_6 + D_TLS_6
 			p.from.scale = 0
-			p.from.index = int(D_NONE_6)
+			p.from.index = D_NONE_6
 		}
-		if p.to.index == int(D_TLS_6) && D_INDIR_6+D_AX_6 <= int(p.to.typ) && p.to.typ <= int(D_INDIR_6+int(D_R15_6)) {
-			p.to.typ = int(D_INDIR_6 + D_TLS_6)
+		if p.to.index == D_TLS_6 && D_INDIR_6+D_AX_6 <= p.to.typ && p.to.typ <= D_INDIR_6+D_R15_6 {
+			p.to.typ = D_INDIR_6 + D_TLS_6
 			p.to.scale = 0
-			p.to.index = int(D_NONE_6)
+			p.to.index = D_NONE_6
 		}
 	} else {
 		// As a courtesy to the C compilers, rewrite TLS local exec load as TLS initial exec load.
@@ -244,29 +162,29 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 		//	MOVQ TLS, BX
 		//	MOVQ off(BX)(TLS*1), BX
 		// This allows the C compilers to emit references to m and g using the direct off(TLS) form.
-		if (p.as == int(AMOVQ_6) || p.as == int(AMOVL_6)) && p.from.typ == int(D_INDIR_6+D_TLS_6) && D_AX_6 <= int(p.to.typ) && p.to.typ <= int(D_R15_6) {
+		if (p.as == AMOVQ_6 || p.as == AMOVL_6) && p.from.typ == D_INDIR_6+D_TLS_6 && D_AX_6 <= p.to.typ && p.to.typ <= D_R15_6 {
 			q = appendp(ctxt, p)
 			q.as = p.as
 			q.from = p.from
-			q.from.typ = int(D_INDIR_6 + int(p.to.typ))
-			q.from.index = int(D_TLS_6)
+			q.from.typ = D_INDIR_6 + p.to.typ
+			q.from.index = D_TLS_6
 			q.from.scale = 2 // TODO: use 1
 			q.to = p.to
-			p.from.typ = int(D_TLS_6)
-			p.from.index = int(D_NONE_6)
+			p.from.typ = D_TLS_6
+			p.from.index = D_NONE_6
 			p.from.offset = 0
 		}
 	}
 	// TODO: Remove.
-	if ctxt.headtype == int(Hwindows) || ctxt.headtype == int(Hplan9) {
-		if p.from.scale == 1 && p.from.index == int(D_TLS_6) {
+	if ctxt.headtype == Hwindows || ctxt.headtype == Hplan9 {
+		if p.from.scale == 1 && p.from.index == D_TLS_6 {
 			p.from.scale = 2
 		}
-		if p.to.scale == 1 && p.to.index == int(D_TLS_6) {
+		if p.to.scale == 1 && p.to.index == D_TLS_6 {
 			p.to.scale = 2
 		}
 	}
-	if ctxt.headtype == int(Hnacl) {
+	if ctxt.headtype == Hnacl {
 		nacladdr_obj6(ctxt, p, &p.from)
 		nacladdr_obj6(ctxt, p, &p.to)
 	}
@@ -277,12 +195,12 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 	p.mode = ctxt.mode
 	switch p.as {
 	case AMODE_6:
-		if p.from.typ == int(D_CONST_6) || p.from.typ == int(D_INDIR_6+D_NONE_6) {
+		if p.from.typ == D_CONST_6 || p.from.typ == D_INDIR_6+D_NONE_6 {
 			switch int(p.from.offset) {
-			case 16:
-			case 32:
-			case 64:
-				ctxt.mode = int(p.from.offset)
+			case 16,
+				32,
+				64:
+				ctxt.mode = p.from.offset
 				break
 			}
 		}
@@ -291,80 +209,113 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 	}
 	// Rewrite CALL/JMP/RET to symbol as D_BRANCH.
 	switch p.as {
-	case ACALL_6:
-	case AJMP_6:
-	case ARET_6:
-		if (p.to.typ == int(D_EXTERN_6) || p.to.typ == int(D_STATIC_6)) && p.to.sym != nil {
-			p.to.typ = int(D_BRANCH_6)
+	case ACALL_6,
+		AJMP_6,
+		ARET_6:
+		if (p.to.typ == D_EXTERN_6 || p.to.typ == D_STATIC_6) && p.to.sym != nil {
+			p.to.typ = D_BRANCH_6
 		}
 		break
 	}
 	// Rewrite float constants to values stored in memory.
 	switch p.as {
-	case AFMOVF_6:
-	case AFADDF_6:
-	case AFSUBF_6:
-	case AFSUBRF_6:
-	case AFMULF_6:
-	case AFDIVF_6:
-	case AFDIVRF_6:
-	case AFCOMF_6:
-	case AFCOMFP_6:
-	case AMOVSS_6:
-	case AADDSS_6:
-	case ASUBSS_6:
-	case AMULSS_6:
-	case ADIVSS_6:
-	case ACOMISS_6:
-	case AUCOMISS_6:
-		if p.from.typ == int(D_FCONST_6) {
-			var i32 int32
-			var f32 float32
-			f32 = float32(p.from.u.dval)
-			i32 = int32(math.Float32bits(f32))
+	case AFMOVF_6,
+		AFADDF_6,
+		AFSUBF_6,
+		AFSUBRF_6,
+		AFMULF_6,
+		AFDIVF_6,
+		AFDIVRF_6,
+		AFCOMF_6,
+		AFCOMFP_6,
+		AMOVSS_6,
+		AADDSS_6,
+		ASUBSS_6,
+		AMULSS_6,
+		ADIVSS_6,
+		ACOMISS_6,
+		AUCOMISS_6:
+		if p.from.typ == D_FCONST_6 {
+			var i32 uint64
+			var f32 float64
+			f32 = p.from.u.dval
+			i32 = uint64(math.Float32bits(float32(f32)))
 			literal = fmt.Sprintf("$f32.%08x", uint32(i32))
-			s = linklookup(ctxt, string(literal), 0)
+			s = linklookup(ctxt, literal, 0)
 			if s.typ == 0 {
-				s.typ = int(SRODATA)
-				adduint32(ctxt, s, uint32(i32))
+				s.typ = SRODATA
+				adduint32(ctxt, s, i32)
 				s.reachable = 0
 			}
-			p.from.typ = int(D_EXTERN_6)
+			p.from.typ = D_EXTERN_6
 			p.from.sym = s
 			p.from.offset = 0
 		}
-		break
-	case AFMOVD_6:
-	case AFADDD_6:
-	case AFSUBD_6:
-	case AFSUBRD_6:
-	case AFMULD_6:
-	case AFDIVD_6:
-	case AFDIVRD_6:
-	case AFCOMD_6:
-	case AFCOMDP_6:
-	case AMOVSD_6:
-	case AADDSD_6:
-	case ASUBSD_6:
-	case AMULSD_6:
-	case ADIVSD_6:
-	case ACOMISD_6:
-	case AUCOMISD_6:
-		if p.from.typ == int(D_FCONST_6) {
-			var i64 int64
-			i64 = int64(math.Float64bits(p.from.u.dval))
+	case AFMOVD_6,
+		AFADDD_6,
+		AFSUBD_6,
+		AFSUBRD_6,
+		AFMULD_6,
+		AFDIVD_6,
+		AFDIVRD_6,
+		AFCOMD_6,
+		AFCOMDP_6,
+		AMOVSD_6,
+		AADDSD_6,
+		ASUBSD_6,
+		AMULSD_6,
+		ADIVSD_6,
+		ACOMISD_6,
+		AUCOMISD_6:
+		if p.from.typ == D_FCONST_6 {
+			var i64 uint64
+			i64 = math.Float64bits(p.from.u.dval)
 			literal = fmt.Sprintf("$f64.%016x", uint64(i64))
-			s = linklookup(ctxt, string(literal), 0)
+			s = linklookup(ctxt, literal, 0)
 			if s.typ == 0 {
-				s.typ = int(SRODATA)
-				adduint64(ctxt, s, uint64(i64))
+				s.typ = SRODATA
+				adduint64(ctxt, s, i64)
 				s.reachable = 0
 			}
-			p.from.typ = int(D_EXTERN_6)
+			p.from.typ = D_EXTERN_6
 			p.from.sym = s
 			p.from.offset = 0
 		}
 		break
+	}
+}
+
+func nacladdr_obj6(ctxt *Link, p *Prog, a *Addr) {
+	if p.as == ALEAL_6 || p.as == ALEAQ_6 {
+		return
+	}
+	if a.typ == D_BP_6 || a.typ == D_INDIR_6+D_BP_6 {
+		ctxt.diag("invalid address: %P", p)
+		return
+	}
+	if a.typ == D_INDIR_6+D_TLS_6 {
+		a.typ = D_INDIR_6 + D_BP_6
+	} else if a.typ == D_TLS_6 {
+		a.typ = D_BP_6
+	}
+	if D_INDIR_6 <= a.typ && a.typ <= D_INDIR_6+D_INDIR_6 {
+		switch a.typ {
+		// all ok
+		case D_INDIR_6 + D_BP_6,
+			D_INDIR_6 + D_SP_6,
+			D_INDIR_6 + D_R15_6:
+			break
+		default:
+			if a.index != D_NONE_6 {
+				ctxt.diag("invalid address %P", p)
+			}
+			a.index = a.typ - D_INDIR_6
+			if a.index != D_NONE_6 {
+				a.scale = 1
+			}
+			a.typ = D_INDIR_6 + D_R15_6
+			break
+		}
 	}
 }
 
@@ -391,6 +342,257 @@ var morename_obj6 = []string{
 	"runtime.morestack48_noctxt",
 }
 
+func parsetextconst_obj6(arg int64, textstksiz *int64, textarg *int64) {
+	*textstksiz = arg & 0xffffffff
+	if *textstksiz&0x80000000 != 0 {
+		*textstksiz = -(-*textstksiz & 0xffffffff)
+	}
+	*textarg = (arg >> 32) & 0xffffffff
+	if *textarg&0x80000000 != 0 {
+		*textarg = 0
+	}
+	*textarg = (*textarg + 7) &^ 7
+}
+
+func addstacksplit_obj6(ctxt *Link, cursym *LSym) {
+	var p *Prog
+	var q *Prog
+	var q1 *Prog
+	var autoffset int64
+	var deltasp int64
+	var a int64
+	var pcsize int
+	var i int64
+	var textstksiz int64
+	var textarg int64
+	if ctxt.tlsg == nil {
+		ctxt.tlsg = linklookup(ctxt, "runtime.tlsg", 0)
+	}
+	if ctxt.symmorestack[0] == nil {
+		if len(morename_obj6) > len(ctxt.symmorestack) {
+			log.Fatalf("Link.symmorestack needs at least %d elements", len(morename_obj6))
+		}
+		for i = 0; i < int64(len(morename_obj6)); i++ {
+			ctxt.symmorestack[i] = linklookup(ctxt, morename_obj6[i], 0)
+		}
+	}
+	if ctxt.headtype == Hplan9 && ctxt.plan9privates == nil {
+		ctxt.plan9privates = linklookup(ctxt, "_privates", 0)
+	}
+	ctxt.cursym = cursym
+	if cursym.text == nil || cursym.text.link == nil {
+		return
+	}
+	p = cursym.text
+	parsetextconst_obj6(p.to.offset, &textstksiz, &textarg)
+	autoffset = textstksiz
+	if autoffset < 0 {
+		autoffset = 0
+	}
+	cursym.args = p.to.offset >> 32
+	cursym.locals = textstksiz
+	if autoffset < StackSmall_stack && !(p.from.scale&NOSPLIT_textflag != 0) {
+		for q = p; q != nil; q = q.link {
+			if q.as == ACALL_6 {
+				goto noleaf
+			}
+			if (q.as == ADUFFCOPY_6 || q.as == ADUFFZERO_6) && autoffset >= StackSmall_stack-8 {
+				goto noleaf
+			}
+		}
+		p.from.scale |= NOSPLIT_textflag
+	noleaf:
+	}
+	q = nil
+	if !(p.from.scale&NOSPLIT_textflag != 0) || (p.from.scale&WRAPPER_textflag != 0) {
+		p = appendp(ctxt, p)
+		p = load_g_cx_obj6(ctxt, p) // load g into CX
+	}
+	if !(cursym.text.from.scale&NOSPLIT_textflag != 0) {
+		p = stacksplit_obj6(ctxt, p, autoffset, textarg, bool2int(!(cursym.text.from.scale&NEEDCTXT_textflag != 0)), &q) // emit split check
+	}
+	if autoffset != 0 {
+		if autoffset%int64(ctxt.arch.regsize) != 0 {
+			ctxt.diag("unaligned stack size %d", autoffset)
+		}
+		p = appendp(ctxt, p)
+		p.as = AADJSP_6
+		p.from.typ = D_CONST_6
+		p.from.offset = autoffset
+		p.spadj = autoffset
+	} else {
+		// zero-byte stack adjustment.
+		// Insert a fake non-zero adjustment so that stkcheck can
+		// recognize the end of the stack-splitting prolog.
+		p = appendp(ctxt, p)
+		p.as = ANOP_6
+		p.spadj = -ctxt.arch.ptrsize
+		p = appendp(ctxt, p)
+		p.as = ANOP_6
+		p.spadj = ctxt.arch.ptrsize
+	}
+	if q != nil {
+		q.pcond = p
+	}
+	deltasp = autoffset
+	if cursym.text.from.scale&WRAPPER_textflag != 0 {
+		// g->panicwrap += autoffset + ctxt->arch->regsize;
+		p = appendp(ctxt, p)
+		p.as = AADDL_6
+		p.from.typ = D_CONST_6
+		p.from.offset = autoffset + int64(ctxt.arch.regsize)
+		indir_cx_obj6(ctxt, &p.to)
+		p.to.offset = 2 * ctxt.arch.ptrsize
+	}
+	if ctxt.debugstack > 1 && autoffset != 0 {
+		// 6l -K -K means double-check for stack overflow
+		// even after calling morestack and even if the
+		// function is marked as nosplit.
+		p = appendp(ctxt, p)
+		p.as = AMOVQ_6
+		indir_cx_obj6(ctxt, &p.from)
+		p.from.offset = 0
+		p.to.typ = D_BX_6
+		p = appendp(ctxt, p)
+		p.as = ASUBQ_6
+		p.from.typ = D_CONST_6
+		p.from.offset = StackSmall_stack + 32
+		p.to.typ = D_BX_6
+		p = appendp(ctxt, p)
+		p.as = ACMPQ_6
+		p.from.typ = D_SP_6
+		p.to.typ = D_BX_6
+		p = appendp(ctxt, p)
+		p.as = AJHI_6
+		p.to.typ = D_BRANCH_6
+		q1 = p
+		p = appendp(ctxt, p)
+		p.as = AINT_6
+		p.from.typ = D_CONST_6
+		p.from.offset = 3
+		p = appendp(ctxt, p)
+		p.as = ANOP_6
+		q1.pcond = p
+	}
+	if ctxt.debugzerostack != 0 && autoffset != 0 && !(cursym.text.from.scale&NOSPLIT_textflag != 0) {
+		// 6l -Z means zero the stack frame on entry.
+		// This slows down function calls but can help avoid
+		// false positives in garbage collection.
+		p = appendp(ctxt, p)
+		p.as = AMOVQ_6
+		p.from.typ = D_SP_6
+		p.to.typ = D_DI_6
+		p = appendp(ctxt, p)
+		p.as = AMOVQ_6
+		p.from.typ = D_CONST_6
+		p.from.offset = autoffset / 8
+		p.to.typ = D_CX_6
+		p = appendp(ctxt, p)
+		p.as = AMOVQ_6
+		p.from.typ = D_CONST_6
+		p.from.offset = 0
+		p.to.typ = D_AX_6
+		p = appendp(ctxt, p)
+		p.as = AREP_6
+		p = appendp(ctxt, p)
+		p.as = ASTOSQ_6
+	}
+	for ; p != nil; p = p.link {
+		pcsize = int(p.mode / 8)
+		a = p.from.typ
+		if a == D_AUTO_6 {
+			p.from.offset += deltasp
+		}
+		if a == D_PARAM_6 {
+			p.from.offset += deltasp + int64(pcsize)
+		}
+		a = p.to.typ
+		if a == D_AUTO_6 {
+			p.to.offset += deltasp
+		}
+		if a == D_PARAM_6 {
+			p.to.offset += deltasp + int64(pcsize)
+		}
+		switch p.as {
+		default:
+			continue
+		case APUSHL_6,
+			APUSHFL_6:
+			deltasp += 4
+			p.spadj = 4
+			continue
+		case APUSHQ_6,
+			APUSHFQ_6:
+			deltasp += 8
+			p.spadj = 8
+			continue
+		case APUSHW_6,
+			APUSHFW_6:
+			deltasp += 2
+			p.spadj = 2
+			continue
+		case APOPL_6,
+			APOPFL_6:
+			deltasp -= 4
+			p.spadj = -4
+			continue
+		case APOPQ_6,
+			APOPFQ_6:
+			deltasp -= 8
+			p.spadj = -8
+			continue
+		case APOPW_6,
+			APOPFW_6:
+			deltasp -= 2
+			p.spadj = -2
+			continue
+		case ARET_6:
+			break
+		}
+		if autoffset != deltasp {
+			ctxt.diag("unbalanced PUSH/POP")
+		}
+		if cursym.text.from.scale&WRAPPER_textflag != 0 {
+			p = load_g_cx_obj6(ctxt, p)
+			p = appendp(ctxt, p)
+			// g->panicwrap -= autoffset + ctxt->arch->regsize;
+			p.as = ASUBL_6
+			p.from.typ = D_CONST_6
+			p.from.offset = autoffset + int64(ctxt.arch.regsize)
+			indir_cx_obj6(ctxt, &p.to)
+			p.to.offset = 2 * ctxt.arch.ptrsize
+			p = appendp(ctxt, p)
+			p.as = ARET_6
+		}
+		if autoffset != 0 {
+			p.as = AADJSP_6
+			p.from.typ = D_CONST_6
+			p.from.offset = -autoffset
+			p.spadj = -autoffset
+			p = appendp(ctxt, p)
+			p.as = ARET_6
+			// If there are instructions following
+			// this ARET, they come from a branch
+			// with the same stackframe, so undo
+			// the cleanup.
+			p.spadj = +autoffset
+		}
+		if p.to.sym != nil { // retjmp
+			p.as = AJMP_6
+		}
+	}
+}
+
+func indir_cx_obj6(ctxt *Link, a *Addr) {
+	if ctxt.headtype == Hnacl {
+		a.typ = D_INDIR_6 + D_R15_6
+		a.index = D_CX_6
+		a.scale = 1
+		return
+	}
+	a.typ = D_INDIR_6 + D_CX_6
+}
+
 // Append code to p to load g into cx.
 // Overwrites p with the first instruction (no first appendp).
 // Overwriting p is unusual but it lets use this in both the
@@ -398,19 +600,19 @@ var morename_obj6 = []string{
 // Returns last new instruction.
 func load_g_cx_obj6(ctxt *Link, p *Prog) *Prog {
 	var next *Prog
-	p.as = int(AMOVQ_6)
+	p.as = AMOVQ_6
 	if ctxt.arch.ptrsize == 4 {
-		p.as = int(AMOVL_6)
+		p.as = AMOVL_6
 	}
-	p.from.typ = int(D_INDIR_6 + D_TLS_6)
+	p.from.typ = D_INDIR_6 + D_TLS_6
 	p.from.offset = 0
-	p.to.typ = int(D_CX_6)
+	p.to.typ = D_CX_6
 	next = p.link
 	progedit_obj6(ctxt, p)
 	for p.link != next {
 		p = p.link
 	}
-	if p.from.index == int(D_TLS_6) {
+	if p.from.index == D_TLS_6 {
 		p.from.scale = 2
 	}
 	return p
@@ -422,25 +624,25 @@ func load_g_cx_obj6(ctxt *Link, p *Prog) *Prog {
 // Returns last new instruction.
 // On return, *jmpok is the instruction that should jump
 // to the stack frame allocation if no split is needed.
-func stacksplit_obj6(ctxt *Link, p *Prog, framesize int, textarg int32, noctxt bool, jmpok **Prog) *Prog {
+func stacksplit_obj6(ctxt *Link, p *Prog, framesize int64, textarg int64, noctxt int, jmpok **Prog) *Prog {
 	var q *Prog
 	var q1 *Prog
-	var moreconst1 int
-	var moreconst2 uint32
+	var moreconst1 int64
+	var moreconst2 int64
 	var i uint32
 	var cmp int
 	var lea int
 	var mov int
 	var sub int
-	cmp = int(ACMPQ_6)
-	lea = int(ALEAQ_6)
-	mov = int(AMOVQ_6)
-	sub = int(ASUBQ_6)
-	if ctxt.headtype == int(Hnacl) {
-		cmp = int(ACMPL_6)
-		lea = int(ALEAL_6)
-		mov = int(AMOVL_6)
-		sub = int(ASUBL_6)
+	cmp = ACMPQ_6
+	lea = ALEAQ_6
+	mov = AMOVQ_6
+	sub = ASUBQ_6
+	if ctxt.headtype == Hnacl {
+		cmp = ACMPL_6
+		lea = ALEAL_6
+		mov = AMOVL_6
+		sub = ASUBL_6
 	}
 	if ctxt.debugstack != 0 {
 		// 6l -K means check not only for stack
@@ -452,91 +654,89 @@ func stacksplit_obj6(ctxt *Link, p *Prog, framesize int, textarg int32, noctxt b
 		p.as = cmp
 		indir_cx_obj6(ctxt, &p.from)
 		p.from.offset = 8
-		p.to.typ = int(D_SP_6)
+		p.to.typ = D_SP_6
 		p = appendp(ctxt, p)
-		p.as = int(AJHI_6)
-		p.to.typ = int(D_BRANCH_6)
+		p.as = AJHI_6
+		p.to.typ = D_BRANCH_6
 		p.to.offset = 4
 		q1 = p
 		p = appendp(ctxt, p)
-		p.as = int(AINT_6)
-		p.from.typ = int(D_CONST_6)
+		p.as = AINT_6
+		p.from.typ = D_CONST_6
 		p.from.offset = 3
 		p = appendp(ctxt, p)
-		p.as = int(ANOP_6)
+		p.as = ANOP_6
 		q1.pcond = p
 	}
-	q1 = (*Prog)(nil)
-	if framesize <= int(StackSmall_stack) {
+	q1 = nil
+	if framesize <= StackSmall_stack {
 		// small stack: SP <= stackguard
 		//	CMPQ SP, stackguard
 		p = appendp(ctxt, p)
 		p.as = cmp
-		p.from.typ = int(D_SP_6)
+		p.from.typ = D_SP_6
+		indir_cx_obj6(ctxt, &p.to)
+	} else if framesize <= StackBig_stack {
+		// large stack: SP-framesize <= stackguard-StackSmall
+		//	LEAQ -xxx(SP), AX
+		//	CMPQ AX, stackguard
+		p = appendp(ctxt, p)
+		p.as = lea
+		p.from.typ = D_INDIR_6 + D_SP_6
+		p.from.offset = -(framesize - StackSmall_stack)
+		p.to.typ = D_AX_6
+		p = appendp(ctxt, p)
+		p.as = cmp
+		p.from.typ = D_AX_6
 		indir_cx_obj6(ctxt, &p.to)
 	} else {
-		if framesize <= int(StackBig_stack) {
-			// large stack: SP-framesize <= stackguard-StackSmall
-			//	LEAQ -xxx(SP), AX
-			//	CMPQ AX, stackguard
-			p = appendp(ctxt, p)
-			p.as = lea
-			p.from.typ = int(D_INDIR_6 + D_SP_6)
-			p.from.offset = -(int64(framesize) - int64(StackSmall_stack))
-			p.to.typ = int(D_AX_6)
-			p = appendp(ctxt, p)
-			p.as = cmp
-			p.from.typ = int(D_AX_6)
-			indir_cx_obj6(ctxt, &p.to)
-		} else {
-			// Such a large stack we need to protect against wraparound.
-			// If SP is close to zero:
-			//	SP-stackguard+StackGuard <= framesize + (StackGuard-StackSmall)
-			// The +StackGuard on both sides is required to keep the left side positive:
-			// SP is allowed to be slightly below stackguard. See stack.h.
-			//
-			// Preemption sets stackguard to StackPreempt, a very large value.
-			// That breaks the math above, so we have to check for that explicitly.
-			//	MOVQ	stackguard, CX
-			//	CMPQ	CX, $StackPreempt
-			//	JEQ	label-of-call-to-morestack
-			//	LEAQ	StackGuard(SP), AX
-			//	SUBQ	CX, AX
-			//	CMPQ	AX, $(framesize+(StackGuard-StackSmall))
-			p = appendp(ctxt, p)
-			p.as = mov
-			indir_cx_obj6(ctxt, &p.from)
-			p.from.offset = 0
-			p.to.typ = int(D_SI_6)
-			p = appendp(ctxt, p)
-			p.as = cmp
-			p.from.typ = int(D_SI_6)
-			p.to.typ = int(D_CONST_6)
-			p.to.offset = int64(StackPreempt_stack)
-			p = appendp(ctxt, p)
-			p.as = int(AJEQ_6)
-			p.to.typ = int(D_BRANCH_6)
-			q1 = p
-			p = appendp(ctxt, p)
-			p.as = lea
-			p.from.typ = int(D_INDIR_6 + D_SP_6)
-			p.from.offset = int64(StackGuard_stack)
-			p.to.typ = int(D_AX_6)
-			p = appendp(ctxt, p)
-			p.as = sub
-			p.from.typ = int(D_SI_6)
-			p.to.typ = int(D_AX_6)
-			p = appendp(ctxt, p)
-			p.as = cmp
-			p.from.typ = int(D_AX_6)
-			p.to.typ = int(D_CONST_6)
-			p.to.offset = int64(framesize) + (int64(StackGuard_stack) - int64(StackSmall_stack))
-		}
+		// Such a large stack we need to protect against wraparound.
+		// If SP is close to zero:
+		//	SP-stackguard+StackGuard <= framesize + (StackGuard-StackSmall)
+		// The +StackGuard on both sides is required to keep the left side positive:
+		// SP is allowed to be slightly below stackguard. See stack.h.
+		//
+		// Preemption sets stackguard to StackPreempt, a very large value.
+		// That breaks the math above, so we have to check for that explicitly.
+		//	MOVQ	stackguard, CX
+		//	CMPQ	CX, $StackPreempt
+		//	JEQ	label-of-call-to-morestack
+		//	LEAQ	StackGuard(SP), AX
+		//	SUBQ	CX, AX
+		//	CMPQ	AX, $(framesize+(StackGuard-StackSmall))
+		p = appendp(ctxt, p)
+		p.as = mov
+		indir_cx_obj6(ctxt, &p.from)
+		p.from.offset = 0
+		p.to.typ = D_SI_6
+		p = appendp(ctxt, p)
+		p.as = cmp
+		p.from.typ = D_SI_6
+		p.to.typ = D_CONST_6
+		p.to.offset = StackPreempt_stack
+		p = appendp(ctxt, p)
+		p.as = AJEQ_6
+		p.to.typ = D_BRANCH_6
+		q1 = p
+		p = appendp(ctxt, p)
+		p.as = lea
+		p.from.typ = D_INDIR_6 + D_SP_6
+		p.from.offset = StackGuard_stack
+		p.to.typ = D_AX_6
+		p = appendp(ctxt, p)
+		p.as = sub
+		p.from.typ = D_SI_6
+		p.to.typ = D_AX_6
+		p = appendp(ctxt, p)
+		p.as = cmp
+		p.from.typ = D_AX_6
+		p.to.typ = D_CONST_6
+		p.to.offset = framesize + (StackGuard_stack - StackSmall_stack)
 	}
 	// common
 	p = appendp(ctxt, p)
-	p.as = int(AJHI_6)
-	p.to.typ = int(D_BRANCH_6)
+	p.as = AJHI_6
+	p.to.typ = D_BRANCH_6
 	q = p
 	// If we ask for more stack, we'll get a minimum of StackMin bytes.
 	// We need a stack frame large enough to hold the top-of-stack data,
@@ -547,67 +747,61 @@ func stacksplit_obj6(ctxt *Link, p *Prog, framesize int, textarg int32, noctxt b
 	// amount: then we can use the custom functions and save a few
 	// instructions.
 	moreconst1 = 0
-	if int32(StackTop_stack)+textarg+int32(ctxt.arch.ptrsize)+int32(framesize)+int32(ctxt.arch.ptrsize)+int32(StackLimit_stack) >= int32(StackMin_stack) {
+	if StackTop_stack+textarg+ctxt.arch.ptrsize+framesize+ctxt.arch.ptrsize+StackLimit_stack >= StackMin_stack {
 		moreconst1 = framesize
 	}
-	moreconst2 = uint32(textarg)
+	moreconst2 = textarg
 	if moreconst2 == 1 { // special marker
 		moreconst2 = 0
 	}
-	if (moreconst2 & 7) != 0 {
+	if moreconst2&7 != 0 {
 		ctxt.diag("misaligned argument size in stack split")
 	}
 	// 4 varieties varieties (const1==0 cross const2==0)
 	// and 6 subvarieties of (const1==0 and const2!=0)
 	p = appendp(ctxt, p)
 	if moreconst1 == 0 && moreconst2 == 0 {
-		p.as = int(ACALL_6)
-		p.to.typ = int(D_BRANCH_6)
-		p.to.sym = ctxt.symmorestack[0*2+bool2int(noctxt)]
+		p.as = ACALL_6
+		p.to.typ = D_BRANCH_6
+		p.to.sym = ctxt.symmorestack[0*2+noctxt]
+	} else if moreconst1 != 0 && moreconst2 == 0 {
+		p.as = AMOVL_6
+		p.from.typ = D_CONST_6
+		p.from.offset = moreconst1
+		p.to.typ = D_AX_6
+		p = appendp(ctxt, p)
+		p.as = ACALL_6
+		p.to.typ = D_BRANCH_6
+		p.to.sym = ctxt.symmorestack[1*2+noctxt]
+	} else if moreconst1 == 0 && moreconst2 <= 48 && moreconst2%8 == 0 {
+		i = uint32(moreconst2/8 + 3)
+		p.as = ACALL_6
+		p.to.typ = D_BRANCH_6
+		p.to.sym = ctxt.symmorestack[i*2+uint32(noctxt)]
+	} else if moreconst1 == 0 && moreconst2 != 0 {
+		p.as = AMOVL_6
+		p.from.typ = D_CONST_6
+		p.from.offset = moreconst2
+		p.to.typ = D_AX_6
+		p = appendp(ctxt, p)
+		p.as = ACALL_6
+		p.to.typ = D_BRANCH_6
+		p.to.sym = ctxt.symmorestack[2*2+noctxt]
 	} else {
-		if moreconst1 != 0 && moreconst2 == 0 {
-			p.as = int(AMOVL_6)
-			p.from.typ = int(D_CONST_6)
-			p.from.offset = int64(moreconst1)
-			p.to.typ = int(D_AX_6)
-			p = appendp(ctxt, p)
-			p.as = int(ACALL_6)
-			p.to.typ = int(D_BRANCH_6)
-			p.to.sym = ctxt.symmorestack[1*2+bool2int(noctxt)]
-		} else {
-			if moreconst1 == 0 && moreconst2 <= 48 && moreconst2%8 == 0 {
-				i = moreconst2/8 + 3
-				p.as = int(ACALL_6)
-				p.to.typ = int(D_BRANCH_6)
-				p.to.sym = ctxt.symmorestack[i*2+uint32(bool2int(noctxt))]
-			} else {
-				if moreconst1 == 0 && moreconst2 != 0 {
-					p.as = int(AMOVL_6)
-					p.from.typ = int(D_CONST_6)
-					p.from.offset = int64(moreconst2)
-					p.to.typ = int(D_AX_6)
-					p = appendp(ctxt, p)
-					p.as = int(ACALL_6)
-					p.to.typ = int(D_BRANCH_6)
-					p.to.sym = ctxt.symmorestack[2*2+bool2int(noctxt)]
-				} else {
-					// Pass framesize and argsize.
-					p.as = int(AMOVQ_6)
-					p.from.typ = int(D_CONST_6)
-					p.from.offset = int64(uint64(moreconst2) << 32)
-					p.from.offset |= int64(moreconst1)
-					p.to.typ = int(D_AX_6)
-					p = appendp(ctxt, p)
-					p.as = int(ACALL_6)
-					p.to.typ = int(D_BRANCH_6)
-					p.to.sym = ctxt.symmorestack[3*2+bool2int(noctxt)]
-				}
-			}
-		}
+		// Pass framesize and argsize.
+		p.as = AMOVQ_6
+		p.from.typ = D_CONST_6
+		p.from.offset = int64(uint64(moreconst2) << 32)
+		p.from.offset |= moreconst1
+		p.to.typ = D_AX_6
+		p = appendp(ctxt, p)
+		p.as = ACALL_6
+		p.to.typ = D_BRANCH_6
+		p.to.sym = ctxt.symmorestack[3*2+noctxt]
 	}
 	p = appendp(ctxt, p)
-	p.as = int(AJMP_6)
-	p.to.typ = int(D_BRANCH_6)
+	p.as = AJMP_6
+	p.to.typ = D_BRANCH_6
 	p.pcond = ctxt.cursym.text.link
 	if q != nil {
 		q.pcond = p.link
@@ -619,255 +813,89 @@ func stacksplit_obj6(ctxt *Link, p *Prog, framesize int, textarg int32, noctxt b
 	return p
 }
 
-func indir_cx_obj6(ctxt *Link, a *Addr) {
-	if ctxt.headtype == int(Hnacl) {
-		a.typ = int(D_INDIR_6 + int(D_R15_6))
-		a.index = int(D_CX_6)
-		a.scale = 1
-		return
-	}
-	a.typ = int(D_INDIR_6 + D_CX_6)
+func follow_obj6(ctxt *Link, s *LSym) {
+	var firstp *Prog
+	var lastp *Prog
+	ctxt.cursym = s
+	firstp = ctxt.prg()
+	lastp = firstp
+	xfol_obj6(ctxt, s.text, &lastp)
+	lastp.link = nil
+	s.text = firstp.link
 }
 
-func parsetextconst_obj6(arg int64, textstksiz *int64, textarg *int64) {
-	*textstksiz = arg & 0xffffffff
-	if *textstksiz&0x80000000 != 0 /*untyped*/ {
-		*textstksiz = -(-*textstksiz & 0xffffffff)
+func nofollow_obj6(a int) int {
+	switch a {
+	case AJMP_6,
+		ARET_6,
+		AIRETL_6,
+		AIRETQ_6,
+		AIRETW_6,
+		ARETFL_6,
+		ARETFQ_6,
+		ARETFW_6,
+		AUNDEF_6:
+		return 1
 	}
-	*textarg = (arg >> 32) & 0xffffffff
-	if *textarg&0x80000000 != 0 /*untyped*/ {
-		*textarg = 0
-	}
-	*textarg = (*textarg + 7) &^ 7
+	return 0
 }
 
-func addstacksplit_obj6(ctxt *Link, cursym *LSym) {
-	var p *Prog
-	var q *Prog
-	var q1 *Prog
-	var autoffset int
-	var deltasp int
-	var a int
-	var pcsize int
-	var i int
-	var textstksiz int64
-	var textarg int64
-	if ctxt.tlsg == nil {
-		ctxt.tlsg = linklookup(ctxt, "runtime.tlsg", 0)
+func pushpop_obj6(a int) int {
+	switch a {
+	case APUSHL_6,
+		APUSHFL_6,
+		APUSHQ_6,
+		APUSHFQ_6,
+		APUSHW_6,
+		APUSHFW_6,
+		APOPL_6,
+		APOPFL_6,
+		APOPQ_6,
+		APOPFQ_6,
+		APOPW_6,
+		APOPFW_6:
+		return 1
 	}
-	if ctxt.symmorestack[0] == nil {
-		if len(morename_obj6) > len(ctxt.symmorestack) {
-			sysfatal("Link.symmorestack needs at least %d elements", len(morename_obj6))
-		}
-		for i = 0; i < len(morename_obj6); i++ {
-			ctxt.symmorestack[i] = linklookup(ctxt, morename_obj6[i], 0)
-		}
+	return 0
+}
+
+func relinv_obj6(a int) int {
+	switch a {
+	case AJEQ_6:
+		return AJNE_6
+	case AJNE_6:
+		return AJEQ_6
+	case AJLE_6:
+		return AJGT_6
+	case AJLS_6:
+		return AJHI_6
+	case AJLT_6:
+		return AJGE_6
+	case AJMI_6:
+		return AJPL_6
+	case AJGE_6:
+		return AJLT_6
+	case AJPL_6:
+		return AJMI_6
+	case AJGT_6:
+		return AJLE_6
+	case AJHI_6:
+		return AJLS_6
+	case AJCS_6:
+		return AJCC_6
+	case AJCC_6:
+		return AJCS_6
+	case AJPS_6:
+		return AJPC_6
+	case AJPC_6:
+		return AJPS_6
+	case AJOS_6:
+		return AJOC_6
+	case AJOC_6:
+		return AJOS_6
 	}
-	if ctxt.headtype == int(Hplan9) && ctxt.plan9privates == nil {
-		ctxt.plan9privates = linklookup(ctxt, "_privates", 0)
-	}
-	ctxt.cursym = cursym
-	if cursym.text == nil || cursym.text.link == nil {
-		return
-	}
-	p = cursym.text
-	parsetextconst_obj6(p.to.offset, (*int64)(&textstksiz), &textarg)
-	autoffset = int(textstksiz)
-	if autoffset < 0 {
-		autoffset = 0
-	}
-	cursym.args = int(p.to.offset >> 32)
-	cursym.locals = int(textstksiz)
-	if autoffset < int(StackSmall_stack) && !(p.from.scale&int(NOSPLIT_textflag) != 0) {
-		for q = p; q != nil; q = q.link {
-			if q.as == int(ACALL_6) {
-				goto noleaf
-			}
-			if (q.as == int(ADUFFCOPY_6) || q.as == int(ADUFFZERO_6)) && autoffset >= StackSmall_stack-8 {
-				goto noleaf
-			}
-		}
-		p.from.scale |= int(NOSPLIT_textflag)
-	noleaf:
-	}
-	q = (*Prog)(nil)
-	if !(p.from.scale&int(NOSPLIT_textflag) != 0) || (p.from.scale&int(WRAPPER_textflag) != 0) {
-		p = appendp(ctxt, p)
-		p = load_g_cx_obj6(ctxt, p) // load g into CX
-	}
-	if !(cursym.text.from.scale&int(NOSPLIT_textflag) != 0) {
-		p = stacksplit_obj6(ctxt, p, autoffset, int32(textarg), !(cursym.text.from.scale&int(NEEDCTXT_textflag) != 0), &q) // emit split check
-	}
-	if autoffset != 0 {
-		if autoffset%ctxt.arch.regsize != 0 {
-			ctxt.diag("unaligned stack size %d", autoffset)
-		}
-		p = appendp(ctxt, p)
-		p.as = int(AADJSP_6)
-		p.from.typ = int(D_CONST_6)
-		p.from.offset = int64(autoffset)
-		p.spadj = autoffset
-	} else {
-		// zero-byte stack adjustment.
-		// Insert a fake non-zero adjustment so that stkcheck can
-		// recognize the end of the stack-splitting prolog.
-		p = appendp(ctxt, p)
-		p.as = int(ANOP_6)
-		p.spadj = -ctxt.arch.ptrsize
-		p = appendp(ctxt, p)
-		p.as = int(ANOP_6)
-		p.spadj = ctxt.arch.ptrsize
-	}
-	if q != nil {
-		q.pcond = p
-	}
-	deltasp = autoffset
-	if cursym.text.from.scale&int(WRAPPER_textflag) != 0 {
-		// g->panicwrap += autoffset + ctxt->arch->regsize;
-		p = appendp(ctxt, p)
-		p.as = int(AADDL_6)
-		p.from.typ = int(D_CONST_6)
-		p.from.offset = int64(autoffset) + int64(ctxt.arch.regsize)
-		indir_cx_obj6(ctxt, &p.to)
-		p.to.offset = 2 * int64(ctxt.arch.ptrsize)
-	}
-	if ctxt.debugstack > 1 && autoffset != 0 {
-		// 6l -K -K means double-check for stack overflow
-		// even after calling morestack and even if the
-		// function is marked as nosplit.
-		p = appendp(ctxt, p)
-		p.as = int(AMOVQ_6)
-		indir_cx_obj6(ctxt, &p.from)
-		p.from.offset = 0
-		p.to.typ = int(D_BX_6)
-		p = appendp(ctxt, p)
-		p.as = int(ASUBQ_6)
-		p.from.typ = int(D_CONST_6)
-		p.from.offset = int64(StackSmall_stack) + 32
-		p.to.typ = int(D_BX_6)
-		p = appendp(ctxt, p)
-		p.as = int(ACMPQ_6)
-		p.from.typ = int(D_SP_6)
-		p.to.typ = int(D_BX_6)
-		p = appendp(ctxt, p)
-		p.as = int(AJHI_6)
-		p.to.typ = int(D_BRANCH_6)
-		q1 = p
-		p = appendp(ctxt, p)
-		p.as = int(AINT_6)
-		p.from.typ = int(D_CONST_6)
-		p.from.offset = 3
-		p = appendp(ctxt, p)
-		p.as = int(ANOP_6)
-		q1.pcond = p
-	}
-	if ctxt.debugzerostack != 0 && autoffset != 0 && !(cursym.text.from.scale&int(NOSPLIT_textflag) != 0) {
-		// 6l -Z means zero the stack frame on entry.
-		// This slows down function calls but can help avoid
-		// false positives in garbage collection.
-		p = appendp(ctxt, p)
-		p.as = int(AMOVQ_6)
-		p.from.typ = int(D_SP_6)
-		p.to.typ = int(D_DI_6)
-		p = appendp(ctxt, p)
-		p.as = int(AMOVQ_6)
-		p.from.typ = int(D_CONST_6)
-		p.from.offset = int64(autoffset) / 8
-		p.to.typ = int(D_CX_6)
-		p = appendp(ctxt, p)
-		p.as = int(AMOVQ_6)
-		p.from.typ = int(D_CONST_6)
-		p.from.offset = 0
-		p.to.typ = int(D_AX_6)
-		p = appendp(ctxt, p)
-		p.as = int(AREP_6)
-		p = appendp(ctxt, p)
-		p.as = int(ASTOSQ_6)
-	}
-	for ; p != nil; p = p.link {
-		pcsize = p.mode / 8
-		a = p.from.typ
-		if a == int(D_AUTO_6) {
-			p.from.offset += int64(deltasp)
-		}
-		if a == int(D_PARAM_6) {
-			p.from.offset += int64(deltasp) + int64(pcsize)
-		}
-		a = p.to.typ
-		if a == int(D_AUTO_6) {
-			p.to.offset += int64(deltasp)
-		}
-		if a == int(D_PARAM_6) {
-			p.to.offset += int64(deltasp) + int64(pcsize)
-		}
-		switch p.as {
-		default:
-			continue
-		case APUSHL_6:
-		case APUSHFL_6:
-			deltasp += 4
-			p.spadj = 4
-			continue
-		case APUSHQ_6:
-		case APUSHFQ_6:
-			deltasp += 8
-			p.spadj = 8
-			continue
-		case APUSHW_6:
-		case APUSHFW_6:
-			deltasp += 2
-			p.spadj = 2
-			continue
-		case APOPL_6:
-		case APOPFL_6:
-			deltasp -= 4
-			p.spadj = -4
-			continue
-		case APOPQ_6:
-		case APOPFQ_6:
-			deltasp -= 8
-			p.spadj = -8
-			continue
-		case APOPW_6:
-		case APOPFW_6:
-			deltasp -= 2
-			p.spadj = -2
-			continue
-		case ARET_6:
-			break
-		}
-		if autoffset != deltasp {
-			ctxt.diag("unbalanced PUSH/POP")
-		}
-		if cursym.text.from.scale&int(WRAPPER_textflag) != 0 {
-			p = load_g_cx_obj6(ctxt, p)
-			p = appendp(ctxt, p)
-			// g->panicwrap -= autoffset + ctxt->arch->regsize;
-			p.as = int(ASUBL_6)
-			p.from.typ = int(D_CONST_6)
-			p.from.offset = int64(autoffset) + int64(ctxt.arch.regsize)
-			indir_cx_obj6(ctxt, &p.to)
-			p.to.offset = 2 * int64(ctxt.arch.ptrsize)
-			p = appendp(ctxt, p)
-			p.as = int(ARET_6)
-		}
-		if autoffset != 0 {
-			p.as = int(AADJSP_6)
-			p.from.typ = int(D_CONST_6)
-			p.from.offset = int64(-autoffset)
-			p.spadj = -autoffset
-			p = appendp(ctxt, p)
-			p.as = int(ARET_6)
-			// If there are instructions following
-			// this ARET, they come from a branch
-			// with the same stackframe, so undo
-			// the cleanup.
-			p.spadj = +autoffset
-		}
-		if p.to.sym != nil { // retjmp
-			p.as = int(AJMP_6)
-		}
-	}
+	log.Fatalf("unknown relation: %s", anames6[a])
+	return 0
 }
 
 func xfol_obj6(ctxt *Link, p *Prog, last **Prog) {
@@ -878,9 +906,9 @@ loop:
 	if p == nil {
 		return
 	}
-	if p.as == int(AJMP_6) {
+	if p.as == AJMP_6 {
 		q = p.pcond
-		if (q) != nil && q.as != int(ATEXT_6) {
+		if q != nil && q.as != ATEXT_6 {
 			/* mark instruction as done and continue layout at target of jump */
 			p.mark = 1
 			p = q
@@ -904,7 +932,7 @@ loop:
 				break
 			}
 			a = q.as
-			if a == int(ANOP_6) {
+			if a == ANOP_6 {
 				i--
 				continue
 			}
@@ -914,11 +942,11 @@ loop:
 			if q.pcond == nil || q.pcond.mark != 0 {
 				continue
 			}
-			if a == int(ACALL_6) || a == int(ALOOP_6) {
+			if a == ACALL_6 || a == ALOOP_6 {
 				continue
 			}
 			for {
-				if p.as == int(ANOP_6) {
+				if p.as == ANOP_6 {
 					p = p.link
 					continue
 				}
@@ -942,11 +970,11 @@ loop:
 				goto loop /* */
 			}
 		}
-		q = ctxt.arch.prg()
-		q.as = int(AJMP_6)
+		q = ctxt.prg()
+		q.as = AJMP_6
 		q.lineno = p.lineno
-		q.to.typ = int(D_BRANCH_6)
-		q.to.offset = int64(p.pc)
+		q.to.typ = D_BRANCH_6
+		q.to.offset = p.pc
 		q.pcond = p
 		p = q
 	}
@@ -959,21 +987,21 @@ loop:
 	if nofollow_obj6(a) != 0 {
 		return
 	}
-	if p.pcond != nil && a != int(ACALL_6) {
+	if p.pcond != nil && a != ACALL_6 {
 		/*
 		 * some kind of conditional branch.
 		 * recurse to follow one path.
 		 * continue loop on the other.
 		 */
 		q = brchain(ctxt, p.pcond)
-		if (q) != nil {
+		if q != nil {
 			p.pcond = q
 		}
 		q = brchain(ctxt, p.link)
-		if (q) != nil {
+		if q != nil {
 			p.link = q
 		}
-		if p.from.typ == int(D_CONST_6) {
+		if p.from.typ == D_CONST_6 {
 			if p.from.offset == 1 {
 				/*
 				 * expect conditional jump to be taken.
@@ -987,7 +1015,7 @@ loop:
 		} else {
 			q = p.link
 			if q.mark != 0 {
-				if a != int(ALOOP_6) {
+				if a != ALOOP_6 {
 					p.as = relinv_obj6(a)
 					p.link = p.pcond
 					p.pcond = q
@@ -1005,94 +1033,94 @@ loop:
 	goto loop
 }
 
-func follow_obj6(ctxt *Link, s *LSym) {
-	var firstp *Prog
-	var lastp *Prog
-	ctxt.cursym = s
-	firstp = ctxt.arch.prg()
-	lastp = firstp
-	xfol_obj6(ctxt, s.text, &lastp)
-	lastp.link = (*Prog)(nil)
-	s.text = firstp.link
-}
-
-func nofollow_obj6(a int) int {
-	switch a {
-	case AJMP_6:
-	case ARET_6:
-	case AIRETL_6:
-	case AIRETQ_6:
-	case AIRETW_6:
-	case ARETFL_6:
-	case ARETFQ_6:
-	case ARETFW_6:
-	case AUNDEF_6:
-		return 1
-	}
-	return 0
-}
-
-func pushpop_obj6(a int) int {
-	switch a {
-	case APUSHL_6:
-	case APUSHFL_6:
-	case APUSHQ_6:
-	case APUSHFQ_6:
-	case APUSHW_6:
-	case APUSHFW_6:
-	case APOPL_6:
-	case APOPFL_6:
-	case APOPQ_6:
-	case APOPFQ_6:
-	case APOPW_6:
-	case APOPFW_6:
-		return 1
-	}
-	return 0
-}
-
-func relinv_obj6(a int) int {
-	switch a {
-	case AJEQ_6:
-		return int(AJNE_6)
-	case AJNE_6:
-		return int(AJEQ_6)
-	case AJLE_6:
-		return int(AJGT_6)
-	case AJLS_6:
-		return int(AJHI_6)
-	case AJLT_6:
-		return int(AJGE_6)
-	case AJMI_6:
-		return int(AJPL_6)
-	case AJGE_6:
-		return int(AJLT_6)
-	case AJPL_6:
-		return int(AJMI_6)
-	case AJGT_6:
-		return int(AJLE_6)
-	case AJHI_6:
-		return int(AJLS_6)
-	case AJCS_6:
-		return int(AJCC_6)
-	case AJCC_6:
-		return int(AJCS_6)
-	case AJPS_6:
-		return int(AJPC_6)
-	case AJPC_6:
-		return int(AJPS_6)
-	case AJOS_6:
-		return int(AJOC_6)
-	case AJOC_6:
-		return int(AJOS_6)
-	}
-	sysfatal("unknown relation: %s", anames6[a])
-	return 0
-}
-
 func prg_obj6() *Prog {
 	var p *Prog
 	p = new(Prog)
 	*p = zprg_obj6
 	return p
+}
+
+var linkamd64 = LinkArch{
+	name:          "amd64",
+	thechar:       '6',
+	addstacksplit: addstacksplit_obj6,
+	assemble:      span6,
+	datasize:      datasize_obj6,
+	follow:        follow_obj6,
+	iscall:        iscall_obj6,
+	isdata:        isdata_obj6,
+	prg:           prg_obj6,
+	progedit:      progedit_obj6,
+	settextflag:   settextflag_obj6,
+	symtype:       symtype_obj6,
+	textflag:      textflag_obj6,
+	Pconv:         Pconv_list6,
+	minlc:         1,
+	ptrsize:       8,
+	regsize:       8,
+	byteOrder:     binary.LittleEndian,
+	D_ADDR:        D_ADDR_6,
+	D_AUTO:        D_AUTO_6,
+	D_BRANCH:      D_BRANCH_6,
+	D_CONST:       D_CONST_6,
+	D_EXTERN:      D_EXTERN_6,
+	D_FCONST:      D_FCONST_6,
+	D_NONE:        D_NONE_6,
+	D_PARAM:       D_PARAM_6,
+	D_SCONST:      D_SCONST_6,
+	D_STATIC:      D_STATIC_6,
+	ACALL:         ACALL_6,
+	ADATA:         ADATA_6,
+	AEND:          AEND_6,
+	AFUNCDATA:     AFUNCDATA_6,
+	AGLOBL:        AGLOBL_6,
+	AJMP:          AJMP_6,
+	ANOP:          ANOP_6,
+	APCDATA:       APCDATA_6,
+	ARET:          ARET_6,
+	ATEXT:         ATEXT_6,
+	ATYPE:         ATYPE_6,
+	AUSEFIELD:     AUSEFIELD_6,
+}
+
+var linkamd64p32 = LinkArch{
+	name:          "amd64p32",
+	thechar:       '6',
+	addstacksplit: addstacksplit_obj6,
+	assemble:      span6,
+	datasize:      datasize_obj6,
+	follow:        follow_obj6,
+	iscall:        iscall_obj6,
+	isdata:        isdata_obj6,
+	prg:           prg_obj6,
+	progedit:      progedit_obj6,
+	settextflag:   settextflag_obj6,
+	symtype:       symtype_obj6,
+	textflag:      textflag_obj6,
+	Pconv:         Pconv_list6,
+	minlc:         1,
+	ptrsize:       4,
+	regsize:       8,
+	D_ADDR:        D_ADDR_6,
+	D_AUTO:        D_AUTO_6,
+	D_BRANCH:      D_BRANCH_6,
+	D_CONST:       D_CONST_6,
+	D_EXTERN:      D_EXTERN_6,
+	D_FCONST:      D_FCONST_6,
+	D_NONE:        D_NONE_6,
+	D_PARAM:       D_PARAM_6,
+	D_SCONST:      D_SCONST_6,
+	D_STATIC:      D_STATIC_6,
+	ACALL:         ACALL_6,
+	ADATA:         ADATA_6,
+	AEND:          AEND_6,
+	AFUNCDATA:     AFUNCDATA_6,
+	AGLOBL:        AGLOBL_6,
+	AJMP:          AJMP_6,
+	ANOP:          ANOP_6,
+	APCDATA:       APCDATA_6,
+	ARET:          ARET_6,
+	ATEXT:         ATEXT_6,
+	ATYPE:         ATYPE_6,
+	AUSEFIELD:     AUSEFIELD_6,
 }

@@ -31,186 +31,9 @@ import "fmt"
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
-func Aconv_list5(a int) string {
-	var s string
-	s = "???"
-	if a >= int(AXXX_8) && a < int(ALAST_8) {
-		s = anames5[a]
-	}
-	return s
-}
-
-func Dconv_list5(p *Prog, a *Addr) string {
-	var v int
-	switch a.typ {
-	default:
-		return fmt.Sprintf("GOK-type(%d)", a.typ)
-		break
-	case D_NONE_8:
-		if a.name != int(D_NONE_8) || a.reg != int(NREG_5) || a.sym != nil {
-			return fmt.Sprintf("%s(R%d)(NONE)", Mconv_list5(a), a.reg)
-		}
-	case D_CONST_8:
-		if a.reg != int(NREG_5) {
-			return fmt.Sprintf("$%s(R%d)", Mconv_list5(a), a.reg)
-		} else {
-			return fmt.Sprintf("$%s", Mconv_list5(a))
-		}
-	case D_CONST2_8:
-		return fmt.Sprintf("$%d-%d", a.offset, a.offset2)
-	case D_SHIFT_5:
-		v = int(a.offset)
-		op := "<<>>->@>"[((v>>5)&3)<<1:]
-		var str string
-		if v&(1<<4) != 0 /*untyped*/ {
-			str = fmt.Sprintf("R%d%c%cR%d", v&15, op[0], op[1], (v>>8)&15)
-		} else {
-			str = fmt.Sprintf("R%d%c%c%d", v&15, op[0], op[1], (v>>7)&31)
-		}
-		if a.reg != int(NREG_5) {
-			str += fmt.Sprintf("(R%d)", a.reg)
-		}
-	case D_OREG_5:
-		if a.reg != int(NREG_5) {
-			return fmt.Sprintf("%s(R%d)", Mconv_list5(a), a.reg)
-		} else {
-			return fmt.Sprintf("%s", Mconv_list5(a))
-		}
-	case D_REG_5:
-		if a.name != int(D_NONE_8) || a.sym != nil {
-			return fmt.Sprintf("%s(R%d)(REG)", Mconv_list5(a), a.reg)
-		}
-		return fmt.Sprintf("R%d", a.reg)
-	case D_FREG_5:
-		if a.name != int(D_NONE_8) || a.sym != nil {
-			return fmt.Sprintf("%s(R%d)(REG)", Mconv_list5(a), a.reg)
-		}
-		return fmt.Sprintf("F%d", a.reg)
-	case D_PSR_5:
-		if a.name != int(D_NONE_8) || a.sym != nil {
-			return fmt.Sprintf("%s(PSR)(REG)", Mconv_list5(a))
-		}
-		return fmt.Sprintf("PSR")
-	case D_BRANCH_8:
-		if a.sym != nil {
-			return fmt.Sprintf("%s(SB)", a.sym.name)
-		} else if p != nil && p.pcond != nil {
-			return fmt.Sprintf("%d", p.pcond.pc)
-		} else if a.u.branch != nil {
-			return fmt.Sprintf("%d", a.u.branch.pc)
-		} else {
-			return fmt.Sprintf("%d(PC)", a.offset) /*-pc*/
-		}
-	case D_FCONST_8:
-		return fmt.Sprintf("$%.17g", a.u.dval)
-	case D_SCONST_8:
-		return fmt.Sprintf("$%q", a.u.sval)
-	}
-	return ""
-}
-
-func Mconv_list5(a *Addr) string {
-	var s *LSym
-	s = a.sym
-	if s == nil {
-		return fmt.Sprintf("%d", int(a.offset))
-	}
-	switch a.name {
-	default:
-		return fmt.Sprintf("GOK-name(%d)", a.name)
-		break
-	case D_NONE_8:
-		return fmt.Sprintf("%d", a.offset)
-		break
-	case D_EXTERN_8:
-		return fmt.Sprintf("%s+%d(SB)", s.name, int(a.offset))
-		break
-	case D_STATIC_8:
-		return fmt.Sprintf("%s<>+%d(SB)", s.name, int(a.offset))
-		break
-	case D_AUTO_8:
-		return fmt.Sprintf("%s-%d(SP)", s.name, int(-a.offset))
-		break
-	case D_PARAM_8:
-		return fmt.Sprintf("%s+%d(FP)", s.name, int(a.offset))
-		break
-	}
-	return ""
-}
-
-func Pconv_list5(ctxt *Link, p *Prog) string {
-	var a int
-	var s int
-	a = p.as
-	s = p.scond
-	sc := extra_list5[s&int(C_SCOND_5)]
-	if s&int(C_SBIT_5) != 0 {
-		sc += ".S"
-	}
-	if s&int(C_PBIT_5) != 0 {
-		sc += ".P"
-	}
-	if s&int(C_WBIT_5) != 0 {
-		sc += ".W"
-	}
-	if s&int(C_UBIT_5) != 0 { /* ambiguous with FBIT */
-		sc += ".U"
-	}
-	if a == int(AMOVM_5) {
-		if p.from.typ == int(D_CONST_8) {
-			return fmt.Sprintf("%.5d (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, RAconv_list5(&p.from), Dconv_list5(p, &p.to))
-		} else if p.to.typ == int(D_CONST_8) {
-			return fmt.Sprintf("%.5d (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), RAconv_list5(&p.to))
-		} else {
-			return fmt.Sprintf("%.5d (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), Dconv_list5(p, &p.to))
-		}
-	} else if a == int(ADATA_8) {
-		return fmt.Sprintf("%.5d (%L)	%s	%s/%d,%s", p.pc, p.lineno, Aconv_list5(a), Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
-	} else if p.as == int(ATEXT_8) {
-		return fmt.Sprintf("%.5d (%L)	%s	%s,%d,%s", p.pc, p.lineno, Aconv_list5(a), Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
-	} else if p.reg == int(NREG_5) {
-		return fmt.Sprintf("%.5d (%L)	%s%s	%s,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), Dconv_list5(p, &p.to))
-	} else if p.from.typ != int(D_FREG_5) {
-		return fmt.Sprintf("%.5d (%L)	%s%s	%s,R%d,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
-	} else {
-		return fmt.Sprintf("%.5d (%L)	%s%s	%s,F%d,%s", p.pc, p.lineno, Aconv_list5(a), sc, Dconv_list5(p, &p.from), p.reg, Dconv_list5(p, &p.to))
-	}
-}
-
-func Rconv_list5(r int) string {
-	return fmt.Sprintf("R%d", r)
-}
-
-func RAconv_list5(a *Addr) string {
-	var i int
-	var v int
-	str := "GOK-reglist"
-	switch a.typ {
-	case D_CONST_8:
-	case D_CONST2_8:
-		if a.reg != int(NREG_5) {
-			break
-		}
-		if a.sym != nil {
-			break
-		}
-		v = int(a.offset)
-		str = ""
-		for i = 0; i < int(NREG_5); i++ {
-			if v&(1<<uint(i)) != 0 /*untyped*/ {
-				if str == "" {
-					str += "[R"
-				} else {
-					str += ",R"
-				}
-				str += fmt.Sprintf("%d", i)
-			}
-		}
-		str += "]"
-	}
-	return str
-}
+const (
+	STRINGSZ_list5 = 1000
+)
 
 var extra_list5 = []string{
 	".EQ",
@@ -229,4 +52,209 @@ var extra_list5 = []string{
 	".LE",
 	"",
 	".NV",
+}
+
+func Pconv_list5(p *Prog) string {
+	var str string
+	var sc string
+	var fp string
+	var a int
+	var s int
+
+	a = p.as
+	s = p.scond
+	sc = extra_list5[s&C_SCOND_5]
+	if s&C_SBIT_5 != 0 {
+		sc += ".S"
+	}
+	if s&C_PBIT_5 != 0 {
+		sc += ".P"
+	}
+	if s&C_WBIT_5 != 0 {
+		sc += ".W"
+	}
+	if s&C_UBIT_5 != 0 { /* ambiguous with FBIT */
+		sc += ".U"
+	}
+	if a == AMOVM_5 {
+		if p.from.typ == D_CONST_5 {
+			str = fmt.Sprintf("%.5d (%v)\t%v%s\t%v,%v", p.pc, p.Line(), Aconv_list5(a), sc, RAconv_list5(&p.from), Dconv_list5(p, 0, &p.to))
+		} else if p.to.typ == D_CONST_5 {
+			str = fmt.Sprintf("%.5d (%v)\t%v%s\t%v,%v", p.pc, p.Line(), Aconv_list5(a), sc, Dconv_list5(p, 0, &p.from), RAconv_list5(&p.to))
+		} else {
+			str = fmt.Sprintf("%.5d (%v)\t%v%s\t%v,%v", p.pc, p.Line(), Aconv_list5(a), sc, Dconv_list5(p, 0, &p.from), Dconv_list5(p, 0, &p.to))
+		}
+	} else if a == ADATA_5 {
+		str = fmt.Sprintf("%.5d (%v)\t%v\t%v/%d,%v", p.pc, p.Line(), Aconv_list5(a), Dconv_list5(p, 0, &p.from), p.reg, Dconv_list5(p, 0, &p.to))
+	} else if p.as == ATEXT_5 {
+		str = fmt.Sprintf("%.5d (%v)\t%v\t%v,%d,%v", p.pc, p.Line(), Aconv_list5(a), Dconv_list5(p, 0, &p.from), p.reg, Dconv_list5(p, 0, &p.to))
+	} else if p.reg == NREG_5 {
+		str = fmt.Sprintf("%.5d (%v)\t%v%s\t%v,%v", p.pc, p.Line(), Aconv_list5(a), sc, Dconv_list5(p, 0, &p.from), Dconv_list5(p, 0, &p.to))
+	} else if p.from.typ != D_FREG_5 {
+		str = fmt.Sprintf("%.5d (%v)\t%v%s\t%v,R%d,%v", p.pc, p.Line(), Aconv_list5(a), sc, Dconv_list5(p, 0, &p.from), p.reg, Dconv_list5(p, 0, &p.to))
+	} else {
+		str = fmt.Sprintf("%.5d (%v)\t%v%s\t%v,F%d,%v", p.pc, p.Line(), Aconv_list5(a), sc, Dconv_list5(p, 0, &p.from), p.reg, Dconv_list5(p, 0, &p.to))
+	}
+
+	fp += str
+	return fp
+}
+
+func Aconv_list5(a int) string {
+	var s string
+	var fp string
+
+	s = "???"
+	if a >= AXXX_5 && a < ALAST_5 {
+		s = anames5[a]
+	}
+	fp += s
+	return fp
+}
+
+func Dconv_list5(p *Prog, flag int, a *Addr) string {
+	var str string
+	var fp string
+	var op string
+	var v int64
+
+	switch a.typ {
+	default:
+		str = fmt.Sprintf("GOK-type(%d)", a.typ)
+	case D_NONE_5:
+		str = ""
+		if a.name != D_NONE_5 || a.reg != NREG_5 || a.sym != nil {
+			str = fmt.Sprintf("%v(R%d)(NONE)", Mconv_list5(a), a.reg)
+		}
+	case D_CONST_5:
+		if a.reg != NREG_5 {
+			str = fmt.Sprintf("$%v(R%d)", Mconv_list5(a), a.reg)
+		} else {
+			str = fmt.Sprintf("$%v", Mconv_list5(a))
+		}
+	case D_CONST2_5:
+		str = fmt.Sprintf("$%d-%d", a.offset, a.offset2)
+	case D_SHIFT_5:
+		v = a.offset
+		op = "<<>>->@>"[((v>>5)&3)<<1:]
+		if v&(1<<4) != 0 {
+			str = fmt.Sprintf("R%d%c%cR%d", v&15, op[0], op[1], (v>>8)&15)
+		} else {
+			str = fmt.Sprintf("R%d%c%c%d", v&15, op[0], op[1], (v>>7)&31)
+		}
+		if a.reg != NREG_5 {
+			str += fmt.Sprintf("(R%d)", a.reg)
+		}
+	case D_OREG_5:
+		if a.reg != NREG_5 {
+			str = fmt.Sprintf("%v(R%d)", Mconv_list5(a), a.reg)
+		} else {
+			str = fmt.Sprintf("%v", Mconv_list5(a))
+		}
+	case D_REG_5:
+		str = fmt.Sprintf("R%d", a.reg)
+		if a.name != D_NONE_5 || a.sym != nil {
+			str = fmt.Sprintf("%v(R%d)(REG)", Mconv_list5(a), a.reg)
+		}
+	case D_FREG_5:
+		str = fmt.Sprintf("F%d", a.reg)
+		if a.name != D_NONE_5 || a.sym != nil {
+			str = fmt.Sprintf("%v(R%d)(REG)", Mconv_list5(a), a.reg)
+		}
+	case D_PSR_5:
+		str = fmt.Sprintf("PSR")
+		if a.name != D_NONE_5 || a.sym != nil {
+			str = fmt.Sprintf("%v(PSR)(REG)", Mconv_list5(a))
+		}
+	case D_BRANCH_5:
+		if a.sym != nil {
+			str = fmt.Sprintf("%s(SB)", a.sym.name)
+		} else if p != nil && p.pcond != nil {
+			str = fmt.Sprintf("%d", p.pcond.pc)
+		} else if a.u.branch != nil {
+			str = fmt.Sprintf("%d", a.u.branch.pc)
+		} else {
+			str = fmt.Sprintf("%d(PC)", a.offset) /*-pc*/
+		}
+	case D_FCONST_5:
+		str = fmt.Sprintf("$%.17g", a.u.dval)
+	case D_SCONST_5:
+		str = fmt.Sprintf("$\"%q\"", a.u.sval)
+		break
+	}
+	fp += str
+	return fp
+}
+
+func RAconv_list5(a *Addr) string {
+	var str string
+	var fp string
+	var i int64
+	var v int64
+
+	str = fmt.Sprintf("GOK-reglist")
+	switch a.typ {
+	case D_CONST_5,
+		D_CONST2_5:
+		if a.reg != NREG_5 {
+			break
+		}
+		if a.sym != nil {
+			break
+		}
+		v = a.offset
+		str = ""
+		for i = 0; i < NREG_5; i++ {
+			if v&(1<<uint64(i)) != 0 {
+				if str[0] == 0 {
+					str += "[R"
+				} else {
+					str += ",R"
+				}
+				str += fmt.Sprintf("%d", i)
+			}
+		}
+		str += "]"
+	}
+	fp += str
+	return fp
+}
+
+func Rconv_list5(r int) string {
+	var fp string
+	var str string
+
+	str = fmt.Sprintf("R%d", r)
+	fp += str
+	return fp
+}
+
+func Mconv_list5(a *Addr) string {
+	var str string
+	var fp string
+	var s *LSym
+
+	s = a.sym
+	if s == nil {
+		str = fmt.Sprintf("%d", int(a.offset))
+		goto out
+	}
+	switch a.name {
+	default:
+		str = fmt.Sprintf("GOK-name(%d)", a.name)
+	case D_NONE_5:
+		str = fmt.Sprintf("%d", a.offset)
+	case D_EXTERN_5:
+		str = fmt.Sprintf("%s+%d(SB)", s.name, int(a.offset))
+	case D_STATIC_5:
+		str = fmt.Sprintf("%s<>+%d(SB)", s.name, int(a.offset))
+	case D_AUTO_5:
+		str = fmt.Sprintf("%s-%d(SP)", s.name, int(-a.offset))
+	case D_PARAM_5:
+		str = fmt.Sprintf("%s+%d(FP)", s.name, int(a.offset))
+		break
+	}
+out:
+	fp += str
+	return fp
 }

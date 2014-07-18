@@ -274,4 +274,4 @@ const (
 /*
  * this is the ranlib header
  */
-var SYMDEF []int8
+var SYMDEF string
