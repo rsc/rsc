@@ -58,7 +58,9 @@ func main() {
 	if *showGroups {
 		return
 	}
+	println(len(prog.Decls), "DECLS")
 	fixGoTypes(prog)
+	println(len(prog.Decls), "DECLS")
 	write(prog, files)
 }
 
@@ -116,6 +118,10 @@ var override = map[string]*cc.Type{
 	"asmout_asm5.out":     &cc.Type{Kind: c2go.Slice, Base: uint32Type},
 
 	"span5.out": &cc.Type{Kind: cc.Array, Base: uint32Type, Width: &cc.Expr{Op: cc.Number, Text: "9"}},
+
+	"LSym.r":  &cc.Type{Kind: c2go.Slice},
+	"Prog.ft": &cc.Type{Kind: c2go.Uint8},
+	"Prog.tt": &cc.Type{Kind: c2go.Uint8},
 }
 
 // Rewrite C types to be Go types.
@@ -455,7 +461,7 @@ func fixGoTypes(prog *cc.Prog) {
 			fixGoTypesInit(decl, decl.Init)
 		}
 		if decl.Body != nil {
-			fixGoTypesStmt(decl, decl.Body)
+			fixGoTypesStmt(prog, decl, decl.Body)
 		}
 	}
 }
@@ -469,13 +475,26 @@ func fixGoTypesInit(decl *cc.Decl, x *cc.Init) {
 	}
 }
 
-func fixGoTypesStmt(fn *cc.Decl, x *cc.Stmt) {
+func fixGoTypesStmt(prog *cc.Prog, fn *cc.Decl, x *cc.Stmt) {
 	if x == nil {
 		return
 	}
 
 	switch x.Op {
-	case cc.StmtDecl, cc.StmtExpr:
+	case cc.StmtDecl:
+		fixGoTypesExpr(fn, x.Expr, nil)
+
+	case cc.StmtExpr:
+		if x.Expr != nil && x.Expr.Op == cc.Call && x.Expr.Left.Op == cc.Name {
+			switch x.Expr.Left.Text {
+			case "qsort":
+				fixQsort(prog, x.Expr)
+				return
+			case "memset":
+				fixMemset(prog, fn, x)
+				return
+			}
+		}
 		fixGoTypesExpr(fn, x.Expr, nil)
 
 	case cc.If, cc.For:
@@ -492,13 +511,13 @@ func fixGoTypesStmt(fn *cc.Decl, x *cc.Stmt) {
 		}
 	}
 	for _, stmt := range x.Block {
-		fixGoTypesStmt(fn, stmt)
+		fixGoTypesStmt(prog, fn, stmt)
 	}
 	if len(x.Block) > 0 && x.Body != nil {
 		panic("block and body")
 	}
-	fixGoTypesStmt(fn, x.Body)
-	fixGoTypesStmt(fn, x.Else)
+	fixGoTypesStmt(prog, fn, x.Body)
+	fixGoTypesStmt(prog, fn, x.Else)
 
 	for _, lab := range x.Labels {
 		// TODO: use correct type
@@ -591,7 +610,7 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	switch x.Op {
 	default:
-		panic(fmt.Sprintf("unexpected construct %v in fixGoTypesExpr - %v - %v", x, x.Op, x.Span))
+		panic(fmt.Sprintf("unexpected construct %v in fixGoTypesExpr - %v - %v", c2go.GoString(x), x.Op, x.Span))
 
 	case cc.Comma:
 		for i, y := range x.List {
@@ -605,7 +624,7 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	case c2go.ExprBlock:
 		for _, stmt := range x.Block {
-			fixGoTypesStmt(fn, stmt)
+			fixGoTypesStmt(nil, fn, stmt)
 		}
 		return nil
 
@@ -666,6 +685,12 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 		forceGoType(fn, x.Right, left)
 
+		return left
+
+	case c2go.ColonEq:
+		left := fixGoTypesExpr(fn, x.Right, nil)
+		x.Left.XType = left
+		x.Left.XDecl.Type = left
 		return left
 
 	case cc.Addr:
@@ -1077,23 +1102,6 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 		return false
 	}
 	switch x.Left.Text {
-	case "memset":
-		if len(x.List) != 3 || x.List[1].Op != cc.Number || x.List[1].Text != "0" {
-			fprintf(x.Span, "unsupported memset - nonzero")
-			return false
-		}
-		obj, objType := objIndir(fn, x.List[0])
-		if !matchSize(fn, obj, objType, x.List[2]) {
-			fprintf(x.Span, "unsupported memset - wrong size")
-			return true
-		}
-
-		x.Op = cc.Eq
-		x.Left = obj
-		x.Right = zeroFor(objType)
-		x.List = nil
-		return true
-
 	case "memmove":
 		if len(x.List) != 3 {
 			fprintf(x.Span, "unsupported %v", x)
@@ -1261,6 +1269,115 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 	}
 
 	return false
+}
+
+func fixMemset(prog *cc.Prog, fn *cc.Decl, stmt *cc.Stmt) {
+	x := stmt.Expr
+	if len(x.List) != 3 || x.List[1].Op != cc.Number || x.List[1].Text != "0" {
+		fprintf(x.Span, "unsupported %v - nonzero", x)
+		return
+	}
+
+	if x.List[2].Op == cc.SizeofExpr || x.List[2].Op == cc.SizeofType {
+		obj, objType := objIndir(fn, x.List[0])
+		if !matchSize(fn, obj, objType, x.List[2]) {
+			fprintf(x.Span, "unsupported %v - wrong size", x)
+			return
+		}
+
+		x.Op = cc.Eq
+		x.Left = obj
+		x.Right = zeroFor(objType)
+		x.List = nil
+		return
+	}
+
+	siz := x.List[2]
+	var count *cc.Expr
+	var objType *cc.Type
+	if siz.Op == cc.Mul {
+		count = siz.Left
+		siz = siz.Right
+		if siz.Op != cc.SizeofExpr && siz.Op != cc.SizeofType {
+			fprintf(x.Span, "unsupported %v - wrong array size", x)
+			return
+		}
+
+		switch siz.Op {
+		case cc.SizeofExpr:
+			p := unparen(siz.Left)
+			if p.Op != cc.Indir && p.Op != cc.Index || !sameType(p.Left.XType, x.List[0].XType) {
+				fprintf(x.Span, "unsupported %v - wrong size", x)
+			}
+			objType = fixGoTypesExpr(fn, x.List[0], nil)
+		case cc.SizeofType:
+			objType = fixGoTypesExpr(fn, x.List[0], nil)
+			if !sameType(siz.Type, objType.Base) {
+				fprintf(x.Span, "unsupported %v - wrong size", x)
+			}
+		}
+	} else {
+		count = siz
+		objType = fixGoTypesExpr(fn, x.List[0], nil)
+		if !objType.Base.Is(c2go.Byte) && !objType.Base.Is(c2go.Uint8) {
+			fprintf(x.Span, "unsupported %v - wrong size form for non-byte type", x)
+			return
+		}
+	}
+
+	// Found it. Replace with zeroing for loop.
+	stmt.Op = cc.For
+	stmt.Pre = &cc.Expr{
+		Op: cc.Eq,
+		Left: &cc.Expr{
+			Op:    cc.Name,
+			Text:  "i",
+			XType: intType,
+		},
+		Right: &cc.Expr{
+			Op:    cc.Number,
+			Text:  "0",
+			XType: intType,
+		},
+		XType: boolType,
+	}
+	stmt.Expr = &cc.Expr{
+		Op: cc.Lt,
+		Left: &cc.Expr{
+			Op:    cc.Name,
+			Text:  "i",
+			XType: intType,
+		},
+		Right: count,
+		XType: boolType,
+	}
+	stmt.Post = &cc.Expr{
+		Op: cc.PostInc,
+		Left: &cc.Expr{
+			Op:    cc.Name,
+			Text:  "i",
+			XType: intType,
+		},
+		XType: intType,
+	}
+	stmt.Body = &cc.Stmt{
+		Op: cc.Block,
+		Block: []*cc.Stmt{
+			{
+				Op: cc.StmtExpr,
+				Expr: &cc.Expr{
+					Op: cc.Eq,
+					Left: &cc.Expr{
+						Op:    cc.Index,
+						Left:  x.List[0],
+						Right: &cc.Expr{Op: cc.Name, Text: "i"},
+					},
+					Right: zeroFor(objType.Base),
+				},
+			},
+		},
+	}
+	return
 }
 
 func fixSpecialCompare(fn *cc.Decl, x *cc.Expr) bool {

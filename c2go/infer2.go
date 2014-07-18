@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"code.google.com/p/rsc/c2go"
 	"code.google.com/p/rsc/cc"
 )
 
@@ -55,10 +56,14 @@ func inferTypes(prog *cc.Prog) {
 	addFlow(prog)
 
 	for _, f := range flowCache {
-		if f.group != nil || f.stopFlow {
+		if f.group != nil {
 			continue
 		}
 		g := &flowGroup{}
+		if f.stopFlow {
+			addToGroup(g, f)
+			continue
+		}
 		exploreGroup(g, f)
 		if len(g.decls) == 0 {
 			continue
@@ -171,6 +176,13 @@ func exploreGroup(g *flowGroup, f *flowSyntax) {
 	if f.group != nil {
 		panic("mixed groups")
 	}
+	addToGroup(g, f)
+	for _, ff := range f.adj {
+		exploreGroup(g, ff)
+	}
+}
+
+func addToGroup(g *flowGroup, f *flowSyntax) {
 	f.group = g
 	g.syntax = append(g.syntax, f)
 	switch x := f.syntax.(type) {
@@ -180,9 +192,6 @@ func exploreGroup(g *flowGroup, f *flowSyntax) {
 		g.exprs = append(g.exprs, x)
 	default:
 		panic(fmt.Sprintf("unexpected syntax %T", x))
-	}
-	for _, ff := range f.adj {
-		exploreGroup(g, ff)
 	}
 }
 
@@ -215,7 +224,7 @@ func addFlowDecl(curfn, d *cc.Decl) {
 		f.stopFlow = true
 	}
 	switch declKey(d) {
-	case "Link.instoffset":
+	case "Link.instoffset", "LSym.r", "Prog.ft", "Prog.tt":
 		f.stopFlow = true
 	}
 
@@ -424,10 +433,13 @@ func addFlowExpr(curfn *cc.Decl, x *cc.Expr) {
 		addFlowEdge(f, flowCache[x.List[1]])
 		addFlowEdge(f, flowCache[x.List[2]])
 
-	case cc.Eq:
+	case cc.Eq, c2go.ColonEq:
 		// flow to left and right
 		addFlowEdge(f, flowCache[x.Left])
 		addFlowEdge(f, flowCache[x.Right])
+		if x.Op == c2go.ColonEq {
+			addFlowEdge(f, flowCache[x.Left.XDecl])
+		}
 
 	case cc.EqEq, cc.NotEq, cc.Gt, cc.GtEq, cc.Lt, cc.LtEq:
 		addFlowEdge(flowCache[x.Left], flowCache[x.Right])

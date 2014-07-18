@@ -286,6 +286,16 @@ func extractSideEffects(x *cc.Expr, mode int) (before, after []*cc.Stmt) {
 	return
 }
 
+var tmpGen = make(chan int)
+
+func init() {
+	go func() {
+		for i := 1; ; i++ {
+			tmpGen <- i
+		}
+	}()
+}
+
 func doSideEffects(x *cc.Expr, before, after *[]*cc.Stmt, mode int) {
 	if x == nil {
 		return
@@ -370,14 +380,18 @@ func doSideEffects(x *cc.Expr, before, after *[]*cc.Stmt, mode int) {
 		if mode&sideNoAfter != 0 {
 			// Not allowed to generate fixups afterward.
 			d := &cc.Decl{
-				Name: "tmp",
-				Type: x.XType,
-				Init: &cc.Init{Expr: x.Left},
+				Name: fmt.Sprintf("tmp%d", <-tmpGen),
+				Type: x.Left.XType,
+			}
+			eq := &cc.Expr{
+				Op:    c2go.ColonEq,
+				Left:  &cc.Expr{Op: cc.Name, Text: d.Name, XDecl: d},
+				Right: x.Left,
 			}
 			old := copyExpr(x.Left)
 			old.SyntaxInfo = cc.SyntaxInfo{}
 			*before = append(*before,
-				&cc.Stmt{Op: cc.StmtDecl, Decl: d},
+				&cc.Stmt{Op: cc.StmtExpr, Expr: eq},
 				&cc.Stmt{Op: cc.StmtExpr, Expr: &cc.Expr{Op: x.Op, Left: old}},
 			)
 			x.Op = cc.Name
