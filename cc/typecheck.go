@@ -31,6 +31,9 @@ func (lx *lexer) pushDecl(decl *Decl) {
 		sc.Decl = make(map[string]*Decl)
 	}
 	sc.Decl[decl.Name] = decl
+	if lx.declSave != nil && sc.Next == nil {
+		*lx.declSave = append(*lx.declSave, decl)
+	}
 }
 
 func (lx *lexer) lookupDecl(name string) *Decl {
@@ -370,6 +373,10 @@ func isNull(x *Expr) bool {
 
 func isVoidPtr(t *Type) bool {
 	return ptrBase(t).Is(Void)
+}
+
+func (t *Type) IsPtrVoid() bool {
+	return isVoidPtr(t)
 }
 
 func isCompatPtr(t1, t2 *Type) bool {

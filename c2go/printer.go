@@ -86,6 +86,12 @@ type typedInit struct {
 
 var htmlEscaper = strings.NewReplacer("<", "&lt;", ">", "&gt;", "&", "&amp;")
 
+func GoString(args ...interface{}) string {
+	var p Printer
+	p.Print(args...)
+	return p.buf.String()
+}
+
 func (p *Printer) Print(args ...interface{}) {
 	for _, arg := range args {
 		switch arg := arg.(type) {
@@ -518,7 +524,7 @@ func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 				subtyp = typ.Def().Base
 			} else if !warned {
 				warned = true
-				fprintf(x.Span, "too many fields braced initializer of %s", typ)
+				fprintf(x.Span, "too many fields in braced initializer of %s", GoString(typ))
 			}
 		}
 		p.printInit(subtyp, y)
@@ -677,11 +683,17 @@ const (
 	Uint64
 	Float32
 	Float64
+	Ideal
 	String
 	Slice
 )
 
 func (p *Printer) printType(t *cc.Type) {
+	if t == nil {
+		p.Print("<nil type>")
+		return
+	}
+
 	// Shouldn't happen but handle in case it does.
 	p.Print(t.Comments.Before)
 	defer p.Print(t.Comments.Suffix, t.Comments.After)
@@ -697,8 +709,7 @@ func (p *Printer) printType(t *cc.Type) {
 
 	switch t.Kind {
 	default:
-		p.Print(fmt.Sprintf("/*%p %d*/", t, t.Kind))
-		p.Print(t.String()) // hope for the best
+		p.Print("C.", t.String()) // hope for the best
 
 	case Slice:
 		p.Print("[]", t.Base)
@@ -762,8 +773,7 @@ func (p *Printer) printType(t *cc.Type) {
 
 	case cc.Array:
 		if t.Width == nil {
-			println("missed width-less array", t.String())
-			p.Print("[]", t.Base) // TODO
+			p.Print("[XXX]", t.Base)
 			return
 		}
 		p.Print("[", t.Width, "]", t.Base)
@@ -861,7 +871,7 @@ func (p *Printer) printDecl(decl *cc.Decl) {
 			p.printEnumDecl(t)
 			return
 		}
-		fprintf(decl.Span, "empty declaration of type %s", t)
+		fprintf(decl.Span, "empty declaration of type %s", GoString(t))
 		return
 	}
 

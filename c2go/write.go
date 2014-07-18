@@ -25,9 +25,8 @@ func write(prog *cc.Prog, files []string) {
 	for _, file := range files {
 		writeFile(prog, file, "")
 	}
-	writeFile(prog, "/Users/rsc/g/go/include/fmt.h", "liblink/fmt_h.go")
-	writeFile(prog, "/Users/rsc/g/go/include/bio.h", "liblink/bio_h.go")
 	writeFile(prog, "/Users/rsc/g/go/include/link.h", "liblink/link_h.go")
+	writeFile(prog, "/Users/rsc/g/go/src/pkg/runtime/stack.h", "liblink/stack_h.go")
 	writeFile(prog, "/Users/rsc/g/go/src/cmd/5l/5.out.h", "liblink/5.out.go")
 	writeFile(prog, "/Users/rsc/g/go/src/cmd/6l/6.out.h", "liblink/6.out.go")
 	writeFile(prog, "/Users/rsc/g/go/src/cmd/8l/8.out.h", "liblink/8.out.go")

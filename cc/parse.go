@@ -61,6 +61,9 @@ func ReadMany(names []string, readers []io.Reader) (*Prog, error) {
 	if lx.errors != nil {
 		return nil, fmt.Errorf("%v", strings.Join(lx.errors, "\n"))
 	}
+
+	removeDuplicates(lx.prog)
+
 	return lx.prog, nil
 }
 
@@ -83,4 +86,27 @@ func ParseExpr(str string) (*Expr, error) {
 type Prog struct {
 	SyntaxInfo
 	Decls []*Decl
+}
+
+// removeDuplicates drops the duplicated declarations
+// caused by forward decls from prog.
+// It keeps the _last_ of each given declaration,
+// assuming that's the complete one.
+// This heuristic tends to preserve something like
+// source order.
+// It would be defeated by someone writing a "forward"
+// declaration following the real definition.
+func removeDuplicates(prog *Prog) {
+	count := map[*Decl]int{}
+	for _, d := range prog.Decls {
+		count[d]++
+	}
+	var out []*Decl
+	for _, d := range prog.Decls {
+		count[d]--
+		if count[d] == 0 {
+			out = append(out, d)
+		}
+	}
+	prog.Decls = out
 }

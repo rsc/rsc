@@ -11,24 +11,14 @@ import (
 	"code.google.com/p/rsc/cc"
 )
 
-// Rewrite from C constructs to Go constructs.
-func rewriteSyntax(x cc.Syntax) {
-	cc.Preorder(x, func(x cc.Syntax) {
+// renameDecls renames file-local declarations to make them
+// unique across the whole set of files being considered.
+// For now, it appends the file base name to the declared name.
+// Eventually it could be smarter and not do that when not necessary.
+// It also renames names like 'type' and 'func' to avoid Go keywords.
+func renameDecls(prog *cc.Prog) {
+	cc.Preorder(prog, func(x cc.Syntax) {
 		switch x := x.(type) {
-		case *cc.Stmt:
-			fixStmt(x)
-
-		case *cc.Expr:
-			switch x.Op {
-			case cc.Number:
-				// Rewrite char literal \0 to \x00.
-				// In general we'd need to rewrite all string and char literals
-				// but this is the only form that comes up.
-				if x.Text == `'\0'` {
-					x.Text = `'\x00'`
-				}
-			}
-
 		case *cc.Decl:
 			// Rewrite declaration names to avoid Go keywords.
 			switch x.Name {
@@ -47,7 +37,11 @@ func rewriteSyntax(x cc.Syntax) {
 				}
 				x.Name += "_" + file
 			}
+		}
+	})
 
+	cc.Preorder(prog, func(x cc.Syntax) {
+		switch x := x.(type) {
 		case *cc.Type:
 			// Add file name to file-local types to avoid conflicts.
 			if x.Kind == cc.Struct && x.Tag != "" && !strings.Contains(x.Span.Start.File, "/include/") {
@@ -57,13 +51,70 @@ func rewriteSyntax(x cc.Syntax) {
 				}
 				x.Tag += "_" + file
 			}
+			if x.Kind == cc.TypedefType && x.TypeDecl != nil {
+				x.Name = x.TypeDecl.Name
+			}
+		}
+	})
+}
 
+func cutParen(x *cc.Expr, ops ...cc.ExprOp) {
+	if x.Left != nil && x.Left.Op == cc.Paren {
+		for _, op := range ops {
+			if x.Left.Left.Op == op {
+				fixMerge(x.Left, x.Left.Left)
+				break
+			}
+		}
+	}
+	if x.Right != nil && x.Right.Op == cc.Paren {
+		for _, op := range ops {
+			if x.Right.Left.Op == op {
+				fixMerge(x.Right, x.Right.Left)
+				break
+			}
+		}
+	}
+}
+
+// Rewrite from C constructs to Go constructs.
+func rewriteSyntax(prog *cc.Prog) {
+	cc.Preorder(prog, func(x cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Stmt:
+			fixStmt(x)
+
+		case *cc.Expr:
+			switch x.Op {
+			case cc.Number:
+				// Rewrite char literal \0 to \x00.
+				// In general we'd need to rewrite all string and char literals
+				// but this is the only form that comes up.
+				if x.Text == `'\0'` {
+					x.Text = `'\x00'`
+				}
+
+			case cc.Paren:
+				switch x.Left.Op {
+				case cc.Number, cc.Name:
+					fixMerge(x, x.Left)
+				}
+
+			case cc.OrEq, cc.AndEq, cc.Or, cc.Eq, cc.EqEq, cc.NotEq, cc.LtEq, cc.GtEq, cc.Lt, cc.Gt:
+				cutParen(x, cc.Or, cc.And, cc.Lsh, cc.Rsh)
+			}
+
+		case *cc.Type:
+			// Rewrite int f(void) to int f().
+			if x.Kind == cc.Func && len(x.Decls) == 1 && x.Decls[0].Name == "" && x.Decls[0].Type.Is(cc.Void) {
+				x.Decls = nil
+			}
 		}
 	})
 
 	// Apply changed struct tags to typedefs.
 	// Excise dead pieces.
-	cc.Postorder(x, func(x cc.Syntax) {
+	cc.Postorder(prog, func(x cc.Syntax) {
 		switch x := x.(type) {
 		case *cc.Type:
 			if x.Kind == cc.TypedefType && x.Base != nil && x.Base.Tag != "" {

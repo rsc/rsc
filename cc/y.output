@@ -181,7 +181,7 @@ state 7
 	tokDec  shift 94
 	tokInc  shift 93
 	tokArrow  shift 95
-	.  reduce 176 (src line 1307)
+	.  reduce 176 (src line 1310)
 
 
 state 8
@@ -503,7 +503,7 @@ state 23
 state 24
 	string_list:  tokString.    (214)
 
-	.  reduce 214 (src line 1526)
+	.  reduce 214 (src line 1529)
 
 
 state 25
@@ -528,13 +528,13 @@ state 27
 state 28
 	xdecl:  topdecl.    (133)
 
-	.  reduce 133 (src line 1011)
+	.  reduce 133 (src line 1014)
 
 
 state 29
 	xdecl:  fndef.    (134)
 
-	.  reduce 134 (src line 1017)
+	.  reduce 134 (src line 1020)
 
 
 state 30
@@ -554,7 +554,7 @@ state 31
 	tokTypeName  shift 125
 	*  shift 121
 	(  shift 122
-	.  reduce 190 (src line 1387)
+	.  reduce 190 (src line 1390)
 
 	decor  goto 118
 	idecor  goto 123
@@ -610,7 +610,7 @@ state 33
 	tokStatic  shift 53
 	tokTypedef  shift 54
 	tokVolatile  shift 58
-	.  reduce 198 (src line 1433)
+	.  reduce 198 (src line 1436)
 
 	cname  goto 48
 	qname  goto 49
@@ -639,7 +639,7 @@ state 34
 	tokUnsigned  shift 44
 	tokVoid  shift 47
 	tokVolatile  shift 58
-	.  reduce 202 (src line 1456)
+	.  reduce 202 (src line 1459)
 
 	cname  goto 48
 	qname  goto 49
@@ -652,7 +652,7 @@ state 34
 state 35
 	cqname_list:  cqname.    (196)
 
-	.  reduce 196 (src line 1421)
+	.  reduce 196 (src line 1424)
 
 
 state 36
@@ -668,7 +668,7 @@ state 37
 
 	tokName  shift 124
 	tokTypeName  shift 125
-	.  reduce 170 (src line 1274)
+	.  reduce 170 (src line 1277)
 
 	tag  goto 136
 	tag_opt  goto 137
@@ -680,7 +680,7 @@ state 38
 
 	tokName  shift 124
 	tokTypeName  shift 125
-	.  reduce 170 (src line 1274)
+	.  reduce 170 (src line 1277)
 
 	tag  goto 138
 	tag_opt  goto 139
@@ -754,13 +754,13 @@ state 49
 state 50
 	structunion:  tokStruct.    (140)
 
-	.  reduce 140 (src line 1074)
+	.  reduce 140 (src line 1077)
 
 
 state 51
 	structunion:  tokUnion.    (141)
 
-	.  reduce 141 (src line 1080)
+	.  reduce 141 (src line 1083)
 
 
 state 52
@@ -1577,7 +1577,7 @@ state 91
 	(  shift 22
 	tokDec  shift 19
 	tokInc  shift 18
-	.  reduce 178 (src line 1319)
+	.  reduce 178 (src line 1322)
 
 	expr  goto 7
 	expr_list  goto 172
@@ -1643,7 +1643,7 @@ state 96
 state 97
 	string_list:  string_list tokString.    (215)
 
-	.  reduce 215 (src line 1532)
+	.  reduce 215 (src line 1535)
 
 
 state 98
@@ -2271,7 +2271,7 @@ state 118
 	[  shift 189
 	(  shift 188
 	;  reduce 100 (src line 763)
-	.  reduce 180 (src line 1330)
+	.  reduce 180 (src line 1333)
 
 	decl_list_opt  goto 191
 
@@ -2280,7 +2280,7 @@ state 119
 	idecor_list_opt:  idecor_list.    (191)
 
 	,  shift 192
-	.  reduce 191 (src line 1392)
+	.  reduce 191 (src line 1395)
 
 
 state 120
@@ -2295,7 +2295,7 @@ state 121
 
 	tokConst  shift 57
 	tokVolatile  shift 58
-	.  reduce 194 (src line 1410)
+	.  reduce 194 (src line 1413)
 
 	qname  goto 195
 	qname_list  goto 194
@@ -2316,19 +2316,19 @@ state 122
 state 123
 	idecor_list:  idecor.    (188)
 
-	.  reduce 188 (src line 1375)
+	.  reduce 188 (src line 1378)
 
 
 state 124
 	tag:  tokName.    (138)
 
-	.  reduce 138 (src line 1061)
+	.  reduce 138 (src line 1064)
 
 
 state 125
 	tag:  tokTypeName.    (139)
 
-	.  reduce 139 (src line 1067)
+	.  reduce 139 (src line 1070)
 
 
 state 126
@@ -2343,7 +2343,7 @@ state 126
 	tokStatic  shift 53
 	tokTypedef  shift 54
 	tokVolatile  shift 58
-	.  reduce 198 (src line 1433)
+	.  reduce 198 (src line 1436)
 
 	cname  goto 48
 	qname  goto 49
@@ -2372,7 +2372,7 @@ state 127
 	tokUnsigned  shift 44
 	tokVoid  shift 47
 	tokVolatile  shift 58
-	.  reduce 202 (src line 1456)
+	.  reduce 202 (src line 1459)
 
 	cname  goto 48
 	qname  goto 49
@@ -2385,7 +2385,7 @@ state 127
 state 128
 	cqname_list:  cqname_list cqname.    (197)
 
-	.  reduce 197 (src line 1427)
+	.  reduce 197 (src line 1430)
 
 
 state 129
@@ -2406,7 +2406,7 @@ state 130
 	tokStatic  shift 53
 	tokTypedef  shift 54
 	tokVolatile  shift 58
-	.  reduce 199 (src line 1438)
+	.  reduce 199 (src line 1441)
 
 	cname  goto 48
 	qname  goto 49
@@ -2439,7 +2439,7 @@ state 132
 	tokUnsigned  shift 44
 	tokVoid  shift 47
 	tokVolatile  shift 58
-	.  reduce 203 (src line 1461)
+	.  reduce 203 (src line 1464)
 
 	cname  goto 48
 	qname  goto 49
@@ -2450,7 +2450,7 @@ state 132
 state 133
 	cqtname_list:  cqtname.    (200)
 
-	.  reduce 200 (src line 1444)
+	.  reduce 200 (src line 1447)
 
 
 state 134
@@ -2469,8 +2469,8 @@ state 136
 	typespec:  structunion tag.    (145)
 	tag_opt:  tag.    (171)
 
-	{  reduce 171 (src line 1279)
-	.  reduce 145 (src line 1117)
+	{  reduce 171 (src line 1282)
+	.  reduce 145 (src line 1120)
 
 
 state 137
@@ -2484,8 +2484,8 @@ state 138
 	typespec:  tokEnum tag.    (150)
 	tag_opt:  tag.    (171)
 
-	{  reduce 171 (src line 1279)
-	.  reduce 150 (src line 1149)
+	{  reduce 171 (src line 1282)
+	.  reduce 150 (src line 1152)
 
 
 state 139
@@ -2570,7 +2570,7 @@ state 140
 	tokDec  shift 94
 	tokInc  shift 93
 	tokArrow  shift 95
-	.  reduce 177 (src line 1313)
+	.  reduce 177 (src line 1316)
 
 
 state 141
@@ -4456,7 +4456,7 @@ state 172
 	expr_list_opt:  expr_list.    (179)
 
 	,  shift 60
-	.  reduce 179 (src line 1324)
+	.  reduce 179 (src line 1327)
 
 
 state 173
@@ -4469,13 +4469,13 @@ state 173
 state 174
 	expr:  expr tokArrow tag.    (148)
 
-	.  reduce 148 (src line 1136)
+	.  reduce 148 (src line 1139)
 
 
 state 175
 	expr:  expr . tag.    (149)
 
-	.  reduce 149 (src line 1142)
+	.  reduce 149 (src line 1145)
 
 
 state 176
@@ -4541,7 +4541,7 @@ state 181
 
 	tokConst  shift 57
 	tokVolatile  shift 58
-	.  reduce 194 (src line 1410)
+	.  reduce 194 (src line 1413)
 
 	qname  goto 195
 	qname_list  goto 194
@@ -4693,7 +4693,7 @@ state 188
 	tokUnsigned  shift 44
 	tokVoid  shift 47
 	tokVolatile  shift 58
-	.  reduce 186 (src line 1364)
+	.  reduce 186 (src line 1367)
 
 	fnarg  goto 219
 	fnarg_list  goto 218
@@ -4728,7 +4728,7 @@ state 189
 	(  shift 22
 	tokDec  shift 19
 	tokInc  shift 18
-	.  reduce 174 (src line 1296)
+	.  reduce 174 (src line 1299)
 
 	expr  goto 224
 	expr_opt  goto 223
@@ -4787,7 +4787,7 @@ state 191
 	tokUnsigned  shift 44
 	tokVoid  shift 47
 	tokVolatile  shift 58
-	.  reduce 136 (src line 1027)
+	.  reduce 136 (src line 1030)
 
 	decl  goto 229
 	cname  goto 48
@@ -4831,14 +4831,14 @@ state 194
 
 	tokConst  shift 57
 	tokVolatile  shift 58
-	.  reduce 195 (src line 1415)
+	.  reduce 195 (src line 1418)
 
 	qname  goto 234
 
 state 195
 	qname_list:  qname.    (192)
 
-	.  reduce 192 (src line 1398)
+	.  reduce 192 (src line 1401)
 
 
 state 196
@@ -4867,7 +4867,7 @@ state 198
 state 199
 	cqtname_list:  cqtname_list cqtname.    (201)
 
-	.  reduce 201 (src line 1450)
+	.  reduce 201 (src line 1453)
 
 
 state 200
@@ -5062,7 +5062,7 @@ state 209
 	binit_list: .    (159)
 
 	}  shift 244
-	.  reduce 159 (src line 1210)
+	.  reduce 159 (src line 1213)
 
 	binit_list  goto 245
 
@@ -5086,7 +5086,7 @@ state 210
 	(  shift 22
 	tokDec  shift 19
 	tokInc  shift 18
-	.  reduce 174 (src line 1296)
+	.  reduce 174 (src line 1299)
 
 	expr  goto 224
 	expr_opt  goto 246
@@ -5130,7 +5130,7 @@ state 212
 	tokUnsigned  shift 44
 	tokVoid  shift 47
 	tokVolatile  shift 58
-	.  reduce 186 (src line 1364)
+	.  reduce 186 (src line 1367)
 
 	fnarg  goto 219
 	fnarg_list  goto 218
@@ -5251,13 +5251,13 @@ state 218
 	fnarg_list_opt:  fnarg_list.    (187)
 
 	,  shift 253
-	.  reduce 187 (src line 1369)
+	.  reduce 187 (src line 1372)
 
 
 state 219
 	fnarg_list:  fnarg.    (184)
 
-	.  reduce 184 (src line 1352)
+	.  reduce 184 (src line 1355)
 
 
 state 220
@@ -5370,7 +5370,7 @@ state 224
 	tokDec  shift 94
 	tokInc  shift 93
 	tokArrow  shift 95
-	.  reduce 175 (src line 1301)
+	.  reduce 175 (src line 1304)
 
 
 state 225
@@ -5454,13 +5454,13 @@ state 226
 	tokDec  shift 94
 	tokInc  shift 93
 	tokArrow  shift 95
-	.  reduce 154 (src line 1181)
+	.  reduce 154 (src line 1184)
 
 
 state 227
 	init:  braced_init_list.    (155)
 
-	.  reduce 155 (src line 1187)
+	.  reduce 155 (src line 1190)
 
 
 state 228
@@ -5474,7 +5474,7 @@ state 228
 state 229
 	decl_list_opt:  decl_list_opt decl.    (181)
 
-	.  reduce 181 (src line 1335)
+	.  reduce 181 (src line 1338)
 
 
 state 230
@@ -5485,7 +5485,7 @@ state 230
 	tokTypeName  shift 125
 	*  shift 121
 	(  shift 122
-	.  reduce 190 (src line 1387)
+	.  reduce 190 (src line 1390)
 
 	decor  goto 232
 	idecor  goto 123
@@ -5496,7 +5496,7 @@ state 230
 state 231
 	idecor_list:  idecor_list , idecor.    (189)
 
-	.  reduce 189 (src line 1381)
+	.  reduce 189 (src line 1384)
 
 
 state 232
@@ -5524,7 +5524,7 @@ state 233
 state 234
 	qname_list:  qname_list qname.    (193)
 
-	.  reduce 193 (src line 1404)
+	.  reduce 193 (src line 1407)
 
 
 state 235
@@ -5575,7 +5575,7 @@ state 236
 state 237
 	sudecl_list:  sudecl.    (208)
 
-	.  reduce 208 (src line 1491)
+	.  reduce 208 (src line 1494)
 
 
 state 238
@@ -5587,8 +5587,8 @@ state 238
 	tokTypeName  shift 125
 	*  shift 121
 	(  shift 122
-	;  reduce 206 (src line 1480)
-	.  reduce 170 (src line 1274)
+	;  reduce 206 (src line 1483)
+	.  reduce 170 (src line 1277)
 
 	decor  goto 267
 	sudecor  goto 266
@@ -5603,14 +5603,14 @@ state 239
 	comma_opt: .    (166)
 
 	,  shift 271
-	.  reduce 166 (src line 1250)
+	.  reduce 166 (src line 1253)
 
 	comma_opt  goto 270
 
 state 240
 	edecl_list:  edecl.    (212)
 
-	.  reduce 212 (src line 1514)
+	.  reduce 212 (src line 1517)
 
 
 state 241
@@ -5618,7 +5618,7 @@ state 241
 	eqexpr_opt: .    (210)
 
 	=  shift 274
-	.  reduce 210 (src line 1503)
+	.  reduce 210 (src line 1506)
 
 	eqexpr  goto 273
 	eqexpr_opt  goto 272
@@ -5772,7 +5772,7 @@ state 243
 state 244
 	braced_init_list:  { }.    (156)
 
-	.  reduce 156 (src line 1193)
+	.  reduce 156 (src line 1196)
 
 
 state 245
@@ -5847,7 +5847,7 @@ state 250
 state 251
 	xdecl:  tokExtern tokString { prog }.    (135)
 
-	.  reduce 135 (src line 1022)
+	.  reduce 135 (src line 1025)
 
 
 state 252
@@ -5920,7 +5920,7 @@ state 256
 
 	tokConst  shift 57
 	tokVolatile  shift 58
-	.  reduce 194 (src line 1410)
+	.  reduce 194 (src line 1413)
 
 	qname  goto 195
 	qname_list  goto 194
@@ -5951,7 +5951,7 @@ state 258
 state 259
 	fndef:  typeclass decor decl_list_opt $$136 block.    (137)
 
-	.  reduce 137 (src line 1049)
+	.  reduce 137 (src line 1052)
 
 
 state 260
@@ -5972,13 +5972,13 @@ state 261
 state 262
 	typespec:  structunion tag_opt { sudecl_list }.    (146)
 
-	.  reduce 146 (src line 1123)
+	.  reduce 146 (src line 1126)
 
 
 state 263
 	sudecl_list:  sudecl_list sudecl.    (209)
 
-	.  reduce 209 (src line 1497)
+	.  reduce 209 (src line 1500)
 
 
 state 264
@@ -5993,13 +5993,13 @@ state 265
 	sudecor_list_opt:  sudecor_list.    (207)
 
 	,  shift 290
-	.  reduce 207 (src line 1485)
+	.  reduce 207 (src line 1488)
 
 
 state 266
 	sudecor_list:  sudecor.    (204)
 
-	.  reduce 204 (src line 1467)
+	.  reduce 204 (src line 1470)
 
 
 state 267
@@ -6009,7 +6009,7 @@ state 267
 
 	[  shift 189
 	(  shift 188
-	.  reduce 142 (src line 1086)
+	.  reduce 142 (src line 1089)
 
 
 state 268
@@ -6023,7 +6023,7 @@ state 269
 	decor:  tag.    (91)
 	tag_opt:  tag.    (171)
 
-	:  reduce 171 (src line 1279)
+	:  reduce 171 (src line 1282)
 	.  reduce 91 (src line 695)
 
 
@@ -6039,20 +6039,20 @@ state 271
 	edecl_list:  edecl_list ,.edecl 
 
 	tokName  shift 241
-	.  reduce 167 (src line 1254)
+	.  reduce 167 (src line 1257)
 
 	edecl  goto 293
 
 state 272
 	edecl:  tokName eqexpr_opt.    (152)
 
-	.  reduce 152 (src line 1161)
+	.  reduce 152 (src line 1164)
 
 
 state 273
 	eqexpr_opt:  eqexpr.    (211)
 
-	.  reduce 211 (src line 1508)
+	.  reduce 211 (src line 1511)
 
 
 state 274
@@ -6098,7 +6098,7 @@ state 276
 state 277
 	binit:  init.    (161)
 
-	.  reduce 161 (src line 1221)
+	.  reduce 161 (src line 1224)
 
 
 state 278
@@ -6109,7 +6109,7 @@ state 278
 	=  shift 299
 	.  shift 280
 	[  shift 281
-	.  reduce 164 (src line 1241)
+	.  reduce 164 (src line 1244)
 
 	initprefix  goto 298
 	eq_opt  goto 297
@@ -6117,7 +6117,7 @@ state 278
 state 279
 	initprefix_list:  initprefix.    (168)
 
-	.  reduce 168 (src line 1262)
+	.  reduce 168 (src line 1265)
 
 
 state 280
@@ -6174,7 +6174,7 @@ state 284
 state 285
 	fnarg_list:  fnarg_list , fnarg.    (185)
 
-	.  reduce 185 (src line 1358)
+	.  reduce 185 (src line 1361)
 
 
 state 286
@@ -6210,7 +6210,7 @@ state 288
 state 289
 	sudecl:  type sudecor_list_opt ;.    (144)
 
-	.  reduce 144 (src line 1103)
+	.  reduce 144 (src line 1106)
 
 
 state 290
@@ -6221,7 +6221,7 @@ state 290
 	tokTypeName  shift 125
 	*  shift 121
 	(  shift 122
-	.  reduce 170 (src line 1274)
+	.  reduce 170 (src line 1277)
 
 	decor  goto 267
 	sudecor  goto 303
@@ -6255,13 +6255,13 @@ state 291
 state 292
 	typespec:  tokEnum tag_opt { edecl_list comma_opt }.    (151)
 
-	.  reduce 151 (src line 1155)
+	.  reduce 151 (src line 1158)
 
 
 state 293
 	edecl_list:  edecl_list , edecl.    (213)
 
-	.  reduce 213 (src line 1520)
+	.  reduce 213 (src line 1523)
 
 
 state 294
@@ -6339,13 +6339,13 @@ state 294
 	tokDec  shift 94
 	tokInc  shift 93
 	tokArrow  shift 95
-	.  reduce 153 (src line 1173)
+	.  reduce 153 (src line 1176)
 
 
 state 295
 	braced_init_list:  { binit_list binit }.    (157)
 
-	.  reduce 157 (src line 1199)
+	.  reduce 157 (src line 1202)
 
 
 state 296
@@ -6353,7 +6353,7 @@ state 296
 	binit_list:  binit_list binit ,.    (160)
 
 	}  shift 305
-	.  reduce 160 (src line 1215)
+	.  reduce 160 (src line 1218)
 
 
 state 297
@@ -6386,19 +6386,19 @@ state 297
 state 298
 	initprefix_list:  initprefix_list initprefix.    (169)
 
-	.  reduce 169 (src line 1268)
+	.  reduce 169 (src line 1271)
 
 
 state 299
 	eq_opt:  =.    (165)
 
-	.  reduce 165 (src line 1245)
+	.  reduce 165 (src line 1248)
 
 
 state 300
 	initprefix:  . tag.    (147)
 
-	.  reduce 147 (src line 1129)
+	.  reduce 147 (src line 1132)
 
 
 state 301
@@ -6508,7 +6508,7 @@ state 302
 	tokVoid  shift 47
 	tokVolatile  shift 58
 	}  shift 310
-	.  reduce 182 (src line 1341)
+	.  reduce 182 (src line 1344)
 
 	decl  goto 308
 	label_list_opt  goto 311
@@ -6525,7 +6525,7 @@ state 302
 state 303
 	sudecor_list:  sudecor_list , sudecor.    (205)
 
-	.  reduce 205 (src line 1474)
+	.  reduce 205 (src line 1477)
 
 
 state 304
@@ -6603,25 +6603,25 @@ state 304
 	tokDec  shift 94
 	tokInc  shift 93
 	tokArrow  shift 95
-	.  reduce 143 (src line 1092)
+	.  reduce 143 (src line 1095)
 
 
 state 305
 	braced_init_list:  { binit_list binit , }.    (158)
 
-	.  reduce 158 (src line 1204)
+	.  reduce 158 (src line 1207)
 
 
 state 306
 	binit:  initprefix_list eq_opt init.    (162)
 
-	.  reduce 162 (src line 1227)
+	.  reduce 162 (src line 1230)
 
 
 state 307
 	initprefix:  [ expr ].    (163)
 
-	.  reduce 163 (src line 1234)
+	.  reduce 163 (src line 1237)
 
 
 state 308
@@ -6697,7 +6697,7 @@ state 312
 state 313
 	label_list_opt:  label_list_opt label.    (183)
 
-	.  reduce 183 (src line 1346)
+	.  reduce 183 (src line 1349)
 
 
 state 314
@@ -6759,7 +6759,7 @@ state 322
 	stmt:  tokDo.lstmt tokWhile ( cexpr ) ; 
 	label_list_opt: .    (182)
 
-	.  reduce 182 (src line 1341)
+	.  reduce 182 (src line 1344)
 
 	label_list_opt  goto 311
 	lstmt  goto 338
@@ -6808,7 +6808,7 @@ state 326
 	(  shift 22
 	tokDec  shift 19
 	tokInc  shift 18
-	.  reduce 172 (src line 1285)
+	.  reduce 172 (src line 1288)
 
 	expr  goto 7
 	cexpr  goto 343
@@ -6955,7 +6955,7 @@ state 335
 	tokUnsigned  shift 44
 	tokVoid  shift 47
 	tokVolatile  shift 58
-	.  reduce 182 (src line 1341)
+	.  reduce 182 (src line 1344)
 
 	decl  goto 308
 	label_list_opt  goto 311
@@ -7008,7 +7008,7 @@ state 339
 	(  shift 22
 	tokDec  shift 19
 	tokInc  shift 18
-	.  reduce 172 (src line 1285)
+	.  reduce 172 (src line 1288)
 
 	expr  goto 7
 	cexpr  goto 343
@@ -7060,7 +7060,7 @@ state 342
 state 343
 	cexpr_opt:  cexpr.    (173)
 
-	.  reduce 173 (src line 1290)
+	.  reduce 173 (src line 1293)
 
 
 state 344
@@ -7340,7 +7340,7 @@ state 363
 	(  shift 22
 	tokDec  shift 19
 	tokInc  shift 18
-	.  reduce 172 (src line 1285)
+	.  reduce 172 (src line 1288)
 
 	expr  goto 7
 	cexpr  goto 343
@@ -7353,7 +7353,7 @@ state 364
 	stmt:  tokIf ( cexpr ).lstmt tokElse lstmt 
 	label_list_opt: .    (182)
 
-	.  reduce 182 (src line 1341)
+	.  reduce 182 (src line 1344)
 
 	label_list_opt  goto 311
 	lstmt  goto 371
@@ -7362,7 +7362,7 @@ state 365
 	stmt:  tokSwitch ( cexpr ).lstmt 
 	label_list_opt: .    (182)
 
-	.  reduce 182 (src line 1341)
+	.  reduce 182 (src line 1344)
 
 	label_list_opt  goto 311
 	lstmt  goto 372
@@ -7371,7 +7371,7 @@ state 366
 	stmt:  tokWhile ( cexpr ).lstmt 
 	label_list_opt: .    (182)
 
-	.  reduce 182 (src line 1341)
+	.  reduce 182 (src line 1344)
 
 	label_list_opt  goto 311
 	lstmt  goto 373
@@ -7449,7 +7449,7 @@ state 375
 	(  shift 22
 	tokDec  shift 19
 	tokInc  shift 18
-	.  reduce 172 (src line 1285)
+	.  reduce 172 (src line 1288)
 
 	expr  goto 7
 	cexpr  goto 343
@@ -7461,7 +7461,7 @@ state 376
 	stmt:  tokIf ( cexpr ) lstmt tokElse.lstmt 
 	label_list_opt: .    (182)
 
-	.  reduce 182 (src line 1341)
+	.  reduce 182 (src line 1344)
 
 	label_list_opt  goto 311
 	lstmt  goto 379
@@ -7489,7 +7489,7 @@ state 380
 	stmt:  tokFor ( cexpr_opt ; cexpr_opt ; cexpr_opt ).lstmt 
 	label_list_opt: .    (182)
 
-	.  reduce 182 (src line 1341)
+	.  reduce 182 (src line 1344)
 
 	label_list_opt  goto 311
 	lstmt  goto 381
