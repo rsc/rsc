@@ -252,6 +252,7 @@ var opPrec = map[cc.ExprOp]int{
 
 	AndNot:   precMul,
 	AndNotEq: precLow,
+	ColonEq:  precLow,
 }
 
 var opStr = map[cc.ExprOp]string{
@@ -295,6 +296,7 @@ var opStr = map[cc.ExprOp]string{
 
 	AndNot:   "&^",
 	AndNotEq: "&^=",
+	ColonEq:  ":=",
 }
 
 const (
@@ -302,6 +304,7 @@ const (
 	ExprSlice
 	AndNot
 	AndNotEq
+	ColonEq
 )
 
 func (p *Printer) printExpr(x *cc.Expr, prec int) {
@@ -559,6 +562,7 @@ func (p *Printer) printProg(x *cc.Prog) {
 
 const (
 	BlockNoBrace cc.StmtOp = 100000 + iota
+	ForRange
 )
 
 func (p *Printer) printStmt(x *cc.Stmt) {
@@ -619,6 +623,9 @@ func (p *Printer) printStmt(x *cc.Stmt) {
 
 	case cc.For:
 		p.Print("for ", x.Pre, "; ", x.Expr, "; ", x.Post, nestBlock{x.Body, false})
+
+	case ForRange:
+		p.Print("for ", x.Pre, " = range ", x.Post, nestBlock{x.Body, false})
 
 	case cc.If:
 		p.Print("if ")

@@ -7,7 +7,7 @@ GC=$(echo ~/g/go/src/cmd/gc/{align.c,array.c,bits.c,builtin.c,bv.c,closure.c,con
 rm -rf /tmp/c2go
 go install ../cc
 go install .
-go run main.go infer.go infer2.go syntax.go write.go "$@" $LINK
+go run main.go infer.go infer2.go qsort.go syntax.go write.go "$@" $LINK
 cp liblink/zzz.go /tmp/c2go/liblink
 gofmt -l /tmp/c2go/liblink/*.go
 gofmt -s -w /tmp/c2go/liblink/*.go
