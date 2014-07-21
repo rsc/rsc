@@ -850,10 +850,15 @@ func addpool_asm5(ctxt *Link, p *Prog, a *Addr) {
 	var c int
 	c = aclass_asm5(ctxt, a)
 	t = zprg_asm5
+	t.ctxt = ctxt
 	t.as = AWORD_5
 	switch c {
 	default:
-		t.to = *a
+		t.to.offset = a.offset
+		t.to.sym = a.sym
+		t.to.typ = a.typ
+		t.to.name = a.name
+
 		if ctxt.flag_shared != 0 && t.to.sym != nil {
 			t.pcrel = p
 		}
@@ -1487,7 +1492,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			rel.siz = 4
 			rel.sym = p.to.sym
 			v += int32(p.to.offset)
-			rel.add = int64(o1) | (int64(v)>>2)&0xffffff
+			rel.add = int64(int32(int64(o1) | (int64(v)>>2)&0xffffff))
 			rel.typ = R_CALLARM
 			break
 		}
@@ -1552,6 +1557,9 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			// Its "address" is the offset from the TLS thread pointer
 			// to the thread-local g and m pointers.
 			// Emit a TLS relocation instead of a standard one.
+			if rel.sym != ctxt.tlsg && rel.sym.name == "runtime.tlsg" {
+				println("wtf tlsg", rel.sym.name, rel.sym, ctxt.tlsg, ctxt.tlsg.name)
+			}
 			if rel.sym == ctxt.tlsg {
 				rel.typ = R_TLS
 				if ctxt.flag_shared != 0 {

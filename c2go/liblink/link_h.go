@@ -297,16 +297,12 @@ type Pcln struct {
 	funcdataoff []int64
 	nfuncdata   int64
 	file        []*LSym
-	nfile       int64
-	mfile       int64
 	lastfile    *LSym
 	lastindex   int64
 }
 
 type Pcdata struct {
 	p []uint8
-	n int64
-	m int64
 }
 
 type Pciter struct {

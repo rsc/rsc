@@ -1,12 +1,18 @@
 #!/bin/bash
 
+export GOOS=linux
+export GOARCH=arm
 set -e
 set -x
-go tool dist install liblink cmd/cc cmd/gc cmd/6a cmd/6c cmd/6g cmd/6l
+go tool dist install liblink cmd/cc cmd/gc cmd/5a cmd/5c cmd/5g cmd/5l
+unset GOOS
+unset GOARCH
 go build -o ~/bin/liblinktest
+export GOOS=linux
+export GOARCH=arm
 FILE=~/g/go/test/helloworld.go
-go tool 6g -S -o h1.6 $FILE >h1.log 2>&1
-if ! NEWLIBLINK=1 go tool 6g -S -o h2.6 $FILE >h2.log 2>&1; then cat h2.log; exit 1; fi
+go tool 5g -S -o h1.6 $FILE >h1.log 2>&1
+if ! NEWLIBLINK=1 go tool 5g -S -o h2.6 $FILE >h2.log 2>&1; then cat h2.log; exit 1; fi
 goobjdump h1.6 >h1.txt
 goobjdump h2.6 >h2.txt
 opendiff {h1,h2}.log
