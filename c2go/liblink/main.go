@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"go/build"
 	"io"
 	"log"
 	"math"
@@ -10,7 +11,19 @@ import (
 	"strings"
 )
 
+var arch *LinkArch
+
 func main() {
+	switch build.Default.GOARCH {
+	case "amd64":
+		arch = &linkamd64
+	case "amd64p32":
+		arch = &linkamd64p32
+	case "386":
+		arch = &link386
+	case "arm":
+		arch = &linkarm
+	}
 	if len(os.Args) == 3 {
 		input()
 		return
@@ -19,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ctxt := linknew(&linkamd64)
+	ctxt := linknew(arch)
 	ctxt.debugasm = 1
 	ctxt.bso = Binitw(os.Stderr)
 	defer Bflush(ctxt.bso)
@@ -100,7 +113,7 @@ var (
 )
 
 func input() {
-	ctxt = linknew(&linkamd64)
+	ctxt = linknew(arch)
 	//ctxt.debugasm = 1
 	ctxt.bso = Binitw(os.Stderr)
 	defer Bflush(ctxt.bso)
@@ -120,16 +133,26 @@ func input() {
 	}
 
 	ctxt.debugasm = int32(rdint(b))
+	ctxt.trimpath = rdstring(b)
 	ctxt.plist = rdplist(b)
 	ctxt.plast = rdplist(b)
 	ctxt.hist = rdhist(b)
 	ctxt.ehist = rdhist(b)
+	for {
+		i := rdint(b)
+		if i < 0 {
+			break
+		}
+		ctxt.hash[i] = rdsym(b)
+	}
+	last := "ctxt"
 
 Loop:
 	for {
-		switch s := rdstring(b); s {
+		s := rdstring(b)
+		switch s {
 		default:
-			log.Fatal("unexpected input: %v", s)
+			log.Fatalf("unexpected input after %s: %v", s, last)
 		case "end":
 			break Loop
 		case "plist":
@@ -141,6 +164,7 @@ Loop:
 		case "hist":
 			readhist(b, rdhist(b))
 		}
+		last = s
 	}
 
 	if len(undef) > 0 {

@@ -541,7 +541,6 @@ func readsym_objfile(ctxt *Link, f *Biobuf, pkg string, pn string) {
 		}
 		n = rdint_objfile(f)
 		pc.file = make([]*LSym, n)
-		pc.nfile = n
 		for i = 0; i < n; i++ {
 			pc.file[i] = rdsym_objfile(ctxt, f, pkg)
 		}

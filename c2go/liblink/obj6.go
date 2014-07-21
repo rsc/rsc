@@ -1098,6 +1098,7 @@ var linkamd64p32 = LinkArch{
 	symtype:       symtype_obj6,
 	textflag:      textflag_obj6,
 	Pconv:         Pconv_list6,
+	byteOrder:     binary.LittleEndian,
 	minlc:         1,
 	ptrsize:       4,
 	regsize:       8,

@@ -2066,7 +2066,7 @@ func oclass_asm8(a *Addr) int {
 		D_CONST2_8,
 		D_ADDR_8:
 		if a.sym == nil {
-			v = a.offset
+			v = int64(int32(a.offset))
 			if v == 0 {
 				return Yi0_asm8
 			}
@@ -2161,7 +2161,7 @@ func relput4_asm8(ctxt *Link, p *Prog, a *Addr) {
 		}
 		r = addrel(ctxt.cursym)
 		*r = rel
-		r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+		r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 	}
 	put4_asm8(ctxt, v)
 }
@@ -2347,7 +2347,7 @@ putrelv:
 		}
 		r = addrel(ctxt.cursym)
 		*r = rel
-		r.off = ctxt.curp.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+		r.off = ctxt.curp.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 	}
 	put4_asm8(ctxt, v)
 	return
@@ -3345,7 +3345,7 @@ found:
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		r = addrel(ctxt.cursym)
-		r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+		r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 		r.typ = R_CALL
 		r.siz = 4
 		r.sym = p.to.sym
@@ -3362,7 +3362,7 @@ found:
 			ctxt.andptr[0] = o.op[z+1]
 			ctxt.andptr = ctxt.andptr[1:]
 			r = addrel(ctxt.cursym)
-			r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+			r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 			r.sym = p.to.sym
 			r.typ = R_PCREL
 			r.siz = 4
@@ -3449,7 +3449,7 @@ found:
 			ctxt.andptr = ctxt.andptr[1:]
 		}
 		r = addrel(ctxt.cursym)
-		r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+		r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 		r.typ = R_PCREL
 		r.siz = 4
 		r.add = p.to.offset
@@ -3460,7 +3460,7 @@ found:
 		ctxt.andptr[0] = o.op[z+1]
 		ctxt.andptr = ctxt.andptr[1:]
 		r = addrel(ctxt.cursym)
-		r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+		r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 		r.typ = R_ADDR
 		r.siz = 4
 		r.add = p.to.offset
@@ -3472,7 +3472,7 @@ found:
 			rel.siz = op
 			r = addrel(ctxt.cursym)
 			*r = rel
-			r.off = p.pc - int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
+			r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
 		}
 		ctxt.andptr[0] = uint8(v)
 		ctxt.andptr = ctxt.andptr[1:]

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math"
@@ -640,6 +641,7 @@ func softfloat_obj5(ctxt *Link, cursym *LSym) {
 			*next = *p
 			// BL _sfloat(SB)
 			*p = zprg_obj5
+			p.ctxt = next.ctxt
 			p.link = next
 			p.as = ABL_5
 			p.to.typ = D_BRANCH_5
@@ -969,6 +971,7 @@ var linkarm = LinkArch{
 	symtype:       symtype_obj5,
 	textflag:      textflag_obj5,
 	Pconv:         Pconv_list5,
+	byteOrder:     binary.LittleEndian,
 	minlc:         4,
 	ptrsize:       4,
 	regsize:       4,

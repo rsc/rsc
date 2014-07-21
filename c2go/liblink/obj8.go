@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math"
@@ -793,6 +794,7 @@ var link386 = LinkArch{
 	symtype:       symtype_obj8,
 	textflag:      textflag_obj8,
 	Pconv:         Pconv_list8,
+	byteOrder:     binary.LittleEndian,
 	minlc:         1,
 	ptrsize:       4,
 	regsize:       4,

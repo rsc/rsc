@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"go/build"
 	"io"
 	"log"
+	"os"
 )
 
 func cputime() float64 {
@@ -23,19 +25,23 @@ func bool2int(b bool) int {
 }
 
 func getgoroot() string {
-	return "/Users/rsc/g/go"
+	return build.Default.GOROOT
 }
 
 func getgoos() string {
-	return "darwin"
+	return build.Default.GOOS
 }
 
 func getgoarch() string {
-	return "amd64"
+	return build.Default.GOARCH
 }
 
 func getgoarm() string {
-	return "7"
+	p := os.Getenv("GOARM")
+	if p == "" {
+		p = "6"
+	}
+	return p
 }
 
 type Biobuf struct {

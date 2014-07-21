@@ -37,7 +37,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 	//dbg = strcmp(func->name, "main.main") == 0;
 	//dbg = strcmp(desc, "pctofile") == 0;
 	ctxt.debugpcln += int32(dbg)
-	dst.n = 0
+	dst.p = dst.p[:0]
 	if ctxt.debugpcln != 0 {
 		Bprint(ctxt.bso, "funcpctab %s [valfunc=%s]\n", fun.name, desc)
 	}
@@ -49,7 +49,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 	}
 	pc = fun.text.pc
 	if ctxt.debugpcln != 0 {
-		Bprint(ctxt.bso, "%6llux %6d %P\n", pc, val, fun.text)
+		Bprint(ctxt.bso, "%6x %6d %v\n", pc, val, fun.text)
 	}
 	started = 0
 	for p = fun.text; p != nil; p = p.link {
@@ -58,7 +58,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 		if val == oldval && started != 0 {
 			val = valfunc(ctxt, fun, val, p, 1, arg)
 			if ctxt.debugpcln != 0 {
-				Bprint(ctxt.bso, "%6llux %6s %P\n", int64(p.pc), "", p)
+				Bprint(ctxt.bso, "%6x %6s %v\n", int64(p.pc), "", p)
 			}
 			continue
 		}
@@ -69,7 +69,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 		if p.link != nil && p.link.pc == p.pc {
 			val = valfunc(ctxt, fun, val, p, 1, arg)
 			if ctxt.debugpcln != 0 {
-				Bprint(ctxt.bso, "%6llux %6s %P\n", int64(p.pc), "", p)
+				Bprint(ctxt.bso, "%6x %6s %v\n", int64(p.pc), "", p)
 			}
 			continue
 		}
@@ -87,7 +87,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 		// as variable-length little-endian base-128 integers,
 		// where the 0x80 bit indicates that the integer continues.
 		if ctxt.debugpcln != 0 {
-			Bprint(ctxt.bso, "%6llux %6d %P\n", int64(p.pc), val, p)
+			Bprint(ctxt.bso, "%6x %6d %v\n", int64(p.pc), val, p)
 		}
 		if started != 0 {
 			addvarint_pcln(ctxt, dst, uint32((p.pc-pc)/int64(ctxt.arch.minlc)))
@@ -106,15 +106,15 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 	}
 	if started != 0 {
 		if ctxt.debugpcln != 0 {
-			Bprint(ctxt.bso, "%6llux done\n", int64(fun.text.pc)+fun.size)
+			Bprint(ctxt.bso, "%6x done\n", int64(fun.text.pc)+fun.size)
 		}
 		addvarint_pcln(ctxt, dst, uint32((fun.value+fun.size-pc)/int64(ctxt.arch.minlc)))
 		addvarint_pcln(ctxt, dst, 0) // terminator
 	}
 	if ctxt.debugpcln != 0 {
-		Bprint(ctxt.bso, "wrote %d bytes to %p\n", dst.n, dst)
-		for i = 0; i < dst.n; i++ {
-			Bprint(ctxt.bso, " %02ux", dst.p[i])
+		Bprint(ctxt.bso, "wrote %d bytes to %p\n", len(dst.p), dst)
+		for i = 0; i < int64(len(dst.p)); i++ {
+			Bprint(ctxt.bso, " %02x", dst.p[i])
 		}
 		Bprint(ctxt.bso, "\n")
 	}
@@ -135,7 +135,8 @@ func pctofileline_pcln(ctxt *Link, sym *LSym, oldval int32, p *Prog, phase int32
 	}
 	linkgetline(ctxt, p.lineno, &f, &l)
 	if f == nil {
-		//	print("getline failed for %s %P\n", ctxt->cursym->name, p);
+		panic("getline")
+		//	print("getline failed for %s %v\n", ctxt->cursym->name, p);
 		return int32(oldval)
 	}
 	if arg == nil {
@@ -145,7 +146,7 @@ func pctofileline_pcln(ctxt *Link, sym *LSym, oldval int32, p *Prog, phase int32
 	if f == pcln.lastfile {
 		return int32(pcln.lastindex)
 	}
-	for i = 0; i < pcln.nfile; i++ {
+	for i = 0; i < int64(len(pcln.file)); i++ {
 		if pcln.file[i] == f {
 			pcln.lastfile = f
 			pcln.lastindex = i
@@ -186,7 +187,7 @@ func pctopcdata_pcln(ctxt *Link, sym *LSym, oldval int32, p *Prog, phase int32, 
 		return oldval
 	}
 	if int64(int32(p.to.offset)) != p.to.offset {
-		ctxt.diag("overflow in PCDATA instruction: %P", p)
+		ctxt.diag("overflow in PCDATA instruction: %v", p)
 		log.Fatalf("bad code")
 	}
 	return int32(p.to.offset)
@@ -286,7 +287,7 @@ func pciternext(it *Pciter) {
 	if it.done != 0 {
 		return
 	}
-	if -cap(it.p) >= -cap(it.d.p[it.d.n:]) {
+	if -cap(it.p) >= -cap(it.d.p[len(it.d.p):]) {
 		it.done = 1
 		return
 	}
