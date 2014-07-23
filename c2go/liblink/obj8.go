@@ -52,12 +52,12 @@ var zprg_obj8 = Prog{
 }
 
 func symtype_obj8(a *Addr) int {
-	var t int64
+	var t int
 	t = a.typ
 	if t == D_ADDR_8 {
 		t = a.index
 	}
-	return int(t)
+	return t
 }
 
 func isdata_obj8(p *Prog) int {
@@ -77,18 +77,18 @@ func textflag_obj8(p *Prog) int {
 }
 
 func settextflag_obj8(p *Prog, f int) {
-	p.from.scale = int64(f)
+	p.from.scale = int8(f)
 }
 
-func canuselocaltls_obj8(ctxt *Link) int {
+func canuselocaltls_obj8(ctxt *Link) bool {
 	switch ctxt.headtype {
 	case Hlinux,
 		Hnacl,
 		Hplan9,
 		Hwindows:
-		return 0
+		return false
 	}
-	return 1
+	return true
 }
 
 func progedit_obj8(ctxt *Link, p *Prog) {
@@ -96,7 +96,7 @@ func progedit_obj8(ctxt *Link, p *Prog) {
 	var s *LSym
 	var q *Prog
 	// See obj6.c for discussion of TLS.
-	if canuselocaltls_obj8(ctxt) != 0 {
+	if canuselocaltls_obj8(ctxt) {
 		// Reduce TLS initial exec model to TLS local exec model.
 		// Sequences like
 		//	MOVL TLS, BX
@@ -178,10 +178,10 @@ func progedit_obj8(ctxt *Link, p *Prog) {
 		ACOMISS_8,
 		AUCOMISS_8:
 		if p.from.typ == D_FCONST_8 {
-			var i32 uint64
-			var f32 float64
-			f32 = p.from.u.dval
-			i32 = uint64(math.Float32bits(float32(f32)))
+			var i32 uint32
+			var f32 float32
+			f32 = float32(p.from.u.dval)
+			i32 = math.Float32bits(f32)
 			literal = fmt.Sprintf("$f32.%08x", uint32(i32))
 			s = linklookup(ctxt, literal, 0)
 			if s.typ == 0 {
@@ -239,7 +239,7 @@ func addstacksplit_obj8(ctxt *Link, cursym *LSym) {
 	var q *Prog
 	var autoffset int64
 	var deltasp int64
-	var a int64
+	var a int
 	if ctxt.symmorestack[0] == nil {
 		ctxt.symmorestack[0] = linklookup(ctxt, "runtime.morestack", 0)
 		ctxt.symmorestack[1] = linklookup(ctxt, "runtime.morestack_noctxt", 0)
@@ -259,12 +259,12 @@ func addstacksplit_obj8(ctxt *Link, cursym *LSym) {
 	cursym.locals = autoffset
 	cursym.args = p.to.offset2
 	q = nil
-	if !(p.from.scale&NOSPLIT_textflag != 0) || (p.from.scale&WRAPPER_textflag != 0) {
+	if p.from.scale&NOSPLIT_textflag == 0 || (p.from.scale&WRAPPER_textflag != 0) {
 		p = appendp(ctxt, p)
 		p = load_g_cx_obj8(ctxt, p) // load g into CX
 	}
-	if !(cursym.text.from.scale&NOSPLIT_textflag != 0) {
-		p = stacksplit_obj8(ctxt, p, autoffset, bool2int(!(cursym.text.from.scale&NEEDCTXT_textflag != 0)), &q) // emit split check
+	if cursym.text.from.scale&NOSPLIT_textflag == 0 {
+		p = stacksplit_obj8(ctxt, p, autoffset, bool2int(cursym.text.from.scale&NEEDCTXT_textflag == 0), &q) // emit split check
 	}
 	if autoffset != 0 {
 		p = appendp(ctxt, p)
@@ -296,7 +296,7 @@ func addstacksplit_obj8(ctxt *Link, cursym *LSym) {
 		p.to.typ = D_INDIR_8 + D_CX_8
 		p.to.offset = 2 * ctxt.arch.ptrsize
 	}
-	if ctxt.debugzerostack != 0 && autoffset != 0 && !(cursym.text.from.scale&NOSPLIT_textflag != 0) {
+	if ctxt.debugzerostack != 0 && autoffset != 0 && cursym.text.from.scale&NOSPLIT_textflag == 0 {
 		// 8l -Z means zero the stack frame on entry.
 		// This slows down function calls but can help avoid
 		// false positives in garbage collection.
@@ -425,7 +425,7 @@ func load_g_cx_obj8(ctxt *Link, p *Prog) *Prog {
 func stacksplit_obj8(ctxt *Link, p *Prog, framesize int64, noctxt int, jmpok **Prog) *Prog {
 	var q *Prog
 	var q1 *Prog
-	var arg int64
+	var arg int
 	if ctxt.debugstack != 0 {
 		// 8l -K means check not only for stack
 		// overflow but stack underflow.
@@ -534,7 +534,7 @@ func stacksplit_obj8(ctxt *Link, p *Prog, framesize int64, noctxt int, jmpok **P
 	// that did a stack check.  If StackMin is enough, don't ask for a specific
 	// amount: then we can use the custom functions and save a few
 	// instructions.
-	if StackTop_stack+ctxt.cursym.text.to.offset2+ctxt.arch.ptrsize+framesize+ctxt.arch.ptrsize+StackLimit_stack >= StackMin_stack {
+	if int64(StackTop_stack+ctxt.cursym.text.to.offset2)+ctxt.arch.ptrsize+framesize+ctxt.arch.ptrsize+StackLimit_stack >= StackMin_stack {
 		p.from.offset = (framesize + 7) &^ 7
 	}
 	arg = ctxt.cursym.text.to.offset2
@@ -548,7 +548,7 @@ func stacksplit_obj8(ctxt *Link, p *Prog, framesize int64, noctxt int, jmpok **P
 	p.as = AMOVL_8
 	p.to.typ = D_AX_8
 	p.from.typ = D_CONST_8
-	p.from.offset = arg
+	p.from.offset = int64(arg)
 	p = appendp(ctxt, p)
 	p.as = ACALL_8
 	p.to.typ = D_BRANCH_8
@@ -578,16 +578,16 @@ func follow_obj8(ctxt *Link, s *LSym) {
 	s.text = firstp.link
 }
 
-func nofollow_obj8(a int) int {
+func nofollow_obj8(a int) bool {
 	switch a {
 	case AJMP_8,
 		ARET_8,
 		AIRETL_8,
 		AIRETW_8,
 		AUNDEF_8:
-		return 1
+		return true
 	}
-	return 0
+	return false
 }
 
 func pushpop_obj8(a int) int {
@@ -682,7 +682,7 @@ loop:
 				i--
 				continue
 			}
-			if nofollow_obj8(a) != 0 || pushpop_obj8(a) != 0 {
+			if nofollow_obj8(a) || pushpop_obj8(a) != 0 {
 				break // NOTE(rsc): arm does goto copy
 			}
 			if q.pcond == nil || q.pcond.mark != 0 {
@@ -730,7 +730,7 @@ loop:
 	*last = p
 	a = p.as
 	/* continue loop with what comes after p */
-	if nofollow_obj8(a) != 0 {
+	if nofollow_obj8(a) {
 		return
 	}
 	if p.pcond != nil && a != ACALL_8 {
@@ -782,6 +782,8 @@ loop:
 var link386 = LinkArch{
 	name:          "386",
 	thechar:       '8',
+	byteOrder:     binary.LittleEndian,
+	Pconv:         Pconv_list8,
 	addstacksplit: addstacksplit_obj8,
 	assemble:      span8,
 	datasize:      datasize_obj8,
@@ -793,8 +795,6 @@ var link386 = LinkArch{
 	settextflag:   settextflag_obj8,
 	symtype:       symtype_obj8,
 	textflag:      textflag_obj8,
-	Pconv:         Pconv_list8,
-	byteOrder:     binary.LittleEndian,
 	minlc:         1,
 	ptrsize:       4,
 	regsize:       4,

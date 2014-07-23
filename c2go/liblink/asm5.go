@@ -13,8 +13,8 @@ type Optab_asm5 struct {
 	a2       int
 	a3       uint8
 	typ      uint8
-	size     int32
-	param    int64
+	size     int
+	param    int
 	flag     int8
 	pcrelsiz uint8
 }
@@ -300,9 +300,9 @@ func nocache_asm5(p *Prog) {
 }
 
 /* size of a case statement including jump table */
-func casesz_asm5(ctxt *Link, p *Prog) int32 {
+func casesz_asm5(ctxt *Link, p *Prog) int {
 	var jt int = 0
-	var n int32 = 0
+	var n int = 0
 	var o []Optab_asm5
 	for ; p != nil; p = p.link {
 		if p.as == ABCASE_5 {
@@ -321,9 +321,9 @@ func casesz_asm5(ctxt *Link, p *Prog) int32 {
 // p->pc if extra padding is necessary.
 // In rare cases, asmoutnacl might split p into two instructions.
 // origPC is the PC for this Prog (no padding is taken into account).
-func asmoutnacl_asm5(ctxt *Link, origPC int64, p *Prog, o []Optab_asm5, out []uint32) int32 {
-	var size int32
-	var reg int64
+func asmoutnacl_asm5(ctxt *Link, origPC int64, p *Prog, o []Optab_asm5, out []uint32) int {
+	var size int
+	var reg int
 	var q *Prog
 	var a *Addr
 	var a2 *Addr
@@ -366,11 +366,11 @@ func asmoutnacl_asm5(ctxt *Link, origPC int64, p *Prog, o []Optab_asm5, out []ui
 				p.pc += 4
 			}
 			if out != nil {
-				out[0] = uint32(int64((uint32(p.scond)&C_SCOND_5)<<28|0x03c0013f) | p.to.reg<<12 | p.to.reg<<16) // BIC $0xc000000f, Rx
+				out[0] = (uint32(p.scond)&C_SCOND_5)<<28 | 0x03c0013f | uint32(p.to.reg)<<12 | uint32(p.to.reg)<<16 // BIC $0xc000000f, Rx
 				if p.as == AB_5 {
-					out[1] = uint32(int64((uint32(p.scond)&C_SCOND_5)<<28|0x012fff10) | p.to.reg) // BX Rx // ABL
+					out[1] = (uint32(p.scond)&C_SCOND_5)<<28 | 0x012fff10 | uint32(p.to.reg) // BX Rx // ABL
 				} else {
-					out[1] = uint32(int64((uint32(p.scond)&C_SCOND_5)<<28|0x012fff30) | p.to.reg) // BLX Rx
+					out[1] = (uint32(p.scond)&C_SCOND_5)<<28 | 0x012fff30 | uint32(p.to.reg) // BLX Rx
 				}
 			}
 			size = 8
@@ -490,7 +490,7 @@ func asmoutnacl_asm5(ctxt *Link, origPC int64, p *Prog, o []Optab_asm5, out []ui
 					}
 				} else {
 					if out != nil {
-						out[0] = uint32(int64((uint32(p.scond)&C_SCOND_5)<<28|0x03c00103) | reg<<16 | reg<<12) // BIC $0xc0000000, Rx
+						out[0] = (uint32(p.scond)&C_SCOND_5)<<28 | 0x03c00103 | uint32(reg)<<16 | uint32(reg)<<12 // BIC $0xc0000000, Rx
 					}
 					if p.pc&15 == 12 {
 						p.pc += 4
@@ -567,7 +567,7 @@ func span5(ctxt *Link, cursym *LSym) {
 	var p *Prog
 	var op *Prog
 	var o []Optab_asm5
-	var m int32
+	var m int
 	var bflag int
 	var i int
 	var v int
@@ -584,13 +584,13 @@ func span5(ctxt *Link, cursym *LSym) {
 		buildop_asm5(ctxt)
 	}
 	ctxt.cursym = cursym
-	ctxt.autosize = int32(p.to.offset + 4)
+	ctxt.autosize = int(p.to.offset + 4)
 	c = 0
 	op = p
 	p = p.link
 	for ; p != nil || ctxt.blitrl != nil; (func() { op = p; p = p.link })() {
 		if p == nil {
-			if checkpool_asm5(ctxt, op, 0) != 0 {
+			if checkpool_asm5(ctxt, op, 0) {
 				p = op
 				continue
 			}
@@ -613,13 +613,13 @@ func span5(ctxt *Link, cursym *LSym) {
 		}
 		// must check literal pool here in case p generates many instructions
 		if ctxt.blitrl != nil {
-			var tmp int32
+			var tmp int
 			if p.as == ACASE_5 {
 				tmp = casesz_asm5(ctxt, p)
 			} else {
 				tmp = m
 			}
-			if checkpool_asm5(ctxt, op, tmp) != 0 {
+			if checkpool_asm5(ctxt, op, tmp) {
 				p = op
 				continue
 			}
@@ -703,12 +703,12 @@ func span5(ctxt *Link, cursym *LSym) {
 			if m%4 != 0 || p.pc%4 != 0 {
 				ctxt.diag("pc invalid: %P size=%d", p, m)
 			}
-			if m/4 > int32(len(out)) {
+			if m/4 > len(out) {
 				ctxt.diag("instruction size too large: %d > %d", m/4, len(out))
 			}
 			if m == 0 && (p.as != AFUNCDATA_5 && p.as != APCDATA_5 && p.as != ADATABUNDLEEND_5) {
 				if p.as == ATEXT_5 {
-					ctxt.autosize = int32(p.to.offset + 4)
+					ctxt.autosize = int(p.to.offset + 4)
 					continue
 				}
 				ctxt.diag("zero-width instruction\n%P", p)
@@ -716,7 +716,7 @@ func span5(ctxt *Link, cursym *LSym) {
 			}
 		}
 		cursym.size = c
-		if !(bflag != 0) {
+		if bflag == 0 {
 			break
 		}
 	}
@@ -735,7 +735,7 @@ func span5(ctxt *Link, cursym *LSym) {
 		ctxt.tlsg = linklookup(ctxt, "runtime.tlsg", 0)
 	}
 	p = cursym.text
-	ctxt.autosize = int32(p.to.offset + 4)
+	ctxt.autosize = int(p.to.offset + 4)
 	symgrow(ctxt, cursym, cursym.size)
 	bp = cursym.p
 	c = p.pc // even p->link might need extra padding
@@ -750,7 +750,7 @@ func span5(ctxt *Link, cursym *LSym) {
 		} else {
 			m = asmoutnacl_asm5(ctxt, c, p, o, out[:])
 			if opc != p.pc {
-				ctxt.diag("asmoutnacl broken: pc changed (%d->%d) in last stage: %P", opc, int32(p.pc), p)
+				ctxt.diag("asmoutnacl broken: pc changed (%d->%d) in last stage: %P", opc, int(p.pc), p)
 			}
 		}
 		if m%4 != 0 || p.pc%4 != 0 {
@@ -771,7 +771,7 @@ func span5(ctxt *Link, cursym *LSym) {
 			bp = bp[1:]
 			c += 4
 		}
-		for i = 0; int32(i) < m/4; i++ {
+		for i = 0; i < m/4; i++ {
 			v = int(out[i])
 			bp[0] = uint8(v)
 			bp = bp[1:]
@@ -792,16 +792,16 @@ func span5(ctxt *Link, cursym *LSym) {
  * drop the pool now, and branch round it.
  * this happens only in extended basic blocks that exceed 4k.
  */
-func checkpool_asm5(ctxt *Link, p *Prog, sz int32) int {
-	if pool_asm5.size >= 0xff0 || immaddr_asm5(int32((p.pc+int64(sz)+4)+4+(12+pool_asm5.size)-(pool_asm5.start+8))) == 0 {
+func checkpool_asm5(ctxt *Link, p *Prog, sz int) bool {
+	if pool_asm5.size >= 0xff0 || immaddr_asm5(int((p.pc+int64(sz)+4)+4+(12+pool_asm5.size)-(pool_asm5.start+8))) == 0 {
 		return flushpool_asm5(ctxt, p, 1, 0)
 	} else if p.link == nil {
 		return flushpool_asm5(ctxt, p, 2, 0)
 	}
-	return 0
+	return false
 }
 
-func flushpool_asm5(ctxt *Link, p *Prog, skip int, force int) int {
+func flushpool_asm5(ctxt *Link, p *Prog, skip int, force int) bool {
 	var q *Prog
 	if ctxt.blitrl != nil {
 		if skip != 0 {
@@ -815,8 +815,8 @@ func flushpool_asm5(ctxt *Link, p *Prog, skip int, force int) int {
 			q.link = ctxt.blitrl
 			q.lineno = p.lineno
 			ctxt.blitrl = q
-		} else if !(force != 0) && (p.pc+(12+pool_asm5.size)-pool_asm5.start < 2048) { // 12 take into account the maximum nacl literal pool alignment padding size
-			return 0
+		} else if force == 0 && (p.pc+(12+pool_asm5.size)-pool_asm5.start < 2048) { // 12 take into account the maximum nacl literal pool alignment padding size
+			return false
 		}
 		if ctxt.headtype == Hnacl && pool_asm5.size%16 != 0 {
 			// if pool is not multiple of 16 bytes, add an alignment marker
@@ -839,9 +839,9 @@ func flushpool_asm5(ctxt *Link, p *Prog, skip int, force int) int {
 		pool_asm5.size = 0
 		pool_asm5.start = 0
 		pool_asm5.extra = 0
-		return 1
+		return true
 	}
-	return 0
+	return false
 }
 
 func addpool_asm5(ctxt *Link, p *Prog, a *Addr) {
@@ -858,7 +858,6 @@ func addpool_asm5(ctxt *Link, p *Prog, a *Addr) {
 		t.to.sym = a.sym
 		t.to.typ = a.typ
 		t.to.name = a.name
-
 		if ctxt.flag_shared != 0 && t.to.sym != nil {
 			t.pcrel = p
 		}
@@ -913,50 +912,50 @@ func addpool_asm5(ctxt *Link, p *Prog, a *Addr) {
 	p.pcond = q
 }
 
-func regoff_asm5(ctxt *Link, a *Addr) int32 {
+func regoff_asm5(ctxt *Link, a *Addr) int {
 	ctxt.instoffset = 0
 	aclass_asm5(ctxt, a)
 	return ctxt.instoffset
 }
 
-func immrot_asm5(v uint32) int64 {
+func immrot_asm5(v uint32) int {
 	var i int
 	for i = 0; i < 16; i++ {
 		if v&^0xff == 0 {
-			return int64(i)<<8 | int64(v) | 1<<25
+			return int(uint32(i<<8) | v | 1<<25)
 		}
 		v = v<<2 | v>>30
 	}
 	return 0
 }
 
-func immaddr_asm5(v int32) int64 {
+func immaddr_asm5(v int) int {
 	if v >= 0 && v <= 0xfff {
-		return int64(v)&0xfff | 1<<24 | 1<<23 /* pre indexing */ /* pre indexing, up */
+		return v&0xfff | 1<<24 | 1<<23 /* pre indexing */ /* pre indexing, up */
 	}
 	if v >= -0xfff && v < 0 {
-		return int64(-v)&0xfff | 1<<24 /* pre indexing */
+		return -v&0xfff | 1<<24 /* pre indexing */
 	}
 	return 0
 }
 
-func immfloat_asm5(v int64) int {
-	return bool2int(v&0xC03 == 0) /* offset will fit in floating-point load/store */
+func immfloat_asm5(v int) bool {
+	return v&0xC03 == 0 /* offset will fit in floating-point load/store */
 }
 
-func immhalf_asm5(v int32) int {
+func immhalf_asm5(v int) int {
 	if v >= 0 && v <= 0xff {
-		return int(v | 1<<24 | 1<<23) /* pre indexing */ /* pre indexing, up */
+		return v | 1<<24 | 1<<23 /* pre indexing */ /* pre indexing, up */
 	}
 	if v >= -0xff && v < 0 {
-		return int(-v&0xff | 1<<24) /* pre indexing */
+		return -v&0xff | 1<<24 /* pre indexing */
 	}
 	return 0
 }
 
 func aclass_asm5(ctxt *Link, a *Addr) int {
 	var s *LSym
-	var t int64
+	var t int
 	switch a.typ {
 	case D_NONE_5:
 		return C_NONE_asm5
@@ -983,57 +982,57 @@ func aclass_asm5(ctxt *Link, a *Addr) int {
 			ctxt.instoffset = 0 // s.b. unused but just in case
 			return C_ADDR_asm5
 		case D_AUTO_5:
-			ctxt.instoffset = int32(int64(ctxt.autosize) + a.offset)
+			ctxt.instoffset = int(int64(ctxt.autosize) + a.offset)
 			t = immaddr_asm5(ctxt.instoffset)
 			if t != 0 {
 				if immhalf_asm5(ctxt.instoffset) != 0 {
 					var tmp int
-					if immfloat_asm5(t) != 0 {
+					if immfloat_asm5(t) {
 						tmp = C_HFAUTO_asm5
 					} else {
 						tmp = C_HAUTO_asm5
 					}
 					return tmp
 				}
-				if immfloat_asm5(t) != 0 {
+				if immfloat_asm5(t) {
 					return C_FAUTO_asm5
 				}
 				return C_SAUTO_asm5
 			}
 			return C_LAUTO_asm5
 		case D_PARAM_5:
-			ctxt.instoffset = int32(int64(ctxt.autosize) + a.offset + 4)
+			ctxt.instoffset = int(int64(ctxt.autosize) + a.offset + 4)
 			t = immaddr_asm5(ctxt.instoffset)
 			if t != 0 {
 				if immhalf_asm5(ctxt.instoffset) != 0 {
 					var tmp int
-					if immfloat_asm5(t) != 0 {
+					if immfloat_asm5(t) {
 						tmp = C_HFAUTO_asm5
 					} else {
 						tmp = C_HAUTO_asm5
 					}
 					return tmp
 				}
-				if immfloat_asm5(t) != 0 {
+				if immfloat_asm5(t) {
 					return C_FAUTO_asm5
 				}
 				return C_SAUTO_asm5
 			}
 			return C_LAUTO_asm5
 		case D_NONE_5:
-			ctxt.instoffset = int32(a.offset)
+			ctxt.instoffset = int(a.offset)
 			t = immaddr_asm5(ctxt.instoffset)
 			if t != 0 {
 				if immhalf_asm5(ctxt.instoffset) != 0 { /* n.b. that it will also satisfy immrot */
 					var tmp int
-					if immfloat_asm5(t) != 0 {
+					if immfloat_asm5(t) {
 						tmp = C_HFOREG_asm5
 					} else {
 						tmp = C_HOREG_asm5
 					}
 					return tmp
 				}
-				if immfloat_asm5(t) != 0 {
+				if immfloat_asm5(t) {
 					return C_FOREG_asm5 /* n.b. that it will also satisfy immrot */
 				}
 				t = immrot_asm5(uint32(ctxt.instoffset))
@@ -1074,7 +1073,7 @@ func aclass_asm5(ctxt *Link, a *Addr) int {
 		D_CONST2_5:
 		switch a.name {
 		case D_NONE_5:
-			ctxt.instoffset = int32(a.offset)
+			ctxt.instoffset = int(a.offset)
 			if a.reg != NREG_5 {
 				return aconsize_asm5(ctxt)
 			}
@@ -1096,10 +1095,10 @@ func aclass_asm5(ctxt *Link, a *Addr) int {
 			ctxt.instoffset = 0 // s.b. unused but just in case
 			return C_LCONADDR_asm5
 		case D_AUTO_5:
-			ctxt.instoffset = int32(int64(ctxt.autosize) + a.offset)
+			ctxt.instoffset = int(int64(ctxt.autosize) + a.offset)
 			return aconsize_asm5(ctxt)
 		case D_PARAM_5:
-			ctxt.instoffset = int32(int64(ctxt.autosize) + a.offset + 4)
+			ctxt.instoffset = int(int64(ctxt.autosize) + a.offset + 4)
 			return aconsize_asm5(ctxt)
 		}
 		return C_GOK_asm5
@@ -1110,7 +1109,7 @@ func aclass_asm5(ctxt *Link, a *Addr) int {
 }
 
 func aconsize_asm5(ctxt *Link) int {
-	var t int64
+	var t int
 	t = immrot_asm5(uint32(ctxt.instoffset))
 	if t != 0 {
 		return C_RACON_asm5
@@ -1277,7 +1276,7 @@ func buildop_asm5(ctxt *Link) {
 	for n = 0; optab_asm5[n].as != AXXX_5; n++ {
 		if optab_asm5[n].flag&LPCREL_asm5 != 0 {
 			if ctxt.flag_shared != 0 {
-				optab_asm5[n].size += int32(optab_asm5[n].pcrelsiz)
+				optab_asm5[n].size += int(optab_asm5[n].pcrelsiz)
 			} else {
 				optab_asm5[n].flag &^= LPCREL_asm5
 			}
@@ -1417,11 +1416,11 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 	var o4 uint32
 	var o5 uint32
 	var o6 uint32
-	var v int32
-	var r int64
-	var rf int64
-	var rt int64
-	var rt2 int64
+	var v int
+	var r int
+	var rf int
+	var rt int
+	var rt2 int
 	var rel *Reloc
 	ctxt.printp = p
 	o1 = 0
@@ -1455,7 +1454,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		} else if r == NREG_5 {
 			r = rt
 		}
-		o1 |= uint32(rf | r<<16 | rt<<12)
+		o1 |= uint32(rf) | uint32(r)<<16 | uint32(rt)<<12
 	case 2: /* movbu $I,[R],R */
 		aclass_asm5(ctxt, &p.from)
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
@@ -1470,7 +1469,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		} else if r == NREG_5 {
 			r = rt
 		}
-		o1 |= uint32(r<<16 | rt<<12)
+		o1 |= uint32(r)<<16 | uint32(rt)<<12
 	case 3: /* add R<<[IR],[R],R */
 		o1 = mov_asm5(ctxt, p)
 	case 4: /* add $I,[R],R */
@@ -1481,8 +1480,8 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		if r == NREG_5 {
 			r = o[0].param
 		}
-		o1 |= uint32(r << 16)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(r) << 16
+		o1 |= uint32(p.to.reg) << 12
 	case 5: /* bra s */
 		o1 = opbra_asm5(ctxt, p.as, p.scond)
 		v = -8
@@ -1491,20 +1490,20 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			rel.off = ctxt.pc
 			rel.siz = 4
 			rel.sym = p.to.sym
-			v += int32(p.to.offset)
-			rel.add = int64(int32(int64(o1) | (int64(v)>>2)&0xffffff))
+			v += int(p.to.offset)
+			rel.add = int64(int32(o1) | (int32(v) >> 2 & 0xffffff))
 			rel.typ = R_CALLARM
 			break
 		}
 		if p.pcond != nil {
-			v = int32((p.pcond.pc - ctxt.pc) - 8)
+			v = int((p.pcond.pc - ctxt.pc) - 8)
 		}
 		o1 |= (uint32(v) >> 2) & 0xffffff
 	case 6: /* b ,O(R) -> add $O,R,PC */
 		aclass_asm5(ctxt, &p.to)
 		o1 = oprrr_asm5(ctxt, AADD_5, p.scond)
 		o1 |= uint32(immrot_asm5(uint32(ctxt.instoffset)))
-		o1 |= uint32(p.to.reg << 16)
+		o1 |= uint32(p.to.reg) << 16
 		o1 |= REGPC_5 << 12
 	case 7: /* bl (R) -> blx R */
 		aclass_asm5(ctxt, &p.to)
@@ -1526,7 +1525,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 		o1 |= uint32(r)
 		o1 |= (uint32(ctxt.instoffset) & 31) << 7
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.to.reg) << 12
 	case 9: /* sll R,[R],R -> mov (R<<R),R */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
 		r = p.reg
@@ -1534,8 +1533,8 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			r = p.to.reg
 		}
 		o1 |= uint32(r)
-		o1 |= uint32(p.from.reg<<8 | 1<<4)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg)<<8 | 1<<4
+		o1 |= uint32(p.to.reg) << 12
 	case 10: /* swi [$con] */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
 		if p.to.typ != D_NONE_5 {
@@ -1557,13 +1556,10 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			// Its "address" is the offset from the TLS thread pointer
 			// to the thread-local g and m pointers.
 			// Emit a TLS relocation instead of a standard one.
-			if rel.sym != ctxt.tlsg && rel.sym.name == "runtime.tlsg" {
-				println("wtf tlsg", rel.sym.name, rel.sym, ctxt.tlsg, ctxt.tlsg.name)
-			}
 			if rel.sym == ctxt.tlsg {
 				rel.typ = R_TLS
 				if ctxt.flag_shared != 0 {
-					rel.add += ctxt.pc - p.pcrel.pc - 8 - rel.siz
+					rel.add += ctxt.pc - p.pcrel.pc - 8 - int64(rel.siz)
 				}
 				rel.xadd = rel.add
 				rel.xsym = rel.sym
@@ -1578,11 +1574,11 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 	case 12: /* movw $lcon, reg */
 		o1 = omvl_asm5(ctxt, p, &p.from, p.to.reg)
 		if o[0].flag&LPCREL_asm5 != 0 {
-			o2 = uint32(int64(oprrr_asm5(ctxt, AADD_5, p.scond)) | p.to.reg | REGPC_5<<16 | p.to.reg<<12)
+			o2 = oprrr_asm5(ctxt, AADD_5, p.scond) | uint32(p.to.reg) | REGPC_5<<16 | uint32(p.to.reg)<<12
 		}
 	case 13: /* op $lcon, [R], R */
 		o1 = omvl_asm5(ctxt, p, &p.from, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		o2 = oprrr_asm5(ctxt, p.as, p.scond)
@@ -1593,9 +1589,9 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		} else if r == NREG_5 {
 			r = p.to.reg
 		}
-		o2 |= uint32(r << 16)
+		o2 |= uint32(r) << 16
 		if p.to.typ != D_NONE_5 {
-			o2 |= uint32(p.to.reg << 12)
+			o2 |= uint32(p.to.reg) << 12
 		}
 	case 14: /* movb/movbu/movh/movhu R,R */
 		o1 = oprrr_asm5(ctxt, ASLL_5, p.scond)
@@ -1605,8 +1601,8 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			o2 = oprrr_asm5(ctxt, ASRA_5, p.scond)
 		}
 		r = p.to.reg
-		o1 |= uint32((p.from.reg) | r<<12)
-		o2 |= uint32(r | r<<12)
+		o1 |= uint32(p.from.reg) | uint32(r)<<12
+		o2 |= uint32(r) | uint32(r)<<12
 		if p.as == AMOVB_5 || p.as == AMOVBS_5 || p.as == AMOVBU_5 {
 			o1 |= 24 << 7
 			o2 |= 24 << 7
@@ -1632,7 +1628,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 				prasm_asm5(p)
 			}
 		}
-		o1 |= uint32(rf<<8 | r | rt<<16)
+		o1 |= uint32(rf)<<8 | uint32(r) | uint32(rt)<<16
 	case 16: /* div r,[r,]r */
 		o1 = 0xf << 28
 		o2 = 0
@@ -1640,29 +1636,29 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
 		rf = p.from.reg
 		rt = p.to.reg
-		rt2 = p.to.offset
+		rt2 = int(p.to.offset)
 		r = p.reg
-		o1 |= uint32(rf<<8 | r | rt<<16 | rt2<<12)
+		o1 |= uint32(rf)<<8 | uint32(r) | uint32(rt)<<16 | uint32(rt2)<<12
 	case 20: /* mov/movb/movbu R,O(R) */
 		aclass_asm5(ctxt, &p.to)
 		r = p.to.reg
 		if r == NREG_5 {
 			r = o[0].param
 		}
-		o1 = osr_asm5(ctxt, p.as, p.from.reg, int64(ctxt.instoffset), r, p.scond)
+		o1 = osr_asm5(ctxt, p.as, p.from.reg, ctxt.instoffset, r, p.scond)
 	case 21: /* mov/movbu O(R),R -> lr */
 		aclass_asm5(ctxt, &p.from)
 		r = p.from.reg
 		if r == NREG_5 {
 			r = o[0].param
 		}
-		o1 = olr_asm5(ctxt, int64(ctxt.instoffset), r, p.to.reg, p.scond)
+		o1 = olr_asm5(ctxt, ctxt.instoffset, r, p.to.reg, p.scond)
 		if p.as != AMOVW_5 {
 			o1 |= 1 << 22
 		}
 	case 30: /* mov/movb/movbu R,L(R) */
 		o1 = omvl_asm5(ctxt, p, &p.to, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		r = p.to.reg
@@ -1675,7 +1671,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 	case 31: /* mov/movbu L(R),R -> lr[b] */
 		o1 = omvl_asm5(ctxt, p, &p.from, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		r = p.from.reg
@@ -1688,7 +1684,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 	case 34: /* mov $lacon,R */
 		o1 = omvl_asm5(ctxt, p, &p.from, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		o2 = oprrr_asm5(ctxt, AADD_5, p.scond)
@@ -1697,23 +1693,23 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		if r == NREG_5 {
 			r = o[0].param
 		}
-		o2 |= uint32(r << 16)
+		o2 |= uint32(r) << 16
 		if p.to.typ != D_NONE_5 {
-			o2 |= uint32(p.to.reg << 12)
+			o2 |= uint32(p.to.reg) << 12
 		}
 	case 35: /* mov PSR,R */
 		o1 = 2<<23 | 0xf<<16 | 0<<0
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
-		o1 |= uint32((p.from.reg & 1) << 22)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= (uint32(p.from.reg) & 1) << 22
+		o1 |= uint32(p.to.reg) << 12
 	case 36: /* mov R,PSR */
 		o1 = 2<<23 | 0x29f<<12 | 0<<4
 		if p.scond&C_FBIT_5 != 0 {
 			o1 ^= 0x010 << 12
 		}
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
-		o1 |= uint32((p.to.reg & 1) << 22)
-		o1 |= uint32(p.from.reg << 0)
+		o1 |= (uint32(p.to.reg) & 1) << 22
+		o1 |= uint32(p.from.reg) << 0
 	case 37: /* mov $con,PSR */
 		aclass_asm5(ctxt, &p.from)
 		o1 = 2<<23 | 0x29f<<12 | 0<<4
@@ -1722,20 +1718,20 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
 		o1 |= uint32(immrot_asm5(uint32(ctxt.instoffset)))
-		o1 |= uint32((p.to.reg & 1) << 22)
-		o1 |= uint32(p.from.reg << 0)
+		o1 |= (uint32(p.to.reg) & 1) << 22
+		o1 |= uint32(p.from.reg) << 0
 	case 38,
 		39:
 		switch o[0].typ {
 		case 38: /* movm $con,oreg -> stm */
 			o1 = 0x4 << 25
 			o1 |= uint32(p.from.offset & 0xffff)
-			o1 |= uint32(p.to.reg << 16)
+			o1 |= uint32(p.to.reg) << 16
 			aclass_asm5(ctxt, &p.to)
 		case 39: /* movm oreg,$con -> ldm */
 			o1 = 0x4<<25 | 1<<20
 			o1 |= uint32(p.to.offset & 0xffff)
-			o1 |= uint32(p.from.reg << 16)
+			o1 |= uint32(p.from.reg) << 16
 			aclass_asm5(ctxt, &p.from)
 			break
 		}
@@ -1764,9 +1760,9 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		if p.as != ASWPW_5 {
 			o1 |= 1 << 22
 		}
-		o1 |= uint32(p.from.reg << 16)
-		o1 |= uint32(p.reg << 0)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg) << 16
+		o1 |= uint32(p.reg) << 0
+		o1 |= uint32(p.to.reg) << 12
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
 	case 41: /* rfe -> movm.s.w.u 0(r13),[r15] */
 		o1 = 0xe8fd8000
@@ -1786,25 +1782,25 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		o1 = ofsr_asm5(ctxt, p.as, p.to.reg, v, r, p.scond, p) | 1<<20
 	case 52: /* floating point store, int32 offset UGLY */
 		o1 = omvl_asm5(ctxt, p, &p.to, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		r = p.to.reg
 		if r == NREG_5 {
 			r = o[0].param
 		}
-		o2 = uint32(int64(oprrr_asm5(ctxt, AADD_5, p.scond)|REGTMP_5<<12|REGTMP_5<<16) | r)
+		o2 = oprrr_asm5(ctxt, AADD_5, p.scond) | REGTMP_5<<12 | REGTMP_5<<16 | uint32(r)
 		o3 = ofsr_asm5(ctxt, p.as, p.from.reg, 0, REGTMP_5, p.scond, p)
 	case 53: /* floating point load, int32 offset UGLY */
 		o1 = omvl_asm5(ctxt, p, &p.from, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		r = p.from.reg
 		if r == NREG_5 {
 			r = o[0].param
 		}
-		o2 = uint32(int64(oprrr_asm5(ctxt, AADD_5, p.scond)|REGTMP_5<<12|REGTMP_5<<16) | r)
+		o2 = oprrr_asm5(ctxt, AADD_5, p.scond) | REGTMP_5<<12 | REGTMP_5<<16 | uint32(r)
 		o3 = ofsr_asm5(ctxt, p.as, p.to.reg, 0, REGTMP_5, p.scond, p) | 1<<20
 	case 54: /* floating point arith */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
@@ -1817,13 +1813,13 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 				r = 0
 			}
 		}
-		o1 |= uint32(rf | r<<16 | rt<<12)
+		o1 |= uint32(rf) | uint32(r)<<16 | uint32(rt)<<12
 	case 56: /* move to FP[CS]R */
 		o1 = (uint32(p.scond)&C_SCOND_5)<<28 | 0xe<<24 | 1<<8 | 1<<4
-		o1 |= uint32((p.to.reg+1)<<21 | p.from.reg<<12)
+		o1 |= (uint32(p.to.reg)+1)<<21 | uint32(p.from.reg)<<12
 	case 57: /* move from FP[CS]R */
 		o1 = (uint32(p.scond)&C_SCOND_5)<<28 | 0xe<<24 | 1<<8 | 1<<4
-		o1 |= uint32((p.from.reg+1)<<21 | p.to.reg<<12 | 1<<20)
+		o1 |= (uint32(p.from.reg)+1)<<21 | uint32(p.to.reg)<<12 | 1<<20
 	case 58: /* movbu R,R */
 		o1 = oprrr_asm5(ctxt, AAND_5, p.scond)
 		o1 |= uint32(immrot_asm5(0xff))
@@ -1835,7 +1831,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		if r == NREG_5 {
 			r = rt
 		}
-		o1 |= uint32(r<<16 | rt<<12)
+		o1 |= uint32(r)<<16 | uint32(rt)<<12
 	case 59: /* movw/bu R<<I(R),R -> ldr indexed */
 		if p.from.reg == NREG_5 {
 			if p.as != AMOVW_5 {
@@ -1847,7 +1843,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		if p.from.offset&(1<<4) != 0 {
 			ctxt.diag("bad shift in LDR")
 		}
-		o1 = olrr_asm5(ctxt, p.from.offset, p.from.reg, p.to.reg, p.scond)
+		o1 = olrr_asm5(ctxt, int(p.from.offset), p.from.reg, p.to.reg, p.scond)
 		if p.as == AMOVBU_5 {
 			o1 |= 1 << 22
 		}
@@ -1860,19 +1856,19 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		if p.from.offset&(^0xf) != 0 {
 			ctxt.diag("bad shift in LDRSB")
 		}
-		o1 = olhrr_asm5(ctxt, p.from.offset, p.from.reg, p.to.reg, p.scond)
+		o1 = olhrr_asm5(ctxt, int(p.from.offset), p.from.reg, p.to.reg, p.scond)
 		o1 ^= 1<<5 | 1<<6
 	case 61: /* movw/b/bu R,R<<[IR](R) -> str indexed */
 		if p.to.reg == NREG_5 {
 			ctxt.diag("MOV to shifter operand")
 		}
-		o1 = osrr_asm5(ctxt, p.from.reg, p.to.offset, p.to.reg, p.scond)
+		o1 = osrr_asm5(ctxt, p.from.reg, int(p.to.offset), p.to.reg, p.scond)
 		if p.as == AMOVB_5 || p.as == AMOVBS_5 || p.as == AMOVBU_5 {
 			o1 |= 1 << 22
 		}
 	case 62: /* case R -> movw	R<<2(PC),PC */
 		if o[0].flag&LPCREL_asm5 != 0 {
-			o1 = uint32(int64(oprrr_asm5(ctxt, AADD_5, p.scond)) | immrot_asm5(1) | p.from.reg<<16 | REGTMP_5<<12)
+			o1 = oprrr_asm5(ctxt, AADD_5, p.scond) | uint32(immrot_asm5(1)) | uint32(p.from.reg)<<16 | REGTMP_5<<12
 			o2 = olrr_asm5(ctxt, REGTMP_5, REGPC_5, REGTMP_5, p.scond)
 			o2 |= 2 << 7
 			o3 = oprrr_asm5(ctxt, AADD_5, p.scond) | REGTMP_5 | REGPC_5<<16 | REGPC_5<<12
@@ -1894,7 +1890,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			}
 			if o[0].flag&LPCREL_asm5 != 0 {
 				rel.typ = R_PCREL
-				rel.add += ctxt.pc - p.pcrel.pc - 16 + rel.siz
+				rel.add += ctxt.pc - p.pcrel.pc - 16 + int64(rel.siz)
 			} else {
 				rel.typ = R_ADDR
 			}
@@ -1903,7 +1899,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 	/* reloc ops */
 	case 64: /* mov/movb/movbu R,addr */
 		o1 = omvl_asm5(ctxt, p, &p.to, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		o2 = osr_asm5(ctxt, p.as, p.from.reg, 0, REGTMP_5, p.scond)
@@ -1913,7 +1909,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 	case 65: /* mov/movbu addr,R */
 		o1 = omvl_asm5(ctxt, p, &p.from, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		o2 = olr_asm5(ctxt, 0, REGTMP_5, p.to.reg, p.scond)
@@ -1926,7 +1922,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 	case 68: /* floating point store -> ADDR */
 		o1 = omvl_asm5(ctxt, p, &p.to, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		o2 = ofsr_asm5(ctxt, p.as, p.from.reg, 0, REGTMP_5, p.scond, p)
@@ -1936,7 +1932,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 	case 69: /* floating point load <- ADDR */
 		o1 = omvl_asm5(ctxt, p, &p.from, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		o2 = ofsr_asm5(ctxt, p.as, p.to.reg, 0, REGTMP_5, p.scond, p) | 1<<20
@@ -1951,14 +1947,14 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		if r == NREG_5 {
 			r = o[0].param
 		}
-		o1 = oshr_asm5(ctxt, p.from.reg, int64(ctxt.instoffset), r, p.scond)
+		o1 = oshr_asm5(ctxt, p.from.reg, ctxt.instoffset, r, p.scond)
 	case 71: /* movb/movh/movhu O(R),R -> ldrsb/ldrsh/ldrh */
 		aclass_asm5(ctxt, &p.from)
 		r = p.from.reg
 		if r == NREG_5 {
 			r = o[0].param
 		}
-		o1 = olhr_asm5(ctxt, int64(ctxt.instoffset), r, p.to.reg, p.scond)
+		o1 = olhr_asm5(ctxt, ctxt.instoffset, r, p.to.reg, p.scond)
 		if p.as == AMOVB_5 || p.as == AMOVBS_5 {
 			o1 ^= 1<<5 | 1<<6
 		} else if p.as == AMOVH_5 || p.as == AMOVHS_5 {
@@ -1966,7 +1962,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 	case 72: /* movh/movhu R,L(R) -> strh */
 		o1 = omvl_asm5(ctxt, p, &p.to, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		r = p.to.reg
@@ -1976,7 +1972,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		o2 = oshrr_asm5(ctxt, p.from.reg, REGTMP_5, r, p.scond)
 	case 73: /* movb/movh/movhu L(R),R -> ldrsb/ldrsh/ldrh */
 		o1 = omvl_asm5(ctxt, p, &p.from, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		r = p.from.reg
@@ -2003,10 +1999,10 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		// p->to.reg may be REGLINK
 		o1 = oprrr_asm5(ctxt, AADD_5, p.scond)
 		o1 |= uint32(immrot_asm5(uint32(ctxt.instoffset)))
-		o1 |= uint32(p.to.reg << 16)
+		o1 |= uint32(p.to.reg) << 16
 		o1 |= REGTMP_5 << 12
-		o2 = uint32(int64(oprrr_asm5(ctxt, AADD_5, p.scond)) | immrot_asm5(0) | REGPC_5<<16 | REGLINK_5<<12) // mov PC, LR
-		o3 = (uint32(p.scond)&C_SCOND_5)<<28 | 0x12fff<<8 | 1<<4 | REGTMP_5                                  // BX Rtmp
+		o2 = oprrr_asm5(ctxt, AADD_5, p.scond) | uint32(immrot_asm5(0)) | REGPC_5<<16 | REGLINK_5<<12 // mov PC, LR
+		o3 = (uint32(p.scond)&C_SCOND_5)<<28 | 0x12fff<<8 | 1<<4 | REGTMP_5                           // BX Rtmp
 	case 76: /* bx O(R) when returning from fn*/
 		ctxt.diag("ABXRET")
 	case 77: /* ldrex oreg,reg */
@@ -2015,8 +2011,8 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			ctxt.diag("offset must be zero in LDREX")
 		}
 		o1 = 0x19<<20 | 0xf9f
-		o1 |= uint32(p.from.reg << 16)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg) << 16
+		o1 |= uint32(p.to.reg) << 12
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
 	case 78: /* strex reg,oreg,reg */
 		aclass_asm5(ctxt, &p.from)
@@ -2024,9 +2020,9 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			ctxt.diag("offset must be zero in STREX")
 		}
 		o1 = 0x18<<20 | 0xf90
-		o1 |= uint32(p.from.reg << 16)
-		o1 |= uint32(p.reg << 0)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg) << 16
+		o1 |= uint32(p.reg) << 0
+		o1 |= uint32(p.to.reg) << 12
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
 	case 80: /* fmov zfcon,freg */
 		if p.as == AMOVD_5 {
@@ -2040,74 +2036,74 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		r = p.to.reg
 		// movf $1.0, r
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
-		o1 |= uint32(r << 12)
+		o1 |= uint32(r) << 12
 		o1 |= (uint32(v) & 0xf) << 0
 		o1 |= (uint32(v) & 0xf0) << 12
 		// subf r,r,r
-		o2 |= uint32(r | r<<16 | r<<12)
+		o2 |= uint32(r) | uint32(r)<<16 | uint32(r)<<12
 	case 81: /* fmov sfcon,freg */
 		o1 = 0x0eb00a00 // VMOV imm 32
 		if p.as == AMOVD_5 {
 			o1 = 0xeeb00b00 // VMOV imm 64
 		}
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.to.reg) << 12
 		v = chipfloat5(ctxt, p.from.u.dval)
 		o1 |= (uint32(v) & 0xf) << 0
 		o1 |= (uint32(v) & 0xf0) << 12
 	case 82: /* fcmp freg,freg, */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
-		o1 |= uint32(p.reg<<12 | p.from.reg<<0)
+		o1 |= uint32(p.reg)<<12 | uint32(p.from.reg)<<0
 		o2 = 0x0ef1fa10 // VMRS R15
 		o2 |= (uint32(p.scond) & C_SCOND_5) << 28
 	case 83: /* fcmp freg,, */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
-		o1 |= uint32(p.from.reg<<12 | 1<<16)
+		o1 |= uint32(p.from.reg)<<12 | 1<<16
 		o2 = 0x0ef1fa10 // VMRS R15
 		o2 |= (uint32(p.scond) & C_SCOND_5) << 28
 	case 84: /* movfw freg,freg - truncate float-to-fix */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
-		o1 |= uint32(p.from.reg << 0)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg) << 0
+		o1 |= uint32(p.to.reg) << 12
 	case 85: /* movwf freg,freg - fix-to-float */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
-		o1 |= uint32(p.from.reg << 0)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg) << 0
+		o1 |= uint32(p.to.reg) << 12
 	// macro for movfw freg,FTMP; movw FTMP,reg
 	case 86: /* movfw freg,reg - truncate float-to-fix */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
-		o1 |= uint32(p.from.reg << 0)
+		o1 |= uint32(p.from.reg) << 0
 		o1 |= FREGTMP_5 << 12
 		o2 = oprrr_asm5(ctxt, AMOVFW_5+AEND_5, p.scond)
 		o2 |= FREGTMP_5 << 16
-		o2 |= uint32(p.to.reg << 12)
+		o2 |= uint32(p.to.reg) << 12
 	// macro for movw reg,FTMP; movwf FTMP,freg
 	case 87: /* movwf reg,freg - fix-to-float */
 		o1 = oprrr_asm5(ctxt, AMOVWF_5+AEND_5, p.scond)
-		o1 |= uint32(p.from.reg << 12)
+		o1 |= uint32(p.from.reg) << 12
 		o1 |= FREGTMP_5 << 16
 		o2 = oprrr_asm5(ctxt, p.as, p.scond)
 		o2 |= FREGTMP_5 << 0
-		o2 |= uint32(p.to.reg << 12)
+		o2 |= uint32(p.to.reg) << 12
 	case 88: /* movw reg,freg  */
 		o1 = oprrr_asm5(ctxt, AMOVWF_5+AEND_5, p.scond)
-		o1 |= uint32(p.from.reg << 12)
-		o1 |= uint32(p.to.reg << 16)
+		o1 |= uint32(p.from.reg) << 12
+		o1 |= uint32(p.to.reg) << 16
 	case 89: /* movw freg,reg  */
 		o1 = oprrr_asm5(ctxt, AMOVFW_5+AEND_5, p.scond)
-		o1 |= uint32(p.from.reg << 16)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg) << 16
+		o1 |= uint32(p.to.reg) << 12
 	case 90: /* tst reg  */
 		o1 = oprrr_asm5(ctxt, ACMP_5+AEND_5, p.scond)
-		o1 |= uint32(p.from.reg << 16)
+		o1 |= uint32(p.from.reg) << 16
 	case 91: /* ldrexd oreg,reg */
 		aclass_asm5(ctxt, &p.from)
 		if ctxt.instoffset != 0 {
 			ctxt.diag("offset must be zero in LDREX")
 		}
 		o1 = 0x1b<<20 | 0xf9f
-		o1 |= uint32(p.from.reg << 16)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg) << 16
+		o1 |= uint32(p.to.reg) << 12
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
 	case 92: /* strexd reg,oreg,reg */
 		aclass_asm5(ctxt, &p.from)
@@ -2115,13 +2111,13 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 			ctxt.diag("offset must be zero in STREX")
 		}
 		o1 = 0x1a<<20 | 0xf90
-		o1 |= uint32(p.from.reg << 16)
-		o1 |= uint32(p.reg << 0)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.from.reg) << 16
+		o1 |= uint32(p.reg) << 0
+		o1 |= uint32(p.to.reg) << 12
 		o1 |= (uint32(p.scond) & C_SCOND_5) << 28
 	case 93: /* movb/movh/movhu addr,R -> ldrsb/ldrsh/ldrh */
 		o1 = omvl_asm5(ctxt, p, &p.from, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		o2 = olhr_asm5(ctxt, 0, REGTMP_5, p.to.reg, p.scond)
@@ -2136,7 +2132,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 	case 94: /* movh/movhu R,addr -> strh */
 		o1 = omvl_asm5(ctxt, p, &p.to, REGTMP_5)
-		if !(o1 != 0) {
+		if o1 == 0 {
 			break
 		}
 		o2 = oshr_asm5(ctxt, p.from.reg, 0, REGTMP_5, p.scond)
@@ -2146,7 +2142,7 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		}
 	case 95: /* PLD off(reg) */
 		o1 = 0xf5d0f000
-		o1 |= uint32(p.from.reg << 16)
+		o1 |= uint32(p.from.reg) << 16
 		if p.from.offset < 0 {
 			o1 &^= (1 << 23)
 			o1 |= uint32((-p.from.offset) & 0xfff)
@@ -2162,17 +2158,17 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 		o1 = 0xf7fabcfd
 	case 97: /* CLZ Rm, Rd */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
-		o1 |= uint32(p.to.reg << 12)
+		o1 |= uint32(p.to.reg) << 12
 		o1 |= uint32(p.from.reg)
 	case 98: /* MULW{T,B} Rs, Rm, Rd */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
-		o1 |= uint32(p.to.reg << 16)
-		o1 |= uint32(p.from.reg << 8)
+		o1 |= uint32(p.to.reg) << 16
+		o1 |= uint32(p.from.reg) << 8
 		o1 |= uint32(p.reg)
 	case 99: /* MULAW{T,B} Rs, Rm, Rn, Rd */
 		o1 = oprrr_asm5(ctxt, p.as, p.scond)
-		o1 |= uint32(p.to.reg << 12)
-		o1 |= uint32(p.from.reg << 8)
+		o1 |= uint32(p.to.reg) << 12
+		o1 |= uint32(p.from.reg) << 8
 		o1 |= uint32(p.reg)
 		o1 |= uint32(p.to.offset << 16)
 	// DATABUNDLE: BKPT $0x5be0, signify the start of NaCl data bundle;
@@ -2194,8 +2190,8 @@ func asmout_asm5(ctxt *Link, p *Prog, o []Optab_asm5, out []uint32) {
 
 func mov_asm5(ctxt *Link, p *Prog) uint32 {
 	var o1 uint32
-	var rt int64
-	var r int64
+	var rt int
+	var r int
 	aclass_asm5(ctxt, &p.from)
 	o1 = oprrr_asm5(ctxt, p.as, p.scond)
 	o1 |= uint32(p.from.offset)
@@ -2209,13 +2205,13 @@ func mov_asm5(ctxt *Link, p *Prog) uint32 {
 	} else if r == NREG_5 {
 		r = rt
 	}
-	o1 |= uint32(r<<16 | rt<<12)
+	o1 |= uint32(r)<<16 | uint32(rt)<<12
 	return o1
 }
 
 func oprrr_asm5(ctxt *Link, a int, sc int) uint32 {
-	var o int32
-	o = (int32(sc) & C_SCOND_5) << 28
+	var o int
+	o = (sc & C_SCOND_5) << 28
 	if sc&C_SBIT_5 != 0 {
 		o |= 1 << 20
 	}
@@ -2411,16 +2407,16 @@ func opbra_asm5(ctxt *Link, a int, sc int) uint32 {
 	return 0
 }
 
-func olr_asm5(ctxt *Link, v int64, b int64, r int64, sc int) uint32 {
+func olr_asm5(ctxt *Link, v int, b int, r int, sc int) uint32 {
 	var o uint32
 	if sc&C_SBIT_5 != 0 {
 		ctxt.diag(".nil on LDR/STR instruction")
 	}
 	o = (uint32(sc) & C_SCOND_5) << 28
-	if !(sc&C_PBIT_5 != 0) {
+	if sc&C_PBIT_5 == 0 {
 		o |= 1 << 24
 	}
-	if !(sc&C_UBIT_5 != 0) {
+	if sc&C_UBIT_5 == 0 {
 		o |= 1 << 23
 	}
 	if sc&C_WBIT_5 != 0 {
@@ -2438,18 +2434,18 @@ func olr_asm5(ctxt *Link, v int64, b int64, r int64, sc int) uint32 {
 		ctxt.diag("literal span too large: %d (R%d)\n%P", v, b, ctxt.printp)
 	}
 	o |= uint32(v)
-	o |= uint32(b << 16)
-	o |= uint32(r << 12)
+	o |= uint32(b) << 16
+	o |= uint32(r) << 12
 	return o
 }
 
-func olhr_asm5(ctxt *Link, v int64, b int64, r int64, sc int) uint32 {
+func olhr_asm5(ctxt *Link, v int, b int, r int, sc int) uint32 {
 	var o uint32
 	if sc&C_SBIT_5 != 0 {
 		ctxt.diag(".nil on LDRH/STRH instruction")
 	}
 	o = (uint32(sc) & C_SCOND_5) << 28
-	if !(sc&C_PBIT_5 != 0) {
+	if sc&C_PBIT_5 == 0 {
 		o |= 1 << 24
 	}
 	if sc&C_WBIT_5 != 0 {
@@ -2463,13 +2459,13 @@ func olhr_asm5(ctxt *Link, v int64, b int64, r int64, sc int) uint32 {
 	if v >= 1<<8 || v < 0 {
 		ctxt.diag("literal span too large: %d (R%d)\n%P", v, b, ctxt.printp)
 	}
-	o |= uint32(v&0xf | (v>>4)<<8 | 1<<22)
-	o |= uint32(b << 16)
-	o |= uint32(r << 12)
+	o |= uint32(v)&0xf | (uint32(v)>>4)<<8 | 1<<22
+	o |= uint32(b) << 16
+	o |= uint32(r) << 12
 	return o
 }
 
-func osr_asm5(ctxt *Link, a int, r int64, v int64, b int64, sc int) uint32 {
+func osr_asm5(ctxt *Link, a int, r int, v int, b int, sc int) uint32 {
 	var o uint32
 	o = olr_asm5(ctxt, v, b, r, sc) ^ (1 << 20)
 	if a != AMOVW_5 {
@@ -2478,35 +2474,35 @@ func osr_asm5(ctxt *Link, a int, r int64, v int64, b int64, sc int) uint32 {
 	return o
 }
 
-func oshr_asm5(ctxt *Link, r int64, v int64, b int64, sc int) uint32 {
+func oshr_asm5(ctxt *Link, r int, v int, b int, sc int) uint32 {
 	var o uint32
 	o = olhr_asm5(ctxt, v, b, r, sc) ^ (1 << 20)
 	return o
 }
 
-func osrr_asm5(ctxt *Link, r int64, i int64, b int64, sc int) uint32 {
+func osrr_asm5(ctxt *Link, r int, i int, b int, sc int) uint32 {
 	return olr_asm5(ctxt, i, b, r, sc) ^ (1<<25 | 1<<20)
 }
 
-func oshrr_asm5(ctxt *Link, r int64, i int64, b int64, sc int) uint32 {
+func oshrr_asm5(ctxt *Link, r int, i int, b int, sc int) uint32 {
 	return olhr_asm5(ctxt, i, b, r, sc) ^ (1<<22 | 1<<20)
 }
 
-func olrr_asm5(ctxt *Link, i int64, b int64, r int64, sc int) uint32 {
+func olrr_asm5(ctxt *Link, i int, b int, r int, sc int) uint32 {
 	return olr_asm5(ctxt, i, b, r, sc) ^ (1 << 25)
 }
 
-func olhrr_asm5(ctxt *Link, i int64, b int64, r int64, sc int) uint32 {
+func olhrr_asm5(ctxt *Link, i int, b int, r int, sc int) uint32 {
 	return olhr_asm5(ctxt, i, b, r, sc) ^ (1 << 22)
 }
 
-func ofsr_asm5(ctxt *Link, a int, r int64, v int32, b int64, sc int, p *Prog) uint32 {
+func ofsr_asm5(ctxt *Link, a int, r int, v int, b int, sc int, p *Prog) uint32 {
 	var o uint32
 	if sc&C_SBIT_5 != 0 {
 		ctxt.diag(".nil on FLDR/FSTR instruction")
 	}
 	o = (uint32(sc) & C_SCOND_5) << 28
-	if !(sc&C_PBIT_5 != 0) {
+	if sc&C_PBIT_5 == 0 {
 		o |= 1 << 24
 	}
 	if sc&C_WBIT_5 != 0 {
@@ -2523,8 +2519,8 @@ func ofsr_asm5(ctxt *Link, a int, r int64, v int32, b int64, sc int, p *Prog) ui
 		ctxt.diag("literal span too large: %d\n%P", v, p)
 	}
 	o |= (uint32(v) >> 2) & 0xFF
-	o |= uint32(b << 16)
-	o |= uint32(r << 12)
+	o |= uint32(b) << 16
+	o |= uint32(r) << 12
 	switch a {
 	default:
 		ctxt.diag("bad fst %A", a)
@@ -2538,10 +2534,10 @@ func ofsr_asm5(ctxt *Link, a int, r int64, v int32, b int64, sc int, p *Prog) ui
 	return o
 }
 
-func omvl_asm5(ctxt *Link, p *Prog, a *Addr, dr int64) uint32 {
-	var v int64
+func omvl_asm5(ctxt *Link, p *Prog, a *Addr, dr int) uint32 {
+	var v int
 	var o1 uint32
-	if !(p.pcond != nil) {
+	if p.pcond == nil {
 		aclass_asm5(ctxt, a)
 		v = immrot_asm5(uint32(^ctxt.instoffset))
 		if v == 0 {
@@ -2551,9 +2547,9 @@ func omvl_asm5(ctxt *Link, p *Prog, a *Addr, dr int64) uint32 {
 		}
 		o1 = oprrr_asm5(ctxt, AMVN_5, p.scond&C_SCOND_5)
 		o1 |= uint32(v)
-		o1 |= uint32(dr << 12)
+		o1 |= uint32(dr) << 12
 	} else {
-		v = p.pcond.pc - p.pc - 8
+		v = int(p.pcond.pc - p.pc - 8)
 		o1 = olr_asm5(ctxt, v, REGPC_5, dr, p.scond&C_SCOND_5)
 	}
 	return o1
@@ -2567,10 +2563,10 @@ func chipzero5(ctxt *Link, e float64) int {
 	return 0
 }
 
-func chipfloat5(ctxt *Link, e float64) int32 {
-	var n int32
+func chipfloat5(ctxt *Link, e float64) int {
+	var n int
 	var h1 uint32
-	var l int32
+	var l uint32
 	var h uint32
 	var ei uint64
 	// We use GOARM=7 to gate the use of VFPv3 vmov (imm) instructions.
@@ -2578,8 +2574,8 @@ func chipfloat5(ctxt *Link, e float64) int32 {
 		goto no
 	}
 	ei = math.Float64bits(e)
-	l = int32(ei)
-	h = uint32(int32(ei >> 32))
+	l = uint32(ei)
+	h = uint32(int(ei >> 32))
 	if l != 0 || h&0xffff != 0 {
 		goto no
 	}
@@ -2597,7 +2593,7 @@ func chipfloat5(ctxt *Link, e float64) int32 {
 		n |= 1 << 6
 	}
 	// rest of exp and mantissa (cd-efgh)
-	n |= int32((h >> 16) & 0x3f)
+	n |= int((h >> 16) & 0x3f)
 	//print("match %.8lux %.8lux %d\n", l, h, n);
 	return n
 no:

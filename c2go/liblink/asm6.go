@@ -18,7 +18,7 @@ const (
 type Optab_asm6 struct {
 	as     int
 	ytab   []uint8
-	prefix int64
+	prefix int
 	op     [23]uint8
 }
 
@@ -2100,12 +2100,12 @@ var nop_asm6 = [][16]uint8{
 
 // Native Client rejects the repeated 0x66 prefix.
 // {0x66, 0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
-func fillnop_asm6(p []uint8, n int64) {
-	var m int64
+func fillnop_asm6(p []uint8, n int) {
+	var m int
 	for n > 0 {
 		m = n
-		if m > int64(len(nop_asm6)) {
-			m = int64(len(nop_asm6))
+		if m > len(nop_asm6) {
+			m = len(nop_asm6)
 		}
 		copy(p, nop_asm6[m-1][:m])
 		p = p[m:]
@@ -2113,10 +2113,10 @@ func fillnop_asm6(p []uint8, n int64) {
 	}
 }
 
-func naclpad_asm6(ctxt *Link, s *LSym, c int64, pad int64) int64 {
-	symgrow(ctxt, s, c+pad)
+func naclpad_asm6(ctxt *Link, s *LSym, c int64, pad int) int64 {
+	symgrow(ctxt, s, c+int64(pad))
 	fillnop_asm6(s.p[c:], pad)
-	return c + pad
+	return c + int64(pad)
 }
 
 func spadjop_asm6(ctxt *Link, p *Prog, l int, q int) int {
@@ -2130,11 +2130,12 @@ func span6(ctxt *Link, s *LSym) {
 	var p *Prog
 	var q *Prog
 	var c int64
-	var v int64
-	var loop int32
+	var v int
+	var loop int
 	var bp []uint8
 	var n int
-	var m int64
+	var m int
+	var i int
 	ctxt.cursym = s
 	if s.p != nil {
 		return
@@ -2158,13 +2159,13 @@ func span6(ctxt *Link, s *LSym) {
 		p.back = n
 		if p.as == AADJSP_6 {
 			p.to.typ = D_SP_6
-			v = -p.from.offset
-			p.from.offset = v
+			v = int(-p.from.offset)
+			p.from.offset = int64(v)
 			p.as = spadjop_asm6(ctxt, p, AADDL_6, AADDQ_6)
 			if v < 0 {
 				p.as = spadjop_asm6(ctxt, p, ASUBL_6, ASUBQ_6)
 				v = -v
-				p.from.offset = v
+				p.from.offset = int64(v)
 			}
 			if v == 0 {
 				p.as = ANOP_6
@@ -2180,13 +2181,13 @@ func span6(ctxt *Link, s *LSym) {
 		}
 		if p.as == AADJSP_6 {
 			p.to.typ = D_SP_6
-			v = -p.from.offset
-			p.from.offset = v
+			v = int(-p.from.offset)
+			p.from.offset = int64(v)
 			p.as = spadjop_asm6(ctxt, p, AADDL_6, AADDQ_6)
 			if v < 0 {
 				p.as = spadjop_asm6(ctxt, p, ASUBL_6, ASUBQ_6)
 				v = -v
-				p.from.offset = v
+				p.from.offset = int64(v)
 			}
 			if v == 0 {
 				p.as = ANOP_6
@@ -2196,7 +2197,7 @@ func span6(ctxt *Link, s *LSym) {
 	n = 0
 	for {
 		loop = 0
-		for i := range s.r {
+		for i = 0; i < len(s.r); i++ {
 			s.r[i] = Reloc{}
 		}
 		s.r = s.r[:0]
@@ -2209,46 +2210,46 @@ func span6(ctxt *Link, s *LSym) {
 					deferreturn_asm6 = linklookup(ctxt, "runtime.deferreturn", 0)
 				}
 				// pad everything to avoid crossing 32-byte boundary
-				if c>>5 != (c+p.isize-1)>>5 {
-					c = naclpad_asm6(ctxt, s, c, -c&31)
+				if c>>5 != (c+int64(p.isize)-1)>>5 {
+					c = naclpad_asm6(ctxt, s, c, int(-c&31))
 				}
 				// pad call deferreturn to start at 32-byte boundary
 				// so that subtracting 5 in jmpdefer will jump back
 				// to that boundary and rerun the call.
 				if p.as == ACALL_6 && p.to.sym == deferreturn_asm6 {
-					c = naclpad_asm6(ctxt, s, c, -c&31)
+					c = naclpad_asm6(ctxt, s, c, int(-c&31))
 				}
 				// pad call to end at 32-byte boundary
 				if p.as == ACALL_6 {
-					c = naclpad_asm6(ctxt, s, c, -(c+p.isize)&31)
+					c = naclpad_asm6(ctxt, s, c, int(-(c+int64(p.isize))&31))
 				}
 				// the linker treats REP and STOSQ as different instructions
 				// but in fact the REP is a prefix on the STOSQ.
 				// make sure REP has room for 2 more bytes, so that
 				// padding will not be inserted before the next instruction.
 				if (p.as == AREP_6 || p.as == AREPN_6) && c>>5 != (c+3-1)>>5 {
-					c = naclpad_asm6(ctxt, s, c, -c&31)
+					c = naclpad_asm6(ctxt, s, c, int(-c&31))
 				}
 				// same for LOCK.
 				// various instructions follow; the longest is 4 bytes.
 				// give ourselves 8 bytes so as to avoid surprises.
 				if p.as == ALOCK_6 && c>>5 != (c+8-1)>>5 {
-					c = naclpad_asm6(ctxt, s, c, -c&31)
+					c = naclpad_asm6(ctxt, s, c, int(-c&31))
 				}
 			}
 			if (p.back&4 != 0) && c&(LoopAlign_asm6-1) != 0 {
 				// pad with NOPs
-				v = -c & (LoopAlign_asm6 - 1)
+				v = int(-c & int64(LoopAlign_asm6-1))
 				if v <= MaxLoopPad_asm6 {
-					symgrow(ctxt, s, c+v)
+					symgrow(ctxt, s, c+int64(v))
 					fillnop_asm6(s.p[c:], v)
-					c += v
+					c += int64(v)
 				}
 			}
 			p.pc = c
 			// process forward jumps to p
 			for q = p.comefrom; q != nil; q = q.forwd {
-				v = p.pc - (q.pc + q.mark)
+				v = int(p.pc - (q.pc + int64(q.mark)))
 				if q.back&2 != 0 { // short
 					if v > 127 {
 						loop++
@@ -2260,7 +2261,7 @@ func span6(ctxt *Link, s *LSym) {
 						s.p[q.pc+1] = uint8(v)
 					}
 				} else {
-					bp = s.p[q.pc+q.mark-4:]
+					bp = s.p[q.pc+int64(q.mark)-4:]
 					bp[0] = uint8(v)
 					bp = bp[1:]
 					bp[0] = uint8(v >> 8)
@@ -2273,43 +2274,42 @@ func span6(ctxt *Link, s *LSym) {
 			p.comefrom = nil
 			p.pc = c
 			asmins_asm6(ctxt, p)
-			m = int64(-cap(ctxt.andptr) + cap(ctxt.and[:]))
+			m = -cap(ctxt.andptr) + cap(ctxt.and[:])
 			if p.isize != m {
 				p.isize = m
 				loop++
 			}
-			symgrow(ctxt, s, p.pc+m)
+			symgrow(ctxt, s, p.pc+int64(m))
 			copy(s.p[p.pc:], ctxt.and[:m])
 			p.mark = m
-			c += m
+			c += int64(m)
 		}
 		n++
 		if n > 20 {
 			ctxt.diag("span must be looping")
 			log.Fatalf("loop")
 		}
-		if !(loop != 0) {
+		if loop == 0 {
 			break
 		}
 	}
 	if ctxt.headtype == Hnacl {
-		c = naclpad_asm6(ctxt, s, c, -c&31)
+		c = naclpad_asm6(ctxt, s, c, int(-c&31))
 	}
 	c += -c & (FuncAlign_asm6 - 1)
 	s.size = c
 	if false { /* debug['a'] > 1 */
-		var i int
 		fmt.Printf("span1 %s %d (%d tries)\n %.6x", s.name, s.size, n, 0)
-		for i = range s.p {
+		for i = 0; i < len(s.p); i++ {
 			fmt.Printf(" %.2x", s.p[i])
 			if i%16 == 15 {
-				fmt.Printf("\n  %.6x", uint64(i+1))
+				fmt.Printf("\n  %.6x", uint(i+1))
 			}
 		}
 		if i%16 != 0 {
 			fmt.Printf("\n")
 		}
-		for i = range s.r {
+		for i = 0; i < len(s.r); i++ {
 			var r *Reloc
 			r = &s.r[i]
 			fmt.Printf(" rel %#.4x/%d %s%+d\n", uint64(r.off), r.siz, r.sym.name, r.add)
@@ -2319,7 +2319,7 @@ func span6(ctxt *Link, s *LSym) {
 
 func instinit_asm6() {
 	var c int
-	var i int64
+	var i int
 	for i = 1; optab_asm6[i].as != 0; i++ {
 		c = optab_asm6[i].as
 		if opindex_asm6[c] != nil {
@@ -2381,7 +2381,7 @@ func instinit_asm6() {
 	for i = 0; i < D_NONE_6; i++ {
 		reg_asm6[i] = -1
 		if i >= D_AL_6 && i <= D_R15B_6 {
-			reg_asm6[i] = int((i - D_AL_6) & 7)
+			reg_asm6[i] = (i - D_AL_6) & 7
 			if i >= D_SPB_6 && i <= D_DIB_6 {
 				regrex_asm6[i] = 0x40
 			}
@@ -2390,22 +2390,22 @@ func instinit_asm6() {
 			}
 		}
 		if i >= D_AH_6 && i <= D_BH_6 {
-			reg_asm6[i] = int(4 + ((i - D_AH_6) & 7))
+			reg_asm6[i] = 4 + ((i - D_AH_6) & 7)
 		}
 		if i >= D_AX_6 && i <= D_R15_6 {
-			reg_asm6[i] = int((i - D_AX_6) & 7)
+			reg_asm6[i] = (i - D_AX_6) & 7
 			if i >= D_R8_6 {
 				regrex_asm6[i] = Rxr_asm6 | Rxx_asm6 | Rxb_asm6
 			}
 		}
 		if i >= D_F0_6 && i <= D_F0_6+7 {
-			reg_asm6[i] = int((i - D_F0_6) & 7)
+			reg_asm6[i] = (i - D_F0_6) & 7
 		}
 		if i >= D_M0_6 && i <= D_M0_6+7 {
-			reg_asm6[i] = int((i - D_M0_6) & 7)
+			reg_asm6[i] = (i - D_M0_6) & 7
 		}
 		if i >= D_X0_6 && i <= D_X0_6+15 {
-			reg_asm6[i] = int((i - D_X0_6) & 7)
+			reg_asm6[i] = (i - D_X0_6) & 7
 			if i >= D_X0_6+8 {
 				regrex_asm6[i] = Rxr_asm6 | Rxx_asm6 | Rxb_asm6
 			}
@@ -2466,7 +2466,7 @@ func prefixof_asm6(ctxt *Link, a *Addr) int {
 
 func oclass_asm6(ctxt *Link, a *Addr) int {
 	var v int64
-	var l int64
+	var l int32
 	if a.typ >= D_INDIR_6 || a.index != D_NONE_6 {
 		if a.index != D_NONE_6 && a.scale == 0 {
 			if a.typ == D_ADDR_6 {
@@ -2673,7 +2673,7 @@ func oclass_asm6(ctxt *Link, a *Addr) int {
 			if v >= -128 && v <= 127 {
 				return Yi8_asm6
 			}
-			l = int64(int32(v))
+			l = int32(v)
 			if int64(l) == v {
 				return Ys32_asm6 /* can sign extend */
 			}
@@ -2689,7 +2689,7 @@ func oclass_asm6(ctxt *Link, a *Addr) int {
 	return Yxxx_asm6
 }
 
-func asmidx_asm6(ctxt *Link, scale int64, index int64, base int64) {
+func asmidx_asm6(ctxt *Link, scale int, index int, base int) {
 	var i int
 	switch index {
 	default:
@@ -2825,7 +2825,7 @@ relput8(Prog *p, Addr *a)
 }
 */
 func vaddr_asm6(ctxt *Link, a *Addr, r *Reloc) int64 {
-	var t int64
+	var t int
 	var v int64
 	var s *LSym
 	if r != nil {
@@ -2851,7 +2851,7 @@ func vaddr_asm6(ctxt *Link, a *Addr, r *Reloc) int64 {
 		v = 0
 		if ctxt.flag_shared != 0 || ctxt.headtype == Hnacl {
 			if s.typ == STLSBSS {
-				r.xadd = r.add - r.siz
+				r.xadd = r.add - int64(r.siz)
 				r.typ = R_TLS
 				r.xsym = s
 			} else {
@@ -2877,8 +2877,8 @@ func vaddr_asm6(ctxt *Link, a *Addr, r *Reloc) int64 {
 
 func asmandsz_asm6(ctxt *Link, a *Addr, r int, rex int, m64 int) {
 	var v int64
-	var t int64
-	var scale int64
+	var t int
+	var scale int
 	var rel Reloc
 	rex &= 0x40 | Rxr_asm6
 	v = a.offset
@@ -2908,26 +2908,26 @@ func asmandsz_asm6(ctxt *Link, a *Addr, r int, rex int, m64 int) {
 		if t == D_NONE_6 {
 			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm6(ctxt, a.scale, a.index, t)
+			asmidx_asm6(ctxt, int(a.scale), a.index, t)
 			goto putrelv
 		}
 		if v == 0 && rel.siz == 0 && t != D_BP_6 && t != D_R13_6 {
 			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm6(ctxt, a.scale, a.index, t)
+			asmidx_asm6(ctxt, int(a.scale), a.index, t)
 			return
 		}
 		if v >= -128 && v < 128 && rel.siz == 0 {
 			ctxt.andptr[0] = uint8(1<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm6(ctxt, a.scale, a.index, t)
+			asmidx_asm6(ctxt, int(a.scale), a.index, t)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			return
 		}
 		ctxt.andptr[0] = uint8(2<<6 | 4<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmidx_asm6(ctxt, a.scale, a.index, t)
+		asmidx_asm6(ctxt, int(a.scale), a.index, t)
 		goto putrelv
 	}
 	if t >= D_AL_6 && t <= D_X0_6+15 {
@@ -2939,7 +2939,7 @@ func asmandsz_asm6(ctxt *Link, a *Addr, r int, rex int, m64 int) {
 		ctxt.rexflag |= regrex_asm6[t]&(0x40|Rxb_asm6) | rex
 		return
 	}
-	scale = a.scale
+	scale = int(a.scale)
 	if t < D_INDIR_6 {
 		switch a.typ {
 		default:
@@ -3170,21 +3170,21 @@ var ymovtab_asm6 = []Movtab_asm6{
 	{0, 0, 0, 0, [4]uint8{}},
 }
 
-func isax_asm6(a *Addr) int {
+func isax_asm6(a *Addr) bool {
 	switch a.typ {
 	case D_AX_6,
 		D_AL_6,
 		D_AH_6,
 		D_INDIR_6 + D_AX_6:
-		return 1
+		return true
 	}
 	if a.index == D_AX_6 {
-		return 1
+		return true
 	}
-	return 0
+	return false
 }
 
-func subreg_asm6(p *Prog, from int64, to int64) {
+func subreg_asm6(p *Prog, from int, to int) {
 	if false { /*debug['Q']*/
 		fmt.Printf("\n%v\ts/%v/%v/\n", p, Rconv_list6(from), Rconv_list6(to))
 	}
@@ -3212,7 +3212,7 @@ func subreg_asm6(p *Prog, from int64, to int64) {
 	}
 }
 
-func mediaop_asm6(ctxt *Link, o *Optab_asm6, op int64, osize int, z int64) int64 {
+func mediaop_asm6(ctxt *Link, o *Optab_asm6, op int, osize int, z int) int {
 	switch op {
 	case Pm_asm6,
 		Pe_asm6,
@@ -3226,7 +3226,7 @@ func mediaop_asm6(ctxt *Link, o *Optab_asm6, op int64, osize int, z int64) int64
 			ctxt.andptr[0] = Pm_asm6
 			ctxt.andptr = ctxt.andptr[1:]
 			z++
-			op = int64(o.op[z])
+			op = int(o.op[z])
 			break
 		}
 		fallthrough
@@ -3248,8 +3248,8 @@ func doasm_asm6(ctxt *Link, p *Prog) {
 	var pp Prog
 	var t []uint8
 	var mo []Movtab_asm6
-	var z int64
-	var op int64
+	var z int
+	var op int
 	var ft int
 	var tt int
 	var xo int
@@ -3289,7 +3289,7 @@ func doasm_asm6(ctxt *Link, p *Prog) {
 		return
 	}
 	xo = bool2int(o.op[0] == 0x0f)
-	for z = 0; t[0] != 0; (func() { z += int64(t[3]) + int64(xo); t = t[4:] })() {
+	for z = 0; t[0] != 0; (func() { z += int(t[3]) + xo; t = t[4:] })() {
 		if ycover_asm6[ft+int(t[0])] != 0 {
 			if ycover_asm6[tt+int(t[1])] != 0 {
 				goto found
@@ -3341,15 +3341,15 @@ found:
 		}
 		break
 	}
-	if z >= int64(len(o.op)) {
+	if z >= len(o.op) {
 		log.Fatalf("asmins bad table %v", p)
 	}
-	op = int64(o.op[z])
+	op = int(o.op[z])
 	if op == 0x0f {
 		ctxt.andptr[0] = uint8(op)
 		ctxt.andptr = ctxt.andptr[1:]
 		z++
-		op = int64(o.op[z])
+		op = int(o.op[z])
 	}
 	switch t[2] {
 	default:
@@ -3359,8 +3359,8 @@ found:
 		break
 	case Zlit_asm6:
 		for ; ; z++ {
-			op = int64(o.op[z])
-			if !(op != 0) {
+			op = int(o.op[z])
+			if op == 0 {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
@@ -3368,8 +3368,8 @@ found:
 		}
 	case Zlitm_r_asm6:
 		for ; ; z++ {
-			op = int64(o.op[z])
-			if !(op != 0) {
+			op = int(o.op[z])
+			if op == 0 {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
@@ -3414,8 +3414,8 @@ found:
 		for {
 			tmp1 := z
 			z++
-			op = int64(o.op[tmp1])
-			if !(op != 0) {
+			op = int(o.op[tmp1])
+			if op == 0 {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
@@ -3500,13 +3500,13 @@ found:
 		ctxt.andptr = ctxt.andptr[1:]
 	case Zib_rp_asm6:
 		ctxt.rexflag |= regrex_asm6[p.to.typ] & (Rxb_asm6 | 0x40)
-		ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = uint8(vaddr_asm6(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
 	case Zil_rp_asm6:
 		ctxt.rexflag |= regrex_asm6[p.to.typ] & Rxb_asm6
-		ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
 		ctxt.andptr = ctxt.andptr[1:]
 		if o.prefix == Pe_asm6 {
 			v = vaddr_asm6(ctxt, &p.from, nil)
@@ -3553,7 +3553,7 @@ found:
 		} else {
 			//print("all: %llux %P\n", v, p);
 			ctxt.rexflag |= regrex_asm6[p.to.typ] & Rxb_asm6
-			ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.to.typ]))
+			ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
 			ctxt.andptr = ctxt.andptr[1:]
 			if rel.typ != 0 {
 				r = addrel(ctxt.cursym)
@@ -3621,11 +3621,11 @@ found:
 		}
 	case Z_rp_asm6:
 		ctxt.rexflag |= regrex_asm6[p.to.typ] & (Rxb_asm6 | 0x40)
-		ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + reg_asm6[p.to.typ])
 		ctxt.andptr = ctxt.andptr[1:]
 	case Zrp__asm6:
 		ctxt.rexflag |= regrex_asm6[p.from.typ] & (Rxb_asm6 | 0x40)
-		ctxt.andptr[0] = uint8(op + int64(reg_asm6[p.from.typ]))
+		ctxt.andptr[0] = uint8(op + reg_asm6[p.from.typ])
 		ctxt.andptr = ctxt.andptr[1:]
 	case Zclr_asm6:
 		ctxt.andptr[0] = uint8(op)
@@ -3758,7 +3758,7 @@ found:
 	case Zbyte_asm6:
 		v = vaddr_asm6(ctxt, &p.from, &rel)
 		if rel.siz != 0 {
-			rel.siz = op
+			rel.siz = uint8(op)
 			r = addrel(ctxt.cursym)
 			*r = rel
 			r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))
@@ -3811,7 +3811,7 @@ bad:
 		pp = *p
 		z = p.from.typ
 		if z >= D_BP_6 && z <= D_DI_6 {
-			if isax_asm6(&p.to) != 0 || p.to.typ == D_NONE_6 {
+			if isax_asm6(&p.to) || p.to.typ == D_NONE_6 {
 				// We certainly don't want to exchange
 				// with AX if the op is MUL or DIV.
 				ctxt.andptr[0] = 0x87
@@ -3834,7 +3834,7 @@ bad:
 		}
 		z = p.to.typ
 		if z >= D_BP_6 && z <= D_DI_6 {
-			if isax_asm6(&p.from) != 0 {
+			if isax_asm6(&p.from) {
 				ctxt.andptr[0] = 0x87
 				ctxt.andptr = ctxt.andptr[1:] /* xchg rhs,bx */
 				asmando_asm6(ctxt, &p.to, reg_asm6[D_BX_6])
@@ -4046,7 +4046,7 @@ var naclstos_asm6 = []uint8{
 	0x3f, // LEAQ (R15)(DI*1), DI
 }
 
-func nacltrunc_asm6(ctxt *Link, reg int64) {
+func nacltrunc_asm6(ctxt *Link, reg int) {
 	if reg >= D_R8_6 {
 		ctxt.andptr[0] = 0x45
 		ctxt.andptr = ctxt.andptr[1:]
@@ -4211,7 +4211,7 @@ func asmins_asm6(ctxt *Link, p *Prog) {
 			r.off++
 		}
 		if r.typ == R_PCREL || r.typ == R_CALL {
-			r.add -= p.pc + int64(n) - (r.off + r.siz)
+			r.add -= p.pc + int64(n) - (r.off + int64(r.siz))
 		}
 	}
 	if ctxt.headtype == Hnacl && p.as != ACMPL_6 && p.as != ACMPQ_6 {

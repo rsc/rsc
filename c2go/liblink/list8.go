@@ -68,10 +68,10 @@ func Dconv_list8(p *Prog, flag int, a *Addr) string {
 	var str string
 	var s string
 	var fp string
-	var i int64
+	var i int
 
 	i = a.typ
-	if flag&fmtLong != 0 {
+	if flag&fmtLong != 0 /*untyped*/ {
 		if i == D_CONST2_8 {
 			str = fmt.Sprintf("$%d-%d", a.offset, a.offset2)
 		} else {
@@ -126,7 +126,7 @@ func Dconv_list8(p *Prog, flag int, a *Addr) string {
 	case D_CONST_8:
 		str = fmt.Sprintf("$%d", a.offset)
 	case D_CONST2_8:
-		if !(flag&fmtLong != 0) {
+		if flag&fmtLong == 0 /*untyped*/ {
 			// D_CONST2 outside of ATEXT should not happen
 			str = fmt.Sprintf("!!$%d-%d", a.offset, a.offset2)
 		}
@@ -144,7 +144,7 @@ func Dconv_list8(p *Prog, flag int, a *Addr) string {
 	}
 brk:
 	if a.index != D_NONE_8 {
-		s = fmt.Sprintf("(%v*%d)", Rconv_list8(a.index), int(a.scale))
+		s = fmt.Sprintf("(%v*%d)", Rconv_list8(int(a.index)), int(a.scale))
 		str += s
 	}
 conv:
@@ -224,7 +224,7 @@ var regstr_list8 = []string{
 	"NONE", /* [D_NONE] */
 }
 
-func Rconv_list8(r int64) string {
+func Rconv_list8(r int) string {
 	var str string
 	var fp string
 

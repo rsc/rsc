@@ -56,16 +56,16 @@ func symgrow(ctxt *Link, s *LSym, lsiz int64) {
 
 func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
 	var off int
-	var siz int32
-	var i int32
+	var siz int
+	var i int
 	var o int64
 	var r *Reloc
 	off = int(p.from.offset)
-	siz = int32(ctxt.arch.datasize(p))
+	siz = ctxt.arch.datasize(p)
 	if off < 0 || siz < 0 || off >= 1<<30 || siz >= 100 {
 		mangle(pn)
 	}
-	symgrow(ctxt, s, int64(off)+int64(siz))
+	symgrow(ctxt, s, int64(off+siz))
 	if p.to.typ == ctxt.arch.D_FCONST {
 		switch siz {
 		default:
@@ -77,16 +77,16 @@ func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
 	} else {
 		if p.to.typ == ctxt.arch.D_SCONST {
 			for i = 0; i < siz; i++ {
-				s.p[int32(off)+i] = uint8(p.to.u.sval[i])
+				s.p[off+i] = uint8(p.to.u.sval[i])
 			}
 		} else {
 			if p.to.typ == ctxt.arch.D_CONST {
 				if p.to.sym != nil {
 					r = addrel(s)
 					r.off = int64(off)
-					r.siz = int64(siz)
+					r.siz = uint8(siz)
 					r.sym = p.to.sym
-					r.typ = R_ADDR
+					r.typ = int(R_ADDR)
 					r.add = p.to.offset
 					goto out
 				}
@@ -108,9 +108,9 @@ func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
 				if p.to.typ == ctxt.arch.D_ADDR {
 					r = addrel(s)
 					r.off = int64(off)
-					r.siz = int64(siz)
+					r.siz = uint8(siz)
 					r.sym = p.to.sym
-					r.typ = R_ADDR
+					r.typ = int(R_ADDR)
 					r.add = p.to.offset
 				} else {
 					ctxt.diag("bad data: %v", p)
@@ -128,12 +128,12 @@ func addrel(s *LSym) *Reloc {
 
 func setuintxx(ctxt *Link, s *LSym, off int64, v uint64, wid int64) int64 {
 	if s.typ == 0 {
-		s.typ = SDATA
+		s.typ = int(SDATA)
 	}
 	s.reachable = 1
-	if int64(s.size) < off+wid {
+	if s.size < off+wid {
 		s.size = off + wid
-		symgrow(ctxt, s, int64(s.size))
+		symgrow(ctxt, s, s.size)
 	}
 	switch wid {
 	case 1:
@@ -156,16 +156,16 @@ func adduintxx(ctxt *Link, s *LSym, v uint64, wid int64) int64 {
 	return off
 }
 
-func adduint8(ctxt *Link, s *LSym, v uint64) int64 {
-	return adduintxx(ctxt, s, v, 1)
+func adduint8(ctxt *Link, s *LSym, v uint8) int64 {
+	return adduintxx(ctxt, s, uint64(v), 1)
 }
 
-func adduint16(ctxt *Link, s *LSym, v uint64) int64 {
-	return adduintxx(ctxt, s, v, 2)
+func adduint16(ctxt *Link, s *LSym, v uint16) int64 {
+	return adduintxx(ctxt, s, uint64(v), 2)
 }
 
-func adduint32(ctxt *Link, s *LSym, v uint64) int64 {
-	return adduintxx(ctxt, s, v, 4)
+func adduint32(ctxt *Link, s *LSym, v uint32) int64 {
+	return adduintxx(ctxt, s, uint64(v), 4)
 }
 
 func adduint64(ctxt *Link, s *LSym, v uint64) int64 {
@@ -201,10 +201,10 @@ func addaddrplus(ctxt *Link, s *LSym, t *LSym, add int64) int64 {
 	r = addrel(s)
 	r.sym = t
 	r.off = i
-	r.siz = ctxt.arch.ptrsize
+	r.siz = uint8(ctxt.arch.ptrsize)
 	r.typ = R_ADDR
 	r.add = add
-	return i + r.siz
+	return i + int64(r.siz)
 }
 
 func addpcrelplus(ctxt *Link, s *LSym, t *LSym, add int64) int64 {
@@ -223,7 +223,7 @@ func addpcrelplus(ctxt *Link, s *LSym, t *LSym, add int64) int64 {
 	r.add = add
 	r.typ = R_PCREL
 	r.siz = 4
-	return i + r.siz
+	return i + int64(r.siz)
 }
 
 func addaddr(ctxt *Link, s *LSym, t *LSym) int64 {
@@ -243,10 +243,10 @@ func setaddrplus(ctxt *Link, s *LSym, off int64, t *LSym, add int64) int64 {
 	r = addrel(s)
 	r.sym = t
 	r.off = off
-	r.siz = ctxt.arch.ptrsize
+	r.siz = uint8(ctxt.arch.ptrsize)
 	r.typ = R_ADDR
 	r.add = add
-	return off + r.siz
+	return off + int64(r.siz)
 }
 
 func setaddr(ctxt *Link, s *LSym, off int64, t *LSym) int64 {
@@ -266,9 +266,9 @@ func addsize(ctxt *Link, s *LSym, t *LSym) int64 {
 	r = addrel(s)
 	r.sym = t
 	r.off = i
-	r.siz = ctxt.arch.ptrsize
+	r.siz = uint8(ctxt.arch.ptrsize)
 	r.typ = R_SIZE
-	return i + r.siz
+	return i + int64(r.siz)
 }
 
 func addaddrplus4(ctxt *Link, s *LSym, t *LSym, add int64) int64 {
@@ -287,5 +287,5 @@ func addaddrplus4(ctxt *Link, s *LSym, t *LSym, add int64) int64 {
 	r.siz = 4
 	r.typ = R_ADDR
 	r.add = add
-	return i + r.siz
+	return i + int64(r.siz)
 }

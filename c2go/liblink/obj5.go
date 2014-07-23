@@ -53,7 +53,7 @@ var zprg_obj5 = Prog{
 }
 
 func symtype_obj5(a *Addr) int {
-	return int(a.name)
+	return a.name
 }
 
 func isdata_obj5(p *Prog) int {
@@ -65,15 +65,15 @@ func iscall_obj5(p *Prog) int {
 }
 
 func datasize_obj5(p *Prog) int {
-	return int(p.reg)
+	return p.reg
 }
 
 func textflag_obj5(p *Prog) int {
-	return int(p.reg)
+	return p.reg
 }
 
 func settextflag_obj5(p *Prog, f int) {
-	p.reg = int64(f)
+	p.reg = f
 }
 
 func progedit_obj5(ctxt *Link, p *Prog) {
@@ -114,11 +114,11 @@ func progedit_obj5(ctxt *Link, p *Prog) {
 	switch p.as {
 	case AMOVF_5:
 		if p.from.typ == D_FCONST_5 && chipfloat5(ctxt, p.from.u.dval) < 0 && (chipzero5(ctxt, p.from.u.dval) < 0 || p.scond&C_SCOND_5 != C_SCOND_NONE_5) {
-			var i32 uint64
-			var f32 float64
-			f32 = p.from.u.dval
-			i32 = uint64(math.Float32bits(float32(f32)))
-			literal = fmt.Sprintf("$f32.%08x", uint32(i32))
+			var i32 uint32
+			var f32 float32
+			f32 = float32(p.from.u.dval)
+			i32 = math.Float32bits(f32)
+			literal = fmt.Sprintf("$f32.%08x", i32)
 			s = linklookup(ctxt, literal, 0)
 			if s.typ == 0 {
 				s.typ = SRODATA
@@ -226,7 +226,7 @@ func addstacksplit_obj5(ctxt *Link, cursym *LSym) {
 	cursym.locals = autoffset
 	cursym.args = p.to.offset2
 	if ctxt.debugzerostack != 0 {
-		if autoffset != 0 && !(p.reg&NOSPLIT_textflag != 0) {
+		if autoffset != 0 && p.reg&NOSPLIT_textflag == 0 {
 			// MOVW $4(R13), R1
 			p = appendp(ctxt, p)
 			p.as = AMOVW_5
@@ -353,7 +353,7 @@ func addstacksplit_obj5(ctxt *Link, cursym *LSym) {
 					autosize = 0
 				}
 			}
-			if !(autosize != 0) && !(cursym.text.mark&LEAF_obj5 != 0) {
+			if autosize == 0 && cursym.text.mark&LEAF_obj5 == 0 {
 				if ctxt.debugvlog != 0 {
 					Bprint(ctxt.bso, "save suppressed in: %s\n", cursym.name)
 					Bflush(ctxt.bso)
@@ -362,12 +362,12 @@ func addstacksplit_obj5(ctxt *Link, cursym *LSym) {
 			}
 			if cursym.text.mark&LEAF_obj5 != 0 {
 				cursym.leaf = 1
-				if !(autosize != 0) {
+				if autosize == 0 {
 					break
 				}
 			}
-			if !(p.reg&NOSPLIT_textflag != 0) {
-				p = stacksplit_obj5(ctxt, p, autosize, bool2int(!(cursym.text.reg&NEEDCTXT_textflag != 0))) // emit split check
+			if p.reg&NOSPLIT_textflag == 0 {
+				p = stacksplit_obj5(ctxt, p, autosize, bool2int(cursym.text.reg&NEEDCTXT_textflag == 0)) // emit split check
 			}
 			// MOVW.W		R14,$-autosize(SP)
 			p = appendp(ctxt, p)
@@ -408,7 +408,7 @@ func addstacksplit_obj5(ctxt *Link, cursym *LSym) {
 		case ARET_5:
 			nocache_obj5(p)
 			if cursym.text.mark&LEAF_obj5 != 0 {
-				if !(autosize != 0) {
+				if autosize == 0 {
 					p.as = AB_5
 					p.from = zprg_obj5.from
 					if p.to.sym != nil { // retjmp
@@ -636,12 +636,12 @@ func softfloat_obj5(ctxt *Link, cursym *LSym) {
 			goto notsoft
 		}
 	soft:
-		if !(wasfloat != 0) || (p.mark&LABEL_obj5 != 0) {
+		if wasfloat == 0 || (p.mark&LABEL_obj5 != 0) {
 			next = ctxt.prg()
 			*next = *p
 			// BL _sfloat(SB)
 			*p = zprg_obj5
-			p.ctxt = next.ctxt
+			p.ctxt = ctxt
 			p.link = next
 			p.as = ABL_5
 			p.to.typ = D_BRANCH_5
@@ -657,7 +657,7 @@ func softfloat_obj5(ctxt *Link, cursym *LSym) {
 }
 
 func stacksplit_obj5(ctxt *Link, p *Prog, framesize int64, noctxt int) *Prog {
-	var arg int64
+	var arg int
 	// MOVW			g_stackguard(g), R1
 	p = appendp(ctxt, p)
 	p.as = AMOVW_5
@@ -754,7 +754,7 @@ func stacksplit_obj5(ctxt *Link, p *Prog, framesize int64, noctxt int) *Prog {
 	if arg&3 != 0 {
 		ctxt.diag("misaligned argument size in stack split")
 	}
-	p.from.offset = arg
+	p.from.offset = int64(arg)
 	p.to.typ = D_REG_5
 	p.to.reg = 2
 	// MOVW.LS	R14, R3
@@ -854,7 +854,7 @@ loop:
 		if q != nil && q.as != ATEXT_5 {
 			p.mark |= FOLL_obj5
 			p = q
-			if !(p.mark&FOLL_obj5 != 0) {
+			if p.mark&FOLL_obj5 == 0 {
 				goto loop
 			}
 		}
@@ -884,7 +884,7 @@ loop:
 			for {
 				r = ctxt.prg()
 				*r = *p
-				if !(r.mark&FOLL_obj5 != 0) {
+				if r.mark&FOLL_obj5 == 0 {
 					fmt.Printf("can't happen 1\n")
 				}
 				r.mark |= FOLL_obj5
@@ -905,10 +905,10 @@ loop:
 				}
 				r.pcond = p.link
 				r.link = p.pcond
-				if !(r.link.mark&FOLL_obj5 != 0) {
+				if r.link.mark&FOLL_obj5 == 0 {
 					xfol_obj5(ctxt, r.link, last)
 				}
-				if !(r.pcond.mark&FOLL_obj5 != 0) {
+				if r.pcond.mark&FOLL_obj5 == 0 {
 					fmt.Printf("can't happen 2\n")
 				}
 				return
@@ -959,6 +959,8 @@ loop:
 var linkarm = LinkArch{
 	name:          "arm",
 	thechar:       '5',
+	byteOrder:     binary.LittleEndian,
+	Pconv:         Pconv_list5,
 	addstacksplit: addstacksplit_obj5,
 	assemble:      span5,
 	datasize:      datasize_obj5,
@@ -970,8 +972,6 @@ var linkarm = LinkArch{
 	settextflag:   settextflag_obj5,
 	symtype:       symtype_obj5,
 	textflag:      textflag_obj5,
-	Pconv:         Pconv_list5,
-	byteOrder:     binary.LittleEndian,
 	minlc:         4,
 	ptrsize:       4,
 	regsize:       4,

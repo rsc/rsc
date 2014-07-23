@@ -56,12 +56,12 @@ func nopout_obj6(p *Prog) {
 }
 
 func symtype_obj6(a *Addr) int {
-	var t int64
+	var t int
 	t = a.typ
 	if t == D_ADDR_6 {
 		t = a.index
 	}
-	return int(t)
+	return t
 }
 
 func isdata_obj6(p *Prog) int {
@@ -81,16 +81,16 @@ func textflag_obj6(p *Prog) int {
 }
 
 func settextflag_obj6(p *Prog, f int) {
-	p.from.scale = int64(f)
+	p.from.scale = int8(f)
 }
 
-func canuselocaltls_obj6(ctxt *Link) int {
+func canuselocaltls_obj6(ctxt *Link) bool {
 	switch ctxt.headtype {
 	case Hplan9,
 		Hwindows:
-		return 0
+		return false
 	}
-	return 1
+	return true
 }
 
 func progedit_obj6(ctxt *Link, p *Prog) {
@@ -129,7 +129,7 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 	// In this way, all supported systems use identical instructions to
 	// access TLS, and they are rewritten appropriately first here in
 	// liblink and then finally using relocations in the linker.
-	if canuselocaltls_obj6(ctxt) != 0 {
+	if canuselocaltls_obj6(ctxt) {
 		// Reduce TLS initial exec model to TLS local exec model.
 		// Sequences like
 		//	MOVQ TLS, BX
@@ -200,7 +200,7 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 			case 16,
 				32,
 				64:
-				ctxt.mode = p.from.offset
+				ctxt.mode = int(p.from.offset)
 				break
 			}
 		}
@@ -236,10 +236,10 @@ func progedit_obj6(ctxt *Link, p *Prog) {
 		ACOMISS_6,
 		AUCOMISS_6:
 		if p.from.typ == D_FCONST_6 {
-			var i32 uint64
-			var f32 float64
-			f32 = p.from.u.dval
-			i32 = uint64(math.Float32bits(float32(f32)))
+			var i32 uint32
+			var f32 float32
+			f32 = float32(p.from.u.dval)
+			i32 = math.Float32bits(f32)
 			literal = fmt.Sprintf("$f32.%08x", uint32(i32))
 			s = linklookup(ctxt, literal, 0)
 			if s.typ == 0 {
@@ -360,9 +360,9 @@ func addstacksplit_obj6(ctxt *Link, cursym *LSym) {
 	var q1 *Prog
 	var autoffset int64
 	var deltasp int64
-	var a int64
+	var a int
 	var pcsize int
-	var i int64
+	var i uint32
 	var textstksiz int64
 	var textarg int64
 	if ctxt.tlsg == nil {
@@ -372,7 +372,7 @@ func addstacksplit_obj6(ctxt *Link, cursym *LSym) {
 		if len(morename_obj6) > len(ctxt.symmorestack) {
 			log.Fatalf("Link.symmorestack needs at least %d elements", len(morename_obj6))
 		}
-		for i = 0; i < int64(len(morename_obj6)); i++ {
+		for i = 0; i < uint32(len(morename_obj6)); i++ {
 			ctxt.symmorestack[i] = linklookup(ctxt, morename_obj6[i], 0)
 		}
 	}
@@ -389,9 +389,9 @@ func addstacksplit_obj6(ctxt *Link, cursym *LSym) {
 	if autoffset < 0 {
 		autoffset = 0
 	}
-	cursym.args = p.to.offset >> 32
+	cursym.args = int(p.to.offset >> 32)
 	cursym.locals = textstksiz
-	if autoffset < StackSmall_stack && !(p.from.scale&NOSPLIT_textflag != 0) {
+	if autoffset < StackSmall_stack && p.from.scale&NOSPLIT_textflag == 0 {
 		for q = p; q != nil; q = q.link {
 			if q.as == ACALL_6 {
 				goto noleaf
@@ -404,12 +404,12 @@ func addstacksplit_obj6(ctxt *Link, cursym *LSym) {
 	noleaf:
 	}
 	q = nil
-	if !(p.from.scale&NOSPLIT_textflag != 0) || (p.from.scale&WRAPPER_textflag != 0) {
+	if p.from.scale&NOSPLIT_textflag == 0 || (p.from.scale&WRAPPER_textflag != 0) {
 		p = appendp(ctxt, p)
 		p = load_g_cx_obj6(ctxt, p) // load g into CX
 	}
-	if !(cursym.text.from.scale&NOSPLIT_textflag != 0) {
-		p = stacksplit_obj6(ctxt, p, autoffset, textarg, bool2int(!(cursym.text.from.scale&NEEDCTXT_textflag != 0)), &q) // emit split check
+	if cursym.text.from.scale&NOSPLIT_textflag == 0 {
+		p = stacksplit_obj6(ctxt, p, autoffset, textarg, bool2int(cursym.text.from.scale&NEEDCTXT_textflag == 0), &q) // emit split check
 	}
 	if autoffset != 0 {
 		if autoffset%int64(ctxt.arch.regsize) != 0 {
@@ -474,7 +474,7 @@ func addstacksplit_obj6(ctxt *Link, cursym *LSym) {
 		p.as = ANOP_6
 		q1.pcond = p
 	}
-	if ctxt.debugzerostack != 0 && autoffset != 0 && !(cursym.text.from.scale&NOSPLIT_textflag != 0) {
+	if ctxt.debugzerostack != 0 && autoffset != 0 && cursym.text.from.scale&NOSPLIT_textflag == 0 {
 		// 6l -Z means zero the stack frame on entry.
 		// This slows down function calls but can help avoid
 		// false positives in garbage collection.
@@ -498,7 +498,7 @@ func addstacksplit_obj6(ctxt *Link, cursym *LSym) {
 		p.as = ASTOSQ_6
 	}
 	for ; p != nil; p = p.link {
-		pcsize = int(p.mode / 8)
+		pcsize = p.mode / 8
 		a = p.from.typ
 		if a == D_AUTO_6 {
 			p.from.offset += deltasp
@@ -824,7 +824,7 @@ func follow_obj6(ctxt *Link, s *LSym) {
 	s.text = firstp.link
 }
 
-func nofollow_obj6(a int) int {
+func nofollow_obj6(a int) bool {
 	switch a {
 	case AJMP_6,
 		ARET_6,
@@ -835,9 +835,9 @@ func nofollow_obj6(a int) int {
 		ARETFQ_6,
 		ARETFW_6,
 		AUNDEF_6:
-		return 1
+		return true
 	}
-	return 0
+	return false
 }
 
 func pushpop_obj6(a int) int {
@@ -936,7 +936,7 @@ loop:
 				i--
 				continue
 			}
-			if nofollow_obj6(a) != 0 || pushpop_obj6(a) != 0 {
+			if nofollow_obj6(a) || pushpop_obj6(a) != 0 {
 				break // NOTE(rsc): arm does goto copy
 			}
 			if q.pcond == nil || q.pcond.mark != 0 {
@@ -984,7 +984,7 @@ loop:
 	*last = p
 	a = p.as
 	/* continue loop with what comes after p */
-	if nofollow_obj6(a) != 0 {
+	if nofollow_obj6(a) {
 		return
 	}
 	if p.pcond != nil && a != ACALL_6 {
@@ -1043,6 +1043,8 @@ func prg_obj6() *Prog {
 var linkamd64 = LinkArch{
 	name:          "amd64",
 	thechar:       '6',
+	byteOrder:     binary.LittleEndian,
+	Pconv:         Pconv_list6,
 	addstacksplit: addstacksplit_obj6,
 	assemble:      span6,
 	datasize:      datasize_obj6,
@@ -1054,11 +1056,9 @@ var linkamd64 = LinkArch{
 	settextflag:   settextflag_obj6,
 	symtype:       symtype_obj6,
 	textflag:      textflag_obj6,
-	Pconv:         Pconv_list6,
 	minlc:         1,
 	ptrsize:       8,
 	regsize:       8,
-	byteOrder:     binary.LittleEndian,
 	D_ADDR:        D_ADDR_6,
 	D_AUTO:        D_AUTO_6,
 	D_BRANCH:      D_BRANCH_6,
@@ -1086,6 +1086,8 @@ var linkamd64 = LinkArch{
 var linkamd64p32 = LinkArch{
 	name:          "amd64p32",
 	thechar:       '6',
+	byteOrder:     binary.LittleEndian,
+	Pconv:         Pconv_list6,
 	addstacksplit: addstacksplit_obj6,
 	assemble:      span6,
 	datasize:      datasize_obj6,
@@ -1097,8 +1099,6 @@ var linkamd64p32 = LinkArch{
 	settextflag:   settextflag_obj6,
 	symtype:       symtype_obj6,
 	textflag:      textflag_obj6,
-	Pconv:         Pconv_list6,
-	byteOrder:     binary.LittleEndian,
 	minlc:         1,
 	ptrsize:       4,
 	regsize:       8,

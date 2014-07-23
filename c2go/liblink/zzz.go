@@ -110,3 +110,17 @@ func getgoversion() string {
 func Binitw(f io.Writer) *Biobuf {
 	return &Biobuf{w: bufio.NewWriter(f)}
 }
+
+const (
+	fmtLong = 1 << iota
+)
+
+const (
+	NOPROF_textflag   = 1
+	DUPOK_textflag    = 2
+	NOSPLIT_textflag  = 4
+	RODATA_textflag   = 8
+	NOPTR_textflag    = 16
+	WRAPPER_textflag  = 32
+	NEEDCTXT_textflag = 64
+)
