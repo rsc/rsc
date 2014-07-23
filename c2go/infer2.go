@@ -25,6 +25,7 @@ type flowSyntax struct {
 	stopFlow    bool
 	ptrAdd      bool
 	ptrIndex    bool
+	key         string
 }
 
 type flowGroup struct {
@@ -37,12 +38,13 @@ type flowGroup struct {
 	goFlow    *flowSyntax
 	canon     *cc.Type
 	canonDecl *cc.Decl
+	isBool    bool
 }
 
 var flowCache = map[cc.Syntax]*flowSyntax{}
 var flowGroups []*flowGroup
 
-func inferTypes(prog *cc.Prog) {
+func inferTypes(cfg *Config, prog *cc.Prog) {
 	cc.Postorder(prog, func(x cc.Syntax) {
 		if t, ok := x.(*cc.Type); ok {
 			if t.Kind == cc.Struct || t.Kind == cc.Enum {
@@ -53,7 +55,7 @@ func inferTypes(prog *cc.Prog) {
 		}
 	})
 
-	addFlow(prog)
+	addFlow(cfg, prog)
 
 	for _, f := range flowCache {
 		if f.group != nil {
@@ -96,6 +98,50 @@ func inferTypes(prog *cc.Prog) {
 		}
 		g.canon = typ
 		g.canonDecl = typDecl
+	}
+
+	for _, g := range flowGroups {
+		for _, f := range g.syntax {
+			if f.usedAsBool {
+				g.isBool = isNumericCType(g.canon) && g.canon.Kind <= cc.Int
+				break
+			}
+		}
+	}
+	for {
+		changed := false
+		for _, g := range flowGroups {
+			if !g.isBool {
+				continue
+			}
+			for _, f := range g.syntax {
+				x, ok := f.syntax.(*cc.Expr)
+				if !ok {
+					continue
+				}
+				switch x.Op {
+				case cc.EqEq, cc.LtEq, cc.GtEq, cc.NotEq, cc.Lt, cc.Gt, cc.AndAnd, cc.OrOr:
+					continue
+				case cc.Number:
+					if x.Text == "0" || x.Text == "1" {
+						continue
+					}
+				case cc.Call:
+					if x.Left.Op == cc.Name {
+						f := flowCache[x.Left.XDecl]
+						if f != nil && f.returnValue != nil && f.returnValue.group != nil && f.returnValue.group.isBool {
+							continue
+						}
+					}
+				}
+				// can't be bool
+				changed = true
+				g.isBool = false
+			}
+		}
+		if !changed {
+			break
+		}
 	}
 
 	if *src != "" && *dst != "" {
@@ -195,42 +241,34 @@ func addToGroup(g *flowGroup, f *flowSyntax) {
 	}
 }
 
-func addFlow(prog *cc.Prog) {
+func addFlow(cfg *Config, prog *cc.Prog) {
 	for _, d := range prog.Decls {
-		addFlowDecl(nil, d)
+		addFlowDecl(cfg, nil, d)
 	}
 
 	// Mop up the rest.
 	cc.Preorder(prog, func(x cc.Syntax) {
 		if d, ok := x.(*cc.Decl); ok {
-			addFlowDecl(nil, d)
+			addFlowDecl(cfg, nil, d)
 		}
 	})
 }
 
-func addFlowDecl(curfn, d *cc.Decl) {
+func addFlowDecl(cfg *Config, curfn, d *cc.Decl) {
 	if d == nil || d.Type == nil || flowCache[d] != nil {
 		return
 	}
 
-	f := &flowSyntax{syntax: d}
+	f := &flowSyntax{syntax: d, key: declKey(d)}
 	flowCache[d] = f
-	if d.Type.IsPtrVoid() {
-		f.stopFlow = true
-	}
 
-	switch d.Name {
-	case "nil":
-		f.stopFlow = true
-	}
-	switch declKey(d) {
-	case "Link.instoffset", "LSym.r", "Prog.ft", "Prog.tt":
+	if d.Type.IsPtrVoid() || d.Name == "nil" || cfg.StopFlow[f.key] {
 		f.stopFlow = true
 	}
 
 	if d.Type.Kind == cc.Func {
 		rv := &flowSyntax{syntax: &cc.Decl{Name: "return", Type: d.Type.Base, CurFn: d}}
-		if d.Type.Base.IsPtrVoid() {
+		if d.Type.Base.IsPtrVoid() || cfg.StopFlow[declKey(rv.syntax.(*cc.Decl))] {
 			rv.stopFlow = true
 		}
 		f.returnValue = rv
@@ -240,32 +278,32 @@ func addFlowDecl(curfn, d *cc.Decl) {
 	}
 
 	for _, dd := range d.Type.Decls {
-		addFlowDecl(curfn, dd)
+		addFlowDecl(cfg, curfn, dd)
 	}
 
 	if d.Init != nil {
-		addFlowInit(d, d.Init)
+		addFlowInit(cfg, d, d.Init)
 	}
 	if d.Body != nil {
-		addFlowStmt(d, d.Body)
+		addFlowStmt(cfg, d, d.Body)
 	}
 }
 
-func addFlowInit(d *cc.Decl, init *cc.Init) {
+func addFlowInit(cfg *Config, d *cc.Decl, init *cc.Init) {
 	if init == nil {
 		return
 	}
 
-	addFlowExpr(nil, init.Expr)
+	addFlowExpr(cfg, nil, init.Expr)
 
 	last := d
 	for _, pre := range init.Prefix {
 		last = pre.XDecl
-		addFlowDecl(nil, last)
-		addFlowExpr(nil, pre.Index)
+		addFlowDecl(cfg, nil, last)
+		addFlowExpr(cfg, nil, pre.Index)
 	}
 	if init.Expr != nil && last != nil {
-		addFlowExpr(nil, init.Expr)
+		addFlowExpr(cfg, nil, init.Expr)
 		addFlowEdge(flowCache[init.Expr], flowCache[last])
 	}
 
@@ -274,27 +312,31 @@ func addFlowInit(d *cc.Decl, init *cc.Init) {
 		var field *cc.Decl
 		if typ != nil && i < len(typ.Decls) {
 			field = typ.Decls[i]
-			addFlowDecl(nil, field)
+			addFlowDecl(cfg, nil, field)
 		}
-		addFlowInit(field, br)
+		addFlowInit(cfg, field, br)
 	}
 }
 
-func addFlowStmt(curfn *cc.Decl, x *cc.Stmt) {
+func addFlowStmt(cfg *Config, curfn *cc.Decl, x *cc.Stmt) {
 	if x == nil {
 		return
 	}
-	addFlowExpr(curfn, x.Pre)
-	addFlowExpr(curfn, x.Post)
-	addFlowExpr(curfn, x.Expr)
-	addFlowDecl(curfn, x.Decl)
-	addFlowStmt(curfn, x.Else)
-	addFlowStmt(curfn, x.Body)
+	if x.Op == cc.StmtDecl {
+		x.Decl.CurFn = curfn
+	}
+
+	addFlowExpr(cfg, curfn, x.Pre)
+	addFlowExpr(cfg, curfn, x.Post)
+	addFlowExpr(cfg, curfn, x.Expr)
+	addFlowDecl(cfg, curfn, x.Decl)
+	addFlowStmt(cfg, curfn, x.Else)
+	addFlowStmt(cfg, curfn, x.Body)
 	for _, stmt := range x.Block {
-		addFlowStmt(curfn, stmt)
+		addFlowStmt(cfg, curfn, stmt)
 	}
 	for _, lab := range x.Labels {
-		addFlowExpr(curfn, lab.Expr)
+		addFlowExpr(cfg, curfn, lab.Expr)
 	}
 
 	switch x.Op {
@@ -304,9 +346,6 @@ func addFlowStmt(curfn *cc.Decl, x *cc.Stmt) {
 			addFlowEdge(f, flowCache[curfn].returnValue)
 		}
 		return
-
-	case cc.StmtDecl:
-		x.Decl.CurFn = curfn
 
 	case cc.StmtExpr:
 		flowCache[x.Expr].isStmtExpr = true
@@ -332,7 +371,7 @@ func addFlowStmt(curfn *cc.Decl, x *cc.Stmt) {
 		for _, stmt := range x.Body.Block {
 			for _, lab := range stmt.Labels {
 				if lab.Op == cc.Case && lab.Expr != nil {
-					addFlowExpr(curfn, lab.Expr)
+					addFlowExpr(cfg, curfn, lab.Expr)
 					addFlowEdge(f, flowCache[lab.Expr])
 				}
 			}
@@ -340,23 +379,23 @@ func addFlowStmt(curfn *cc.Decl, x *cc.Stmt) {
 	}
 }
 
-func addFlowExpr(curfn *cc.Decl, x *cc.Expr) {
+func addFlowExpr(cfg *Config, curfn *cc.Decl, x *cc.Expr) {
 	if x == nil || flowCache[x] != nil {
 		return
 	}
 	f := &flowSyntax{syntax: x}
 	flowCache[x] = f
 
-	addFlowExpr(curfn, x.Left)
-	addFlowExpr(curfn, x.Right)
+	addFlowExpr(cfg, curfn, x.Left)
+	addFlowExpr(cfg, curfn, x.Right)
 	for _, expr := range x.List {
-		addFlowExpr(curfn, expr)
+		addFlowExpr(cfg, curfn, expr)
 	}
 	for _, stmt := range x.Block {
-		addFlowStmt(curfn, stmt)
+		addFlowStmt(cfg, curfn, stmt)
 	}
-	addFlowInit(nil, x.Init)
-	addFlowDecl(curfn, x.XDecl)
+	addFlowInit(cfg, nil, x.Init)
+	addFlowDecl(cfg, curfn, x.XDecl)
 
 	switch x.Op {
 	case cc.Add, cc.Sub:
@@ -410,14 +449,14 @@ func addFlowExpr(curfn *cc.Decl, x *cc.Expr) {
 	case cc.Call:
 		if x.Left.Op == cc.Name && x.Left.XDecl != nil {
 			d := x.Left.XDecl
-			addFlowDecl(nil, d)
+			addFlowDecl(cfg, nil, d)
 			if fd := flowCache[d]; fd != nil && fd.returnValue != nil {
 				addFlowEdge(f, fd.returnValue)
 			}
 			for i := 0; i < len(d.Type.Decls) && i < len(x.List); i++ {
 				dd := d.Type.Decls[i]
 				if dd.Type != nil {
-					addFlowDecl(nil, dd)
+					addFlowDecl(cfg, nil, dd)
 					addFlowEdge(flowCache[dd], flowCache[x.List[i]])
 				}
 			}
@@ -486,7 +525,11 @@ Search:
 		return
 	}
 	for f := src; ; f = next[f] {
-		fmt.Printf("%s %s [stop=%v]\n", f.syntax.GetSpan(), f.syntax, f.stopFlow)
+		key := ""
+		if d, ok := f.syntax.(*cc.Decl); ok {
+			key = " " + declKey(d)
+		}
+		fmt.Printf("%s %s%s [stop=%v key=%v]\n", f.syntax.GetSpan(), f.syntax, key, f.stopFlow, f.key)
 		if f == dst {
 			break
 		}

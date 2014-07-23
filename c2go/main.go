@@ -14,7 +14,6 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"strings"
 
 	"code.google.com/p/rsc/c2go"
 	"code.google.com/p/rsc/cc"
@@ -38,9 +37,13 @@ func main() {
 	if *inc != "" {
 		cc.AddInclude(*inc)
 	}
-	var fixes map[string]string
+	var fixes *Config
 	if *fixFile != "" {
-		fixes = readFixFile(*fixFile)
+		f, err := readConfig(*fixFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fixes = f
 	}
 	if len(args) == 0 {
 		flag.Usage()
@@ -60,21 +63,25 @@ func main() {
 		log.Fatal(err)
 	}
 	renameDecls(prog)
-	inferTypes(prog)
+	inferTypes(fixes, prog)
 	rewriteSyntax(prog)
 	rewriteTypes(prog)
 	if *showGroups {
 		return
 	}
-	println(len(prog.Decls), "DECLS")
+	rewriteLen(fixes, prog)
 	fixGoTypes(prog)
-	println(len(prog.Decls), "DECLS")
+	fixBools(prog)
+	finalEdits(prog)
 	write(prog, files, fixes)
+	for _, d := range fixes.Diffs {
+		if d.Used == 0 {
+			fmt.Fprintf(os.Stderr, "%s: unused diff\n", d.Line)
+		}
+	}
 }
 
 func readFixFile(filename string) map[string]string {
-	fmt.Printf("read fixes %s\n", filename)
-
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -82,7 +89,6 @@ func readFixFile(filename string) map[string]string {
 
 	m := make(map[string]string)
 	for _, match := range regexp.MustCompile(`(?ms)^func (\w+).*?^}`).FindAllStringSubmatch(string(data), -1) {
-		fmt.Printf("FIX %s\n", match[1])
 		m[match[1]] = match[0]
 	}
 
@@ -127,11 +133,12 @@ var override = map[string]*cc.Type{
 	"ocmp_asm5.return":  uint32Type,
 
 	"asmout_asm5.o1":  uint32Type,
-	"asmout_asm5.o2":  uint32Type,
 	"asmout_asm5.o4":  uint32Type,
 	"asmout_asm5.o5":  uint32Type,
 	"asmout_asm5.o6":  uint32Type,
 	"asmout_asm5.rel": &cc.Type{Kind: cc.Ptr},
+
+	"setuintxx.wid": int64Type,
 
 	"Link.andptr": &cc.Type{Kind: c2go.Slice},
 
@@ -143,8 +150,7 @@ var override = map[string]*cc.Type{
 
 	"Oprang_asm5.start": &cc.Type{Kind: c2go.Slice},
 
-	"asmoutnacl_asm5.out": &cc.Type{Kind: c2go.Slice, Base: uint32Type},
-	"asmout_asm5.out":     &cc.Type{Kind: c2go.Slice, Base: uint32Type},
+	"asmout_asm5.out": &cc.Type{Kind: c2go.Slice, Base: uint32Type},
 
 	"span5.out": &cc.Type{Kind: cc.Array, Base: uint32Type, Width: &cc.Expr{Op: cc.Number, Text: "9"}},
 
@@ -161,23 +167,19 @@ func rewriteTypes(prog cc.Syntax) {
 			key := declKey(d)
 			t := override[key]
 			if t == nil {
-				if strings.HasSuffix(key, "start") {
-					println("KEY", key)
-				}
 				return
 			}
 			if t.Kind == cc.Array {
 				// Override only applies to specific decl. Skip for now.
 				return
 			}
-			println("OVERRIDE", key)
 			f := flowCache[d]
 			if f == nil {
 				return
 			}
 			g := f.group
 			if g.goKind != 0 || g.goType != nil {
-				fmt.Printf("multiple overrides: %v (%p) and %v (%p)\n", key, f.group, g.goKey, g.goFlow.group)
+				fmt.Fprintf(os.Stderr, "multiple overrides: %v (%p) and %v (%p)\n", key, f.group, g.goKey, g.goFlow.group)
 			}
 			g.goKey = key
 			g.goFlow = f
@@ -228,13 +230,14 @@ func rewriteTypes(prog cc.Syntax) {
 			fmt.Printf("group missing canonical\n")
 			continue
 		}
+		if g.isBool {
+			g.goType = boolType
+			continue
+		}
 		t := g.canon.Def()
 		if cc.Char <= t.Kind && t.Kind <= cc.Enum {
 			// Convert to an appropriately sized number.
 			// Canon is largest rank from C; convert to Go.
-			if t.Kind == cc.Longlong {
-				println("canon long long", c2goKind[t.Kind])
-			}
 			g.goType = &cc.Type{Kind: c2goKind[t.Kind]}
 			continue
 		}
@@ -265,7 +268,11 @@ func rewriteTypes(prog cc.Syntax) {
 	if *showGroups {
 		fmt.Printf("%d groups\n", len(flowGroups))
 		for _, g := range flowGroups {
-			fmt.Printf("group(%d): %v (canon %v)\n", len(g.decls), c2go.GoString(g.goType), c2go.GoString(g.canon))
+			suffix := ""
+			if g.isBool {
+				suffix = " [bool]"
+			}
+			fmt.Printf("group(%d): %v (canon %v)%s\n", len(g.decls), c2go.GoString(g.goType), c2go.GoString(g.canon), suffix)
 			for i := 0; i < 2; i++ {
 				for _, f := range g.syntax {
 					if d, ok := f.syntax.(*cc.Decl); ok == (i == 0) {
@@ -275,6 +282,9 @@ func rewriteTypes(prog cc.Syntax) {
 						}
 						if f.ptrAdd {
 							suffix += " (ptradd)"
+						}
+						if f.usedAsBool {
+							suffix += " (bool)"
 						}
 						fmt.Printf("\t%s %v%s\n", f.syntax.GetSpan(), f.syntax, suffix)
 					}
@@ -305,7 +315,9 @@ func rewriteTypes(prog cc.Syntax) {
 			f := flowCache[d]
 			if f == nil {
 				d.Type = toGoType(nil, d, d.Type, cache)
-				fmt.Printf("%s: missing flow group for %s\n", d.Span, declKey(d))
+				if declKey(d) != "tmp" {
+					fprintf(d.Span, "missing flow group for %s", d.Span, declKey(d))
+				}
 				return
 			}
 			g := f.group
@@ -463,13 +475,14 @@ func toGoType(g *flowGroup, x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Ty
 }
 
 var c2goKind = map[cc.TypeKind]cc.TypeKind{
-	cc.Char:      c2go.Int8,
-	cc.Uchar:     c2go.Uint8,
-	cc.Short:     c2go.Int16,
-	cc.Ushort:    c2go.Uint16,
-	cc.Int:       c2go.Int,
-	cc.Uint:      c2go.Uint,
-	cc.Long:      c2go.Int32,
+	cc.Char:   c2go.Int8,
+	cc.Uchar:  c2go.Uint8,
+	cc.Short:  c2go.Int16,
+	cc.Ushort: c2go.Uint16,
+	cc.Int:    c2go.Int,
+	cc.Uint:   c2go.Uint,
+	//cc.Long:      c2go.Int32,
+	cc.Long:      c2go.Int, // long is used too indiscriminately to assign 32-bit meaning to it
 	cc.Ulong:     c2go.Uint32,
 	cc.Longlong:  c2go.Int64,
 	cc.Ulonglong: c2go.Uint64,
@@ -490,6 +503,10 @@ func fixGoTypes(prog *cc.Prog) {
 			fixGoTypesInit(decl, decl.Init)
 		}
 		if decl.Body != nil {
+			t := decl.Type
+			if t != nil && t.Kind == cc.Func && t.Base.Is(c2go.Int) && len(t.Decls) == 1 && t.Decls[0].Type.String() == "Fmt*" {
+				fixFormatter(decl)
+			}
 			fixGoTypesStmt(prog, decl, decl.Body)
 		}
 	}
@@ -641,6 +658,13 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 	default:
 		panic(fmt.Sprintf("unexpected construct %v in fixGoTypesExpr - %v - %v", c2go.GoString(x), x.Op, x.Span))
 
+	case c2go.ExprSlice:
+		// inserted by rewriteLen
+		left := fixGoTypesExpr(fn, x.List[0], targ)
+		fixGoTypesExpr(fn, x.List[1], nil)
+		fixGoTypesExpr(fn, x.List[2], nil)
+		return left
+
 	case cc.Comma:
 		for i, y := range x.List {
 			t := targ
@@ -675,18 +699,14 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		}
 
 		left := fixGoTypesExpr(fn, x.Left, targ)
-		if strings.Contains(c2go.GoString(x.Left), ".and") {
-			fmt.Printf("XXX ctxt.and - %v - in %v\n", c2go.GoString(left), c2go.GoString(x))
-		}
 
 		if x.Op == cc.And && x.Right.Op == cc.Twid {
 			x.Op = c2go.AndNot
 			x.Right = x.Right.Left
 		}
 
-		right := fixGoTypesExpr(fn, x.Right, targ)
-
 		if x.Op == cc.Add && isSliceStringOrArray(left) {
+			fixGoTypesExpr(fn, x.Right, nil)
 			x.Op = c2go.ExprSlice
 			x.List = []*cc.Expr{x.Left, x.Right, nil}
 			x.Left = nil
@@ -697,9 +717,7 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 			return left
 		}
 
-		if x.String() == "m / 4" {
-			fmt.Println("fixbinary", c2go.GoString(left), c2go.GoString(right))
-		}
+		right := fixGoTypesExpr(fn, x.Right, targ)
 		return fixBinary(fn, x, left, right, targ)
 
 	case cc.AddEq, cc.AndEq, cc.DivEq, cc.Eq, cc.ModEq, cc.MulEq, cc.OrEq, cc.SubEq, cc.XorEq:
@@ -716,6 +734,12 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 			x.Op = cc.Eq
 			x.Right = &cc.Expr{Op: c2go.ExprSlice, List: []*cc.Expr{old, x.Right, nil}}
 			return left
+		}
+
+		if x.Op == cc.Eq && x.Left.Op == cc.Index && sameType(x.Left.Left.XType, stringType) && c2go.GoString(x.Left.Right) == "0" && c2go.GoString(x.Right) == "0" {
+			x.Left = x.Left.Left
+			x.Right = &cc.Expr{Op: cc.Name, Text: `""`}
+			return x.Left.XType
 		}
 
 		forceGoType(fn, x.Right, left)
@@ -763,6 +787,9 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		return x.XDecl.Type
 
 	case cc.Call:
+		if fixPrintf(fn, x) {
+			return x.XType
+		}
 		if fixSpecialCall(fn, x) {
 			return x.XType
 		}
@@ -840,9 +867,6 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	case cc.Lsh, cc.Rsh:
 		left := fixGoTypesExpr(fn, x.Left, targ)
-		if x.String() == "r << 16" {
-			fmt.Printf("LSH: %v left=%v targ=%v\n", x, c2go.GoString(left), c2go.GoString(targ))
-		}
 		if left != nil && targ != nil && c2go.Int8 <= left.Kind && left.Kind <= c2go.Float64 && targ.Kind > left.Kind {
 			forceConvert(fn, x.Left, left, targ)
 			left = targ
@@ -859,9 +883,10 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		if x.Text == "nelem" {
 			x.Text = "len"
 			x.XDecl = nil
+		}
+		if x.Text == "len" {
 			return &cc.Type{Kind: cc.Func, Base: intType}
 		}
-
 		if x.XDecl == nil {
 			return nil
 		}
@@ -919,6 +944,7 @@ var (
 	intType    = &cc.Type{Kind: c2go.Int}
 	uintType   = &cc.Type{Kind: c2go.Uint}
 	uint32Type = &cc.Type{Kind: c2go.Uint32}
+	int64Type  = &cc.Type{Kind: c2go.Int64}
 	uint64Type = &cc.Type{Kind: c2go.Uint64}
 	idealType  = &cc.Type{Kind: c2go.Ideal}
 	stringType = &cc.Type{Kind: c2go.String}
@@ -1052,9 +1078,6 @@ func fixShiftCount(fn *cc.Decl, x *cc.Expr) {
 }
 
 func fixBinary(fn *cc.Decl, x *cc.Expr, left, right, targ *cc.Type) *cc.Type {
-	if x.String() == "m / 4 > len(out)" {
-		fmt.Printf("fixbinary %v - %v %v %v\n", x, c2go.GoString(left), c2go.GoString(right), c2go.GoString(targ))
-	}
 	if left == nil || right == nil {
 		return nil
 	}
@@ -1092,6 +1115,8 @@ func fixBinary(fn *cc.Decl, x *cc.Expr, left, right, targ *cc.Type) *cc.Type {
 }
 
 func sameType(t, u *cc.Type) bool {
+	t = t.Def()
+	u = u.Def()
 	if t == u {
 		return true
 	}
@@ -1284,15 +1309,15 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 		x.XType = stringType
 		return true
 
-	case "strcpy", "strcat":
+	case "strcpy", "strcat", "fmtstrcpy":
 		if len(x.List) != 2 {
 			fprintf(x.Span, "unsupported %v - too many args", x)
 			return false
 		}
-		fixGoTypesExpr(fn, x.List[0], stringType)
+		fixGoTypesExpr(fn, x.List[0], nil)
 		fixGoTypesExpr(fn, x.List[1], stringType)
 		x.Op = cc.Eq
-		if x.Left.Text == "strcat" {
+		if x.Left.Text == "strcat" || x.Left.Text == "fmtstrcpy" {
 			x.Op = cc.AddEq
 		}
 		x.Left = x.List[0]
@@ -1506,4 +1531,132 @@ func matchSize(fn *cc.Decl, obj *cc.Expr, objType *cc.Type, siz *cc.Expr) bool {
 		}
 		return obj.String() == y.String()
 	}
+}
+
+func fixBools(prog *cc.Prog) {
+	cc.Preorder(prog, func(x cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Expr:
+			if x.Op == cc.Not {
+				switch x.Left.Op {
+				case cc.OrOr, cc.AndAnd, cc.EqEq, cc.NotEq, cc.LtEq, cc.GtEq, cc.Lt, cc.Gt, cc.Paren:
+					x.Left = negate(x.Left)
+					fixMerge(x, x.Left)
+				}
+			}
+		}
+	})
+}
+
+func negate(x *cc.Expr) *cc.Expr {
+	switch x.Op {
+	case cc.Paren:
+		return negate(x.Left)
+	case cc.OrOr:
+		x.Op = cc.AndAnd
+		x.Left = negate(x.Left)
+		x.Right = negate(x.Right)
+	case cc.AndAnd:
+		x.Op = cc.OrOr
+		x.Left = negate(x.Left)
+		x.Right = negate(x.Right)
+	case cc.EqEq:
+		x.Op = cc.NotEq
+	case cc.NotEq:
+		x.Op = cc.EqEq
+	case cc.Lt:
+		x.Op = cc.GtEq
+	case cc.GtEq:
+		x.Op = cc.Lt
+	case cc.Gt:
+		x.Op = cc.LtEq
+	case cc.LtEq:
+		x.Op = cc.Gt
+	default:
+		x = &cc.Expr{Op: cc.Not, Left: x}
+	}
+	return x
+}
+
+func rewriteLen(cfg *Config, prog *cc.Prog) {
+	cc.Postorder(prog, func(x cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Expr:
+			// Assign to len, generated by len rewrite. Change to reslice.
+			if x.Op == cc.Eq && x.Left.Op == cc.Call && x.Left.Left.Op == cc.Name && x.Left.Left.Text == "len" && len(x.Left.List) > 0 {
+				arg := x.Left.List[0]
+				x.Left = arg
+				x.Right = &cc.Expr{
+					Op:   c2go.ExprSlice,
+					List: []*cc.Expr{arg, nil, x.Right},
+				}
+				return
+			}
+
+			if (x.Op == cc.Arrow || x.Op == cc.Dot) && x.XDecl != nil {
+				k := declKey(x.XDecl)
+				name := cfg.Len[k]
+				if name == "" {
+					return
+				}
+				d := x.XDecl
+				if d.OuterType == nil {
+					fmt.Fprintf(os.Stderr, "found use of %s but missing type\n", k)
+					return
+				}
+				t := d.OuterType
+				var other *cc.Decl
+				for _, dd := range t.Decls {
+					if dd.Name == name {
+						other = dd
+						break
+					}
+				}
+				if other == nil {
+					fmt.Fprintf(os.Stderr, "found use of %s but cannot find field %s\n", k, name)
+					return
+				}
+				left := x.Left
+				x.Op = cc.Call
+				x.Left = &cc.Expr{
+					Op:    cc.Name,
+					Text:  "len",
+					XType: &cc.Type{Kind: cc.Func, Base: intType},
+				}
+				x.List = []*cc.Expr{
+					{
+						Op:    cc.Dot,
+						Left:  left,
+						Text:  name,
+						XDecl: other,
+					},
+				}
+			}
+		}
+	})
+
+	cc.Postorder(prog, func(x cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Type:
+			out := x.Decls[:0]
+			for _, d := range x.Decls {
+				k := declKey(d)
+				if cfg.Len[k] == "" && !cfg.Delete[k] {
+					out = append(out, d)
+				}
+			}
+			x.Decls = out
+		}
+	})
+}
+
+func finalEdits(prog *cc.Prog) {
+	cc.Postorder(prog, func(x cc.Syntax) {
+		switch x := x.(type) {
+		case *cc.Expr:
+			if x.Op == cc.Arrow && x.Text == "prg" && c2go.GoString(x.Left) == "ctxt.arch" {
+				x.Left = x.Left.Left // drop arch.
+			}
+		}
+	})
 }
