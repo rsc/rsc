@@ -82,7 +82,7 @@ func rewriteSyntax(prog *cc.Prog) {
 	cc.Preorder(prog, func(x cc.Syntax) {
 		switch x := x.(type) {
 		case *cc.Stmt:
-			fixStmt(x)
+			rewriteStmt(x)
 
 		case *cc.Expr:
 			switch x.Op {
@@ -161,6 +161,7 @@ func rewriteSyntax(prog *cc.Prog) {
 				expr.Left = p
 				expr.Right = q
 				expr.Op = cc.Sub
+				x.Op = cc.Add
 				x.Left = c
 				x.Right = expr
 				expr.XType = x.XType
@@ -176,14 +177,14 @@ func isPtrOrArray(t *cc.Type) bool {
 func filterBlock(x []*cc.Stmt) []*cc.Stmt {
 	all := x[:0]
 	for _, stmt := range x {
-		if stmt.Op != cc.Empty {
+		if stmt.Op != cc.Empty || len(stmt.Comments.Before)+len(stmt.Comments.After)+len(stmt.Labels) > 0 {
 			all = append(all, stmt)
 		}
 	}
 	return all
 }
 
-func fixStmt(stmt *cc.Stmt) {
+func rewriteStmt(stmt *cc.Stmt) {
 	// TODO: Double-check stmt.Labels
 
 	switch stmt.Op {
@@ -193,7 +194,7 @@ func fixStmt(stmt *cc.Stmt) {
 	case cc.Do:
 		// Rewrite do { ... } while(x)
 		// to for(;;) { ... if(!x) break }
-		// Since fixStmt is called in a preorder traversal,
+		// Since rewriteStmt is called in a preorder traversal,
 		// the recursion into the children will clean up x
 		// in the if condition as needed.
 		stmt.Op = cc.For
@@ -266,7 +267,51 @@ func fixStmt(stmt *cc.Stmt) {
 
 	case cc.Switch:
 		// TODO: Change default fallthrough to default break.
+		rewriteSwitch(stmt)
 	}
+}
+
+func rewriteSwitch(swt *cc.Stmt) {
+	var out []*cc.Stmt
+	for _, stmt := range swt.Body.Block {
+		// Put names after cases, so that they go to the same place.
+		var names, cases []*cc.Label
+		for _, lab := range stmt.Labels {
+			if lab.Op == cc.LabelName {
+				names = append(names, lab)
+			} else {
+				cases = append(cases, lab)
+			}
+		}
+		if len(cases) > 0 && len(names) > 0 {
+			stmt.Labels = append(cases, names...)
+		}
+		if len(cases) > 0 {
+			// Add fallthrough if needed.
+			if len(out) > 0 {
+				last := out[len(out)-1]
+				if last.Op == cc.Break && len(last.Labels) == 0 {
+					last.Op = cc.Empty
+				} else if fallsThrough(last) {
+					out = append(out, &cc.Stmt{Op: cc.StmtExpr, Expr: &cc.Expr{Op: cc.Name, Text: "fallthrough"}})
+				}
+			}
+		}
+		out = append(out, stmt)
+	}
+	swt.Body.Block = out
+}
+
+func fallsThrough(x *cc.Stmt) bool {
+	switch x.Op {
+	case cc.Break, cc.Continue, cc.Return, cc.Goto:
+		return false
+	case cc.StmtExpr:
+		if x.Expr.Op == cc.Call && x.Expr.Left.Op == cc.Name && x.Expr.Left.Text == "sysfatal" {
+			return false
+		}
+	}
+	return true
 }
 
 func forceBlock(x *cc.Stmt) *cc.Stmt {
@@ -352,6 +397,8 @@ func doSideEffects(x *cc.Expr, before, after *[]*cc.Stmt, mode int) {
 		case cc.PostInc, cc.PostDec:
 			return
 		case cc.Eq, cc.AddEq, cc.SubEq, cc.MulEq, cc.DivEq, cc.ModEq, cc.XorEq, cc.OrEq, cc.AndEq, cc.LshEq, cc.RshEq:
+			return
+		case cc.Call:
 			return
 		}
 	}
@@ -442,6 +489,18 @@ func doSideEffects(x *cc.Expr, before, after *[]*cc.Stmt, mode int) {
 		x.Text = d.Name
 		x.XDecl = d
 		x.List = nil
+
+	case cc.Call:
+		if x.Left.Text == "fmtstrcpy" || x.Left.Text == "fmtprint" {
+			old := copyExpr(x)
+			old.SyntaxInfo = cc.SyntaxInfo{}
+			*before = append(*before, &cc.Stmt{Op: cc.StmtExpr, Expr: old})
+			x.Op = cc.Number
+			x.Text = "0"
+			x.XDecl = nil
+			x.Left = nil
+			x.List = nil
+		}
 	}
 }
 
@@ -477,6 +536,6 @@ func checkNoSideEffects(x *cc.Expr, mode int) {
 	old := x.String()
 	doSideEffects(x, &before, &after, mode)
 	if len(before)+len(after) > 0 {
-		fmt.Printf("cannot handle side effects in %s\n", old)
+		fprintf(x.Span, "cannot handle side effects in %s", old)
 	}
 }

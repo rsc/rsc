@@ -374,7 +374,10 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		p.Print("]")
 
 	case cc.Arrow:
-		name := x.XDecl.Name
+		name := x.Text
+		if x.XDecl != nil {
+			name = x.XDecl.Name
+		}
 		p.Print(exprPrec{x.Left, prec}, ".", name)
 
 	case cc.Call:
@@ -473,8 +476,6 @@ func (p *Printer) printPrefix(x *cc.Prefix) {
 	}
 }
 
-var debugPrintInit = false
-
 func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 	p.Print(x.Comments.Before)
 	defer p.Print(x.Comments.Suffix, x.Comments.After)
@@ -488,15 +489,6 @@ func (p *Printer) printInit(typ *cc.Type, x *cc.Init) {
 		if x.Expr.Op == cc.Number && (typ.Is(cc.Ptr) || typ.Is(Slice)) {
 			p.Print("nil")
 			return
-		}
-		if x.Expr.String() == "ANAME" {
-			debugPrintInit = true
-		}
-		if debugPrintInit {
-			println("INIT", x.Expr.Op, x.Expr.String(), typ.String())
-		}
-		if x.Expr.String() == "ANEGB" {
-			debugPrintInit = false
 		}
 		p.printExpr(x.Expr, precComma)
 		return
@@ -568,15 +560,22 @@ const (
 func (p *Printer) printStmt(x *cc.Stmt) {
 	if len(x.Labels) > 0 {
 		p.Print(Untab, Unindent, x.Comments.Before, Indent, "\t")
-		for _, lab := range x.Labels {
+		for i := 0; i < len(x.Labels); i++ {
+			lab := x.Labels[i]
 			p.Print(Untab, Unindent, lab.Comments.Before, Indent, "\t")
 			p.Print(Untab)
-			switch {
-			case lab.Name != "":
+			switch lab.Op {
+			case cc.LabelName:
 				p.Print(lab.Name)
-			case lab.Expr != nil:
+			case cc.Case:
 				p.Print("case ", lab.Expr)
-			default:
+				for i+1 < len(x.Labels) && x.Labels[i+1].Op == cc.Case {
+					p.Print(", ", lab.Comments.Suffix, Newline)
+					i++
+					lab = x.Labels[i]
+					p.Print(lab.Comments.Before, lab.Expr)
+				}
+			case cc.Default:
 				p.Print("default")
 			}
 			p.Print(":", lab.Comments.Suffix, Newline)

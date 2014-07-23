@@ -1,0 +1,902 @@
+
+func symgrow(ctxt *Link, s *LSym, lsiz int64) {
+	var siz int
+	siz = int(lsiz)
+	if int64(siz) != lsiz {
+		sysfatal("symgrow size %d too long", lsiz)
+	}
+	if len(s.p) >= siz {
+		return
+	}
+	for cap(s.p) < siz {
+		s.p = append(s.p[:cap(s.p)], 0)
+	}
+	s.p = s.p[:siz]
+}
+
+// data.go
+// These were all using inuxi etc. and must be rewritten to use binary.ByteOrder.
+
+func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
+	var off int
+	var siz int
+	var i int
+	var o int64
+	var r *Reloc
+	off = int(p.from.offset)
+	siz = ctxt.arch.datasize(p)
+	if off < 0 || siz < 0 || off >= 1<<30 || siz >= 100 {
+		mangle(pn)
+	}
+	symgrow(ctxt, s, int64(off+siz))
+	if p.to.typ == ctxt.arch.D_FCONST {
+		switch siz {
+		default:
+		case 4:
+			ctxt.arch.byteOrder.PutUint32(s.p[off:], math.Float32bits(float32(p.to.u.dval)))
+		case 8:
+			ctxt.arch.byteOrder.PutUint64(s.p[off:], math.Float64bits(p.to.u.dval))
+		}
+	} else {
+		if p.to.typ == ctxt.arch.D_SCONST {
+			for i = 0; i < siz; i++ {
+				s.p[off+i] = uint8(p.to.u.sval[i])
+			}
+		} else {
+			if p.to.typ == ctxt.arch.D_CONST {
+				if p.to.sym != nil {
+					r = addrel(s)
+					r.off = int64(off)
+					r.siz = uint8(siz)
+					r.sym = p.to.sym
+					r.typ = int(R_ADDR)
+					r.add = p.to.offset
+					goto out
+				}
+				o = p.to.offset
+				switch siz {
+				default:
+					ctxt.diag("bad nuxi %d\n%v", siz, p)
+					break
+				case 1:
+					s.p[off] = byte(o)
+				case 2:
+					ctxt.arch.byteOrder.PutUint16(s.p[off:], uint16(o))
+				case 4:
+					ctxt.arch.byteOrder.PutUint32(s.p[off:], uint32(o))
+				case 8:
+					ctxt.arch.byteOrder.PutUint64(s.p[off:], uint64(o))
+				}
+			} else {
+				if p.to.typ == ctxt.arch.D_ADDR {
+					r = addrel(s)
+					r.off = int64(off)
+					r.siz = uint8(siz)
+					r.sym = p.to.sym
+					r.typ = int(R_ADDR)
+					r.add = p.to.offset
+				} else {
+					ctxt.diag("bad data: %v", p)
+				}
+			}
+		out:
+		}
+	}
+}
+
+func addrel(s *LSym) *Reloc {
+	s.r = append(s.r, Reloc{})
+	return &s.r[len(s.r)-1]
+}
+
+func setuintxx(ctxt *Link, s *LSym, off int64, v uint64, wid int64) int64 {
+	if s.typ == 0 {
+		s.typ = int(SDATA)
+	}
+	s.reachable = 1
+	if s.size < off+wid {
+		s.size = off + wid
+		symgrow(ctxt, s, s.size)
+	}
+	switch wid {
+	case 1:
+		s.p[off] = uint8(v)
+		break
+	case 2:
+		ctxt.arch.byteOrder.PutUint16(s.p[off:], uint16(v))
+	case 4:
+		ctxt.arch.byteOrder.PutUint32(s.p[off:], uint32(v))
+	case 8:
+		ctxt.arch.byteOrder.PutUint64(s.p[off:], uint64(v))
+	}
+	return off + wid
+}
+
+func expandpkg(t0 string, pkg string) string {
+	return strings.Replace(t0, `"".`, pkg+".", -1)
+}
+
+func double2ieee(ieee *uint64, f float64) {
+	*ieee = math.Float64bits(f)
+}
+
+func addlib(ctxt *Link, src string, obj string, pathname string) {
+	name := path.Clean(pathname)
+
+	// runtime.a -> runtime
+	short := strings.TrimSuffix(name, ".a")
+
+	// already loaded?
+	for i := range ctxt.library {
+		if ctxt.library[i].pkg == short {
+			return
+		}
+	}
+
+	var pname string
+	// runtime -> runtime.a for search
+	if (!(ctxt.windows != 0) && name[0] == '/') || (ctxt.windows != 0 && name[1] == ':') {
+		pname = name
+	} else {
+		// try dot, -L "libdir", and then goroot.
+		for _, dir := range ctxt.libdir {
+			pname = dir + "/" + name
+			if _, err := os.Stat(pname); !os.IsNotExist(err) {
+				break
+			}
+		}
+	}
+	pname = path.Clean(pname)
+
+	// runtime.a -> runtime
+	pname = strings.TrimSuffix(pname, ".a")
+
+	if ctxt.debugvlog > 1 && ctxt.bso != nil {
+		Bprint(ctxt.bso, "%5.2f addlib: %s %s pulls in %s\n", cputime(), obj, src, pname)
+	}
+	addlibpath(ctxt, src, obj, pname, name)
+}
+
+func addlibpath(ctxt *Link, srcref string, objref string, file string, pkg string) {
+	for i := range ctxt.library {
+		if file == ctxt.library[i].file {
+			return
+		}
+	}
+	if ctxt.debugvlog > 1 && ctxt.bso != nil {
+		Bprint(ctxt.bso, "%5.2f addlibpath: srcref: %s objref: %s file: %s pkg: %s\n", cputime(), srcref, objref, file, pkg)
+	}
+	ctxt.library = append(ctxt.library, Library{
+		objref: objref,
+		srcref: srcref,
+		file:   file,
+		pkg:    pkg,
+	})
+}
+
+func atolwhex(s string) int64 {
+	x, err := strconv.ParseInt(s, 0, 64)
+	if err != nil {
+		x = 0
+	}
+	return x
+}
+
+func addvarint_pcln(ctxt *Link, d *Pcdata, val uint32) {
+	var v uint32
+	for v = val; v >= 0x80; v >>= 7 {
+		d.p = append(d.p, uint8(v|0x80))
+	}
+	d.p = append(d.p, uint8(v))
+}
+
+func yy_isalpha_sym(c int) bool {
+	return 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z'
+}
+
+delete emallocz estrdup erealloc
+delete nuxiinit find1 fnuxi4 fnuxi8 inuxi1 inuxi2 inuxi4 inuxi8
+delete listinit5 listinit6 listinit8
+delete bigP_list5 bigP_list6 bigP_list8
+delete DSconv_list5 DSconv_list6 DSconv_list8
+delete Hist.printed
+
+uselen Pcdata.n p
+uselen Pcdata.m p
+uselen Pcln.nfile file
+uselen Pcln.mfile file
+uselen Pcln.npcdata pcdata
+uselen LSym.maxp p
+uselen LSym.np p
+uselen LSym.nr r
+uselen LSym.maxr r
+uselen Link.nlibdir libdir
+uselen Link.maxlibdir libdir
+uselen Link.nlibrary library
+uselen Link.libraryp library
+uselen Link.nfile file
+uselen Link.mfile file
+
+stopflow Link.instoffset
+stopflow LSym.r
+stopflow Prog.ft
+stopflow Prog.tt
+stopflow wrint_objfile.sval
+stopflow rdint_objfile.return
+stopflow Addr.offset
+stopflow nelem.return
+stopflow Reloc.siz
+stopflow adduintxx.v
+stopflow adduint64.v
+stopflow adduint32.v
+stopflow widthptr
+stopflow duintxx.off
+stopflow gdatacomplex.w
+stopflow duintxx.v
+stopflow duintptr.v
+stopflow duint64.v
+stopflow duint32.v
+stopflow duint16.v
+stopflow duint8.v
+stopflow mpmovecfix.c
+stopflow mpgetfix.return
+stopflow bounded_walk.max
+stopflow nodconst.v
+stopflow nodintconst.v
+stopflow Addr.scale
+stopflow CASE.
+stopflow lexinit_lex.etype
+stopflow lexfini_lex.etype
+stopflow bgen.a
+stopflow _yylex_lex.c
+stopflow qsort.nmemb
+stopflow bvsize_bv.return
+stopflow memset.
+stopflow bvalloc.nbytes
+stopflow xmalloc_plive.size
+stopflow bvcmp.nbytes
+stopflow atoi.return
+
+diff {
+  	// On arm, record goarm.
+  	if ctxt.arch.thechar == '5' {
+  		p = getgoarm()
+- 		if p != nil {
+- 			ctxt.goarm = atoi(p)
++ 		if p != "" {
++ 			x, _ := strconv.Atoi(p)
++ 			ctxt.goarm = x
+  		} else {
+  			ctxt.goarm = 6
+  		}
+}
+
+diff {
+  	var ctxt *Link
+  	var p string
+  	var buf string
+- 	nuxiinit()
+  	ctxt = new(Link)
+  	ctxt.arch = arch
+  	ctxt.version = HistVersion
+  	ctxt.goroot = getgoroot()
+- 	ctxt.goroot_final = getenv("GOROOT_FINAL")
+- 	if ctxt.goroot_final != nil && ctxt.goroot_final[0] == '\x00' {
+- 		ctxt.goroot_final = string(nil)
+- 	}
++ 	ctxt.goroot_final = os.Getenv("GOROOT_FINAL")
+  	p = getgoarch()
+  	if p != arch.name {
+  		log.Fatalf("invalid goarch %s (want %s)", p, arch.name)
+  	}
+- 	if getwd(buf, sizeof(buf)) == 0 {
++ 	buf, err := os.Getwd()
++ 	if err != nil {
+  		buf = "/???"
+  	}
+}
+
+diff {
+- 	v = getvarint_pcln((**uint8)(&it.p))
++ 	v = getvarint_pcln(&it.p)
+}
+
+diff {
+- 	free((*struct{})(havepc))
+}
+
+diff {
+  var linkamd64 = LinkArch{
+  	name:          "amd64",
+  	thechar:       '6',
++ 	byteOrder:     binary.LittleEndian,
++ 	Pconv:         Pconv_list6,
+}
+
+diff {
+  var linkamd64p32 = LinkArch{
+  	name:          "amd64p32",
+  	thechar:       '6',
++ 	byteOrder:     binary.LittleEndian,
++ 	Pconv:         Pconv_list6,
+}
+
+diff {
+  var link386 = LinkArch{
+  	name:          "386",
+  	thechar:       '8',
++ 	byteOrder:     binary.LittleEndian,
++ 	Pconv:         Pconv_list8,
+}
+
+diff {
+  var linkarm = LinkArch{
+  	name:          "arm",
+  	thechar:       '5',
++ 	byteOrder:     binary.LittleEndian,
++ 	Pconv:         Pconv_list5,
+}
+
+// Set context field in all generated Progs.
+
+diff {
+  	var c int
+  	c = aclass_asm5(ctxt, a)
+  	t = zprg_asm5
++ 	t.ctxt = ctxt
+  	t.as = AWORD_5
+  	switch c {
+  	default:
+}
+
+// Add byteOrder and Pconv to LinkArch.
+
+diff {
+ type LinkArch struct {
+ 	name          string
+ 	thechar       int
++	byteOrder     binary.ByteOrder
++	Pconv         func(*Prog) string
+ 	addstacksplit func(*Link, *LSym)
+ 	assemble      func(*Link, *LSym)
+ 	datasize      func(*Prog) int
+}
+
+diff {
++ func (p *Prog) Line() string {
++ 	return linklinefmt(p.ctxt, int(p.lineno), false, false)
++ }
++ 
++ func (p *Prog) String() string {
++ 	if p.ctxt == nil {
++ 		return fmt.Sprintf("<Prog without ctxt>")
++ 	}
++ 	return p.ctxt.arch.Pconv(p)
++ }
++
+  type LSym struct {
+}
+
+diff {
++ func (ctxt *Link) prg() *Prog {
++ 	p := ctxt.arch.prg()
++ 	p.ctxt = ctxt
++ 	return p
++ }
++ 
+  type Plist struct {
+}
+
+diff {
+  type Prog struct {
++ 	ctxt *Link
+}
+
+func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
+	var a [HISTSZ_obj]struct {
+		incl *Hist
+		idel int
+		line *Hist
+		ldel int
+	}
+	lno1 := lno
+	var d int
+	var i int
+	var n int
+	var h *Hist
+	n = 0
+	var fp string
+	for h = ctxt.hist; h != nil; h = h.link {
+		if h.offset < 0 {
+			continue
+		}
+		if lno < int(h.line) {
+			break
+		}
+		if h.name != "XXXXXXX" {
+			if h.offset > 0 {
+				// #line directive
+				if n > 0 && n < int(HISTSZ_obj) {
+					a[n-1].line = h
+					a[n-1].ldel = h.line - h.offset + 1
+				}
+			} else {
+				// beginning of file
+				if n < int(HISTSZ_obj) {
+					a[n].incl = h
+					a[n].idel = int(h.line)
+					a[n].line = nil
+				}
+				n++
+			}
+			continue
+		}
+		n--
+		if n > 0 && n < int(HISTSZ_obj) {
+			d = h.line - a[n].incl.line
+			a[n-1].ldel += d
+			a[n-1].idel += int(d)
+		}
+	}
+	if n > int(HISTSZ_obj) {
+		n = int(HISTSZ_obj)
+	}
+	for i = n - 1; i >= 0; i-- {
+		if i != n-1 {
+			if !showAll {
+				break
+			}
+			fp += " "
+		}
+		if ctxt.debugline != 0 || showFullPath {
+			fp += fmt.Sprintf("%s/", ctxt.pathname)
+		}
+		if a[i].line != nil {
+			fp += fmt.Sprintf("%s:%d[%s:%d]", a[i].line.name, lno-a[i].ldel+1, a[i].incl.name, lno-a[i].idel+1)
+		} else {
+			fp += fmt.Sprintf("%s:%d", a[i].incl.name, lno-a[i].idel+1)
+		}
+		lno = int(a[i].incl.line - 1) // now print out start of this file
+	}
+	if n == 0 {
+		fp += fmt.Sprintf("<unknown line number %d %d %d %s>", lno1, ctxt.hist.offset, ctxt.hist.line, ctxt.hist.name)
+	}
+	return fp
+}
+diff {
+- 		if h.name != "" {
++ 		if h.name != "XXXXXXX" {
+}
+diff {
+  	// Remove leading ctxt->trimpath, or else rewrite $GOROOT to $GOROOT_FINAL.
+- 	if haspathprefix_obj(buf, ctxt.trimpath) {
++ 	if ctxt.trimpath != "" && haspathprefix_obj(buf, ctxt.trimpath) {
+}
+
+// StackPreempt is a negative constant; conversion can only proceed by masking it first.
+diff {
+- 		p.from.offset = int64(uint32(StackPreempt_stack))
++ 		p.from.offset = int64(uint32(StackPreempt_stack & 0xFFFFFFFF))
+}
+diff {
+- 		p.to.offset = int64(uint32(StackPreempt_stack))
++ 		p.to.offset = int64(uint32(StackPreempt_stack & 0xFFFFFFFF))
+}
+
+// Type checker should get this right, but too bad.
+diff {
+-		op = string(&"<<>>->@>"[((v>>5)&3)<<1])
++		op = string("<<>>->@>"[((v>>5)&3)<<1:])
+}
+diff {
+  	var i int
+  	var cs int
+  	var ct int
+- 	if t == nil {
++ 	if t == "" {
+  		return false
+  	}
+  	for i = 0; t[i] != 0; i++ {
+}
+diff {
+  			}
+  			buf = buf1
+  		}
+- 	} else if ctxt.goroot_final != nil && haspathprefix_obj(buf, ctxt.goroot) {
++ 	} else if ctxt.goroot_final != "" && haspathprefix_obj(buf, ctxt.goroot) {
+  		buf1 = fmt.Sprintf("%s%s", ctxt.goroot_final, buf[len(ctxt.goroot):])
+  		buf = buf1
+  	}
+}
+diff {
+- 	}{0, 0},
++  	}{"", 0},
+}
+
+// I/O is hard.
+
+diff {
+- 	wrdata_objfile(b, (*struct{})(s.p), len(s.p))
++ 	wrdata_objfile(b, s.p)
+}
+diff {
+- 		wrdata_objfile(b, (*struct{})(pc.pcsp.p), len(pc.pcsp.p))
+- 		wrdata_objfile(b, (*struct{})(pc.pcfile.p), len(pc.pcfile.p))
+- 		wrdata_objfile(b, (*struct{})(pc.pcline.p), len(pc.pcline.p))
++ 		wrdata_objfile(b, pc.pcsp.p)
++ 		wrdata_objfile(b, pc.pcfile.p)
++ 		wrdata_objfile(b, pc.pcline.p)
+}
+diff {
+- 			wrdata_objfile(b, (*struct{})(pc.pcdata[i].p), len(pc.pcdata[i].p))
++ 			wrdata_objfile(b, pc.pcdata[i].p)
+}
+diff {
+- 	Bwrite(b, (*struct{})(buf), -cap(p)+cap(buf[:]))
++ 	Bwrite(b, buf[:len(buf)-len(p)])
+}
+diff {
+- 	wrdata_objfile(b, (*struct{})(s), len(s))
++ 	wrdata_objfile(b, []byte(s))
+}
+diff {
+- 	Bread(f, (*struct{})(buf), len(buf))
+- 	if memcmp(buf, startmagic_objfile, sizeof(buf)) != 0 {
++ 	Bread(f, buf[:])
++ 	if string(buf[:]) != startmagic_objfile {
+}
+diff {
+- 	Bread(f, (*struct{})(buf), len(buf))
+- 	if memcmp(buf, endmagic_objfile, sizeof(buf)) != 0 {
++ 	Bread(f, buf[:])
++ 	if string(buf[:]) != endmagic_objfile {
+}
+diff {
+- 	rddata_objfile(f, (**uint8)(&s.p), &len(s.p))
++ 	rddata_objfile(f, &s.p)
+}
+diff {
+- 		rddata_objfile(f, (**uint8)(&pc.pcsp.p), &len(pc.pcsp.p))
+- 		rddata_objfile(f, (**uint8)(&pc.pcfile.p), &len(pc.pcfile.p))
+- 		rddata_objfile(f, (**uint8)(&pc.pcline.p), &len(pc.pcline.p))
++ 		rddata_objfile(f, &pc.pcsp.p)
++ 		rddata_objfile(f, &pc.pcfile.p)
++ 		rddata_objfile(f, &pc.pcline.p)
+}
+diff {
+- 			rddata_objfile(f, (**uint8)(&pc.pcdata[i].p), &len(pc.pcdata[i].p))
++ 			rddata_objfile(f, &pc.pcdata[i].p)
+}
+
+
+func wrpath_objfile(ctxt *Link, b *Biobuf, p string) {
+	var i int
+	var n int
+	if ctxt.windows == 0 || !strings.Contains(p, `\`) {
+		wrstring_objfile(b, p)
+		return
+	}
+	n = len(p)
+	wrint_objfile(b, int64(n))
+	for i = 0; i < n; i++ {
+		var tmp int
+		if p[i] == '\\' {
+			tmp = '/'
+		} else {
+			tmp = int(p[i])
+		}
+		Bputc(b, tmp)
+	}
+}
+
+func wrdata_objfile(b *Biobuf, v []byte) {
+	wrint_objfile(b, int64(len(v)))
+	Bwrite(b, v)
+}
+
+func rdstring_objfile(f *Biobuf) string {
+	n := rdint_objfile(f)
+	p := make([]byte, n)
+	Bread(f, p)
+	return string(p)
+}
+
+func rddata_objfile(f *Biobuf, pp *[]byte) {
+	*pp = make([]byte, rdint_objfile(f))
+	Bread(f, *pp)
+}
+
+func rdsym_objfile(ctxt *Link, f *Biobuf, pkg string) *LSym {
+	var n int64
+	var v uint32
+	var p []byte
+	var s *LSym
+	n = rdint_objfile(f)
+	if n == 0 {
+		rdint_objfile(f)
+		return nil
+	}
+	p = make([]byte, n)
+	Bread(f, p)
+	v = uint32(rdint_objfile(f))
+	if v != 0 {
+		v = ctxt.version
+	}
+	s = linklookup(ctxt, expandpkg(string(p), pkg), v)
+	if v == 0 && s.name[0] == '$' && s.typ == 0 {
+		if strings.HasPrefix(s.name, "$f32.") {
+			u64, _ := strconv.ParseUint(s.name[5:], 16, 32)
+			u32 := uint32(u64)
+			s.typ = SRODATA
+			adduint32(ctxt, s, u32)
+			s.reachable = 0
+		} else if strings.HasPrefix(s.name, "$f64.") {
+			u64, _ := strconv.ParseUint(s.name[5:], 16, 64)
+			s.typ = SRODATA
+			adduint64(ctxt, s, u64)
+			s.reachable = 0
+		}
+	}
+	return s
+}
+
+// pcln tables have void* magic
+
+diff {
+- func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc func(*Link, *LSym, int, *Prog, int, *struct{}) int, arg *struct{}) {
++ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc func(*Link, *LSym, int, *Prog, int, interface{}) int, arg interface{}) {
+}
+diff {
+- func pctofileline_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg *struct{}) int {
++ func pctofileline_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg interface{}) int {
+}
+diff {
+- 	pcln = (*Pcln)(arg)
++ 	pcln = arg.(*Pcln)
+}
+diff {
+- 	if len(pcln.file) >= len(pcln.file) {
+- 		pcln.file = pcln.file[:(len(pcln.file)+1)*2]
+- 		pcln.file = []*LSym(erealloc((*struct{})(pcln.file), len(pcln.file)*sizeof(pcln.file[0])))
+- 	}
+- 	pcln.file[len(pcln.file)] = f
+- 	len(pcln.file)++
++ 	pcln.file = append(pcln.file, f)
+}
+diff {
+- func pctospadj_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg *struct{}) int {
++ func pctospadj_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg interface{}) int {
+}
+diff {
+- func pctopcdata_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg *struct{}) int {
+- 	if phase == 0 || p.as != ctxt.arch.APCDATA || p.from.offset != int64(uint32(arg)) {
++ func pctopcdata_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg interface{}) int {
++ 	if phase == 0 || p.as != ctxt.arch.APCDATA || p.from.offset != int64(arg.(int)) {
+}
+diff {
+- 	funcpctab_pcln(ctxt, &pcln.pcfile, cursym, "pctofile", pctofileline_pcln, (*struct{})(pcln))
++ 	funcpctab_pcln(ctxt, &pcln.pcfile, cursym, "pctofile", pctofileline_pcln, pcln)
+}
+diff {
+- 	n = ((npcdata+31)/32 + (nfuncdata+31)/32) * 4
+- 	havepc = []uint32(make([]byte, n))
++ 	n = ((npcdata+31)/32 + (nfuncdata+31)/32)
++ 	havepc = make([]uint32, n)
+}
+diff {
+- 		funcpctab_pcln(ctxt, &pcln.pcdata[i], cursym, "pctopcdata", pctopcdata_pcln, (*struct{})(uint32(i)))
++ 		funcpctab_pcln(ctxt, &pcln.pcdata[i], cursym, "pctopcdata", pctopcdata_pcln, i)
+}
+diff {
+- func getvarint_pcln(pp **uint8) uint32 {
++ func getvarint_pcln(pp *[]uint8) uint32 {
+}
+diff {
+- 	*pp = &p[0]
++ 	*pp = p
+  	return v
+  }
+}
+
+// remove liblink shell-out code
+
+diff {
+- var outfile string
+- 
+}
+diff {
+  	var p *Prog
+  	var plink *Prog
+  	var a *Auto
+- 	var br *Biobuf
+- 	var br2 *Biobuf
+- 	var start int64
+- 	var end int64
+  	var c1 int
+  	var c2 int
+- 	var n int
+- 	var env string
+- 	start = Boffset(b)
+- 	br = nil
+- 	env = getenv("GOLIBLINK")
+- 	if env != nil && atoi(env) > 0 {
+- 		br = writeobjgo(ctxt)
+- 		if atoi(env) < 2 {
+- 			for {
+- 				c1 = Bgetc(br)
+- 				if c1 < 0 {
+- 					break
+- 				}
+- 				Bputc(b, c1)
+- 			}
+- 			Bterm(br)
+- 			return
+- 		}
+- 	}
+}
+diff {
+- 	if br != nil {
+- 		Bflush(ctxt.bso)
+- 		end = Boffset(b)
+- 		br2 = Bopen(outfile, OREAD_libc)
+- 		if br2 == nil {
+- 			log.Fatalf("cannot read output file %s", outfile)
+- 		}
+- 		Bseek(br2, start, 0)
+- 		n = 0
+- 		for {
+- 			c1 = Bgetc(br2)
+- 			c2 = Bgetc(br)
+- 			if c1 != c2 {
+- 				log.Fatalf("object file output mismatch at %d + %d going to %d: %d %d", start, n, end, c1, c2)
+- 			}
+- 			if c1 < 0 {
+- 				break
+- 			}
+- 			n++
+- 		}
+- 		Bterm(br2)
+- 		Bterm(br)
+- 	}
+}
+diff {
+  	var p *Prog
+  	var plink *Prog
+  	var a *Auto
+- 	var c1 int
+- 	var c2 int
+  	// Build list of symbols, and assign instructions to lists.
+  	// Ignore ctxt->plist boundaries. There are no guarantees there,
+  	// and the C compilers and assemblers just use one big list.
+}
+
+// translator should handle these
+diff {
+- 	if len(s.p) > 0 && dup != nil && len(dup.p) > 0 && strncmp(s.name, "gclocals·", 10) == 0 {
++ 	if len(s.p) > 0 && dup != nil && len(dup.p) > 0 && strings.HasPrefix(s.name, "gclocals·") {
+}
+diff {
+- 		if len(s.p) != len(dup.p) || memcmp(s.p, dup.p, len(s.p)) != 0 {
++ 		if !bytes.Equal(s.p, dup.p) {
+}
+
+// NUL in string
+diff {
+- 	var c int
+  	h = v
+- 	for p = symb; ; p = p[1:] {
+- 		c = int(p[0])
+- 		if c == 0 {
+- 			break
+- 		}
+- 		h = h + h + h + uint32(c)
++ 	for p = symb; len(p) > 0; p = p[1:] {
++ 		h = h + h + h + uint32(p[0])
+  	}
+}
+diff {
+  	var i int
+  	var cs int
+  	var ct int
+- 	if t == "" {
++ 	if len(t) > len(s) {
+  		return false
+  	}
+- 	for i = 0; t[i] != 0; i++ {
++ 	for i = 0; i < len(t); i++ {
+  		cs = int(s[i])
+  		ct = int(t[i])
+  		if 'A' <= cs && cs <= 'Z' {
+}
+diff {
+  			return false
+  		}
+  	}
+- 	return s[i] == '\x00' || s[i] == '/' || s[i] == '\\'
++ 	return i >= len(s) || s[i] == '/' || s[i] == '\\'
+  }
+}
+diff {
+  		// On Windows.
+  		ctxt.windows = 1
+  		// Canonicalize path by converting \ to / (Windows accepts both).
+- 		for p = buf; p[0] != 0; p = p[1:] {
+- 			if p[0] == '\\' {
+- 				p[0] = '/'
+- 			}
+- 		}
++ 		buf = strings.Replace(buf, `\`, `/`, -1)
+  	}
+  	ctxt.pathname = buf
+  	ctxt.headtype = headtype(getgoos())
+}
+
+// sign-extension checks really want to truncate to a fixed size.
+diff {
+  func oclass_asm6(ctxt *Link, a *Addr) int {
+  	var v int64
+- 	var l int64
++ 	var l int32
+  	if a.typ >= D_INDIR_6 || a.index != D_NONE_6 {
+  		if a.index != D_NONE_6 && a.scale == 0 {
+  			if a.typ == D_ADDR_6 {
+}
+diff {
+- 			l = v
++ 			l = int32(v)
+  			if int64(l) == v {
+  				return Ys32_asm6 /* can sign extend */
+  			}
+}
+diff {
+  		D_CONST2_8,
+  		D_ADDR_8:
+  		if a.sym == nil {
+- 			v = int(a.offset)
++ 			v = int(int32(a.offset))
+  			if v == 0 {
+  				return Yi0_asm8
+  			}
+}
+diff {
+  			rel.siz = 4
+  			rel.sym = p.to.sym
+  			v += int(p.to.offset)
+- 			rel.add = int64(o1) | (int64(v)>>2)&0xffffff
++ 			rel.add = int64(int32(o1) | (int32(v) >> 2 & 0xffffff))
+  			rel.typ = R_CALLARM
+  			break
+  		}
+}
+diff {
+  func chipfloat5(ctxt *Link, e float64) int {
+  	var n int
+  	var h1 uint32
+- 	var l int
++ 	var l uint32
+}
+diff {
+  	ei = math.Float64bits(e)
+- 	l = int(ei)
++ 	l = uint32(ei)
+  	h = uint32(int(ei >> 32))
+}
+diff {
+  	s = a.sym
+  	if s == nil {
+- 		str = fmt.Sprintf("%d", int(a.offset))
++ 		str = fmt.Sprintf("%d", int32(a.offset))
+  		goto out
+  	}
+}
+diff {
+  	case D_NONE_5:
+- 		str = fmt.Sprintf("%d", a.offset)
++ 		str = fmt.Sprintf("%d", int32(a.offset))
+}
+diff {
+  			// BL _sfloat(SB)
+  			*p = zprg_obj5
++ 			p.ctxt = ctxt
+  			p.link = next
+}
