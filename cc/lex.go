@@ -70,7 +70,7 @@ type lexer struct {
 
 	// type checking state
 	scope       *Scope
-	includeSeen map[string]*[]*Decl
+	includeSeen map[string]*Header
 
 	// output
 	errors []string
@@ -78,9 +78,14 @@ type lexer struct {
 	expr   *Expr
 }
 
+type Header struct {
+	decls []*Decl
+	types []*Type
+}
+
 func (lx *lexer) parse() {
 	if lx.includeSeen == nil {
-		lx.includeSeen = make(map[string]*[]*Decl)
+		lx.includeSeen = make(map[string]*Header)
 	}
 	if lx.wholeInput == "" {
 		lx.wholeInput = lx.input
@@ -96,7 +101,7 @@ type lexInput struct {
 	lastsym    string
 	file       string
 	lineno     int
-	declSave   *[]*Decl
+	declSave   *Header
 }
 
 func (lx *lexer) pushInclude(includeLine string) {
@@ -125,18 +130,21 @@ func (lx *lexer) pushInclude(includeLine string) {
 		return
 	}
 
-	if decls := lx.includeSeen[file]; decls != nil {
-		for _, decl := range *decls {
+	if hdr := lx.includeSeen[file]; hdr != nil {
+		for _, decl := range hdr.decls {
 			// fmt.Printf("%s: replay %s\n", file, decl.Name)
 			lx.pushDecl(decl)
+		}
+		for _, typ := range hdr.types {
+			lx.pushType(typ)
 		}
 		return
 	}
 
-	dp := lx.declSave
-	if dp == nil {
-		dp = new([]*Decl)
-		lx.includeSeen[file] = dp
+	hdr := lx.declSave
+	if hdr == nil {
+		hdr = new(Header)
+		lx.includeSeen[file] = hdr
 	}
 
 	if extraMap[origFile] != "" {
@@ -147,7 +155,7 @@ func (lx *lexer) pushInclude(includeLine string) {
 			wholeInput: str,
 			file:       "internal/" + origFile,
 			lineno:     1,
-			declSave:   dp,
+			declSave:   hdr,
 		}
 	}
 
@@ -162,7 +170,7 @@ func (lx *lexer) pushInclude(includeLine string) {
 		wholeInput: str,
 		file:       file,
 		lineno:     1,
-		declSave:   dp,
+		declSave:   hdr,
 	}
 }
 
