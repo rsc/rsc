@@ -80,10 +80,10 @@ func Dconv_list6(p *Prog, flag int, a *Addr) string {
 	var str string
 	var s string
 	var fp string
-	var i int64
+	var i int
 
 	i = a.typ
-	if flag&fmtLong != 0 {
+	if flag&fmtLong != 0 /*untyped*/ {
 		if i == D_CONST_6 {
 			str = fmt.Sprintf("$%d-%d", a.offset&0xffffffff, a.offset>>32)
 		} else {
@@ -151,7 +151,7 @@ func Dconv_list6(p *Prog, flag int, a *Addr) string {
 	}
 brk:
 	if a.index != D_NONE_6 {
-		s = fmt.Sprintf("(%v*%d)", Rconv_list6(a.index), int(a.scale))
+		s = fmt.Sprintf("(%v*%d)", Rconv_list6(int(a.index)), int(a.scale))
 		str += s
 	}
 conv:
@@ -275,7 +275,7 @@ var regstr_list6 = []string{
 	"NONE", /* [D_NONE] */
 }
 
-func Rconv_list6(r int64) string {
+func Rconv_list6(r int) string {
 	var str string
 	var fp string
 

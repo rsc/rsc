@@ -14,9 +14,9 @@ const (
 )
 
 type Optab_asm8 struct {
-	as     int64
+	as     int
 	ytab   []uint8
-	prefix int64
+	prefix int
 	op     [13]uint8
 }
 
@@ -1624,12 +1624,12 @@ var nop_asm8 = [][16]uint8{
 
 // Native Client rejects the repeated 0x66 prefix.
 // {0x66, 0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
-func fillnop_asm8(p []uint8, n int64) {
-	var m int64
+func fillnop_asm8(p []uint8, n int) {
+	var m int
 	for n > 0 {
 		m = n
-		if m > int64(len(nop_asm8)) {
-			m = int64(len(nop_asm8))
+		if m > len(nop_asm8) {
+			m = len(nop_asm8)
 		}
 		copy(p, nop_asm8[m-1][:m])
 		p = p[m:]
@@ -1637,21 +1637,22 @@ func fillnop_asm8(p []uint8, n int64) {
 	}
 }
 
-func naclpad_asm8(ctxt *Link, s *LSym, c int64, pad int64) int64 {
-	symgrow(ctxt, s, c+pad)
+func naclpad_asm8(ctxt *Link, s *LSym, c int64, pad int) int64 {
+	symgrow(ctxt, s, c+int64(pad))
 	fillnop_asm8(s.p[c:], pad)
-	return c + pad
+	return c + int64(pad)
 }
 
 func span8(ctxt *Link, s *LSym) {
 	var p *Prog
 	var q *Prog
 	var c int64
-	var v int64
-	var loop int32
+	var v int
+	var loop int
 	var bp []uint8
 	var n int
-	var m int64
+	var m int
+	var i int
 	ctxt.cursym = s
 	if s.text == nil || s.text.link == nil {
 		return
@@ -1675,13 +1676,13 @@ func span8(ctxt *Link, s *LSym) {
 		p.back = n
 		if p.as == AADJSP_8 {
 			p.to.typ = D_SP_8
-			v = -p.from.offset
-			p.from.offset = v
+			v = int(-p.from.offset)
+			p.from.offset = int64(v)
 			p.as = AADDL_8
 			if v < 0 {
 				p.as = ASUBL_8
 				v = -v
-				p.from.offset = v
+				p.from.offset = int64(v)
 			}
 			if v == 0 {
 				p.as = ANOP_8
@@ -1696,13 +1697,13 @@ func span8(ctxt *Link, s *LSym) {
 		}
 		if p.as == AADJSP_8 {
 			p.to.typ = D_SP_8
-			v = -p.from.offset
-			p.from.offset = v
+			v = int(-p.from.offset)
+			p.from.offset = int64(v)
 			p.as = AADDL_8
 			if v < 0 {
 				p.as = ASUBL_8
 				v = -v
-				p.from.offset = v
+				p.from.offset = int64(v)
 			}
 			if v == 0 {
 				p.as = ANOP_8
@@ -1712,7 +1713,7 @@ func span8(ctxt *Link, s *LSym) {
 	n = 0
 	for {
 		loop = 0
-		for i := range s.r {
+		for i = 0; i < len(s.r); i++ {
 			s.r[i] = Reloc{}
 		}
 		s.r = s.r[:0]
@@ -1725,37 +1726,37 @@ func span8(ctxt *Link, s *LSym) {
 					deferreturn_asm8 = linklookup(ctxt, "runtime.deferreturn", 0)
 				}
 				// pad everything to avoid crossing 32-byte boundary
-				if c>>5 != (c+p.isize-1)>>5 {
-					c = naclpad_asm8(ctxt, s, c, -c&31)
+				if c>>5 != (c+int64(p.isize)-1)>>5 {
+					c = naclpad_asm8(ctxt, s, c, int(-c&31))
 				}
 				// pad call deferreturn to start at 32-byte boundary
 				// so that subtracting 5 in jmpdefer will jump back
 				// to that boundary and rerun the call.
 				if p.as == ACALL_8 && p.to.sym == deferreturn_asm8 {
-					c = naclpad_asm8(ctxt, s, c, -c&31)
+					c = naclpad_asm8(ctxt, s, c, int(-c&31))
 				}
 				// pad call to end at 32-byte boundary
 				if p.as == ACALL_8 {
-					c = naclpad_asm8(ctxt, s, c, -(c+p.isize)&31)
+					c = naclpad_asm8(ctxt, s, c, int(-(c+int64(p.isize))&31))
 				}
 				// the linker treats REP and STOSQ as different instructions
 				// but in fact the REP is a prefix on the STOSQ.
 				// make sure REP has room for 2 more bytes, so that
 				// padding will not be inserted before the next instruction.
 				if p.as == AREP_8 && c>>5 != (c+3-1)>>5 {
-					c = naclpad_asm8(ctxt, s, c, -c&31)
+					c = naclpad_asm8(ctxt, s, c, int(-c&31))
 				}
 				// same for LOCK.
 				// various instructions follow; the longest is 4 bytes.
 				// give ourselves 8 bytes so as to avoid surprises.
 				if p.as == ALOCK_8 && c>>5 != (c+8-1)>>5 {
-					c = naclpad_asm8(ctxt, s, c, -c&31)
+					c = naclpad_asm8(ctxt, s, c, int(-c&31))
 				}
 			}
 			p.pc = c
 			// process forward jumps to p
 			for q = p.comefrom; q != nil; q = q.forwd {
-				v = p.pc - (q.pc + q.mark)
+				v = int(p.pc - (q.pc + int64(q.mark)))
 				if q.back&2 != 0 { // short
 					if v > 127 {
 						loop++
@@ -1767,7 +1768,7 @@ func span8(ctxt *Link, s *LSym) {
 						s.p[q.pc+1] = uint8(v)
 					}
 				} else {
-					bp = s.p[q.pc+q.mark-4:]
+					bp = s.p[q.pc+int64(q.mark)-4:]
 					bp[0] = uint8(v)
 					bp = bp[1:]
 					bp[0] = uint8(v >> 8)
@@ -1780,37 +1781,36 @@ func span8(ctxt *Link, s *LSym) {
 			p.comefrom = nil
 			p.pc = c
 			asmins_asm8(ctxt, p)
-			m = int64(-cap(ctxt.andptr) + cap(ctxt.and[:]))
+			m = -cap(ctxt.andptr) + cap(ctxt.and[:])
 			if p.isize != m {
 				p.isize = m
 				loop++
 			}
-			symgrow(ctxt, s, p.pc+m)
+			symgrow(ctxt, s, p.pc+int64(m))
 			copy(s.p[p.pc:], ctxt.and[:m])
 			p.mark = m
-			c += m
+			c += int64(m)
 		}
 		n++
 		if n > 20 {
 			ctxt.diag("span must be looping")
 			log.Fatalf("bad code")
 		}
-		if !(loop != 0) {
+		if loop == 0 {
 			break
 		}
 	}
 	if ctxt.headtype == Hnacl {
-		c = naclpad_asm8(ctxt, s, c, -c&31)
+		c = naclpad_asm8(ctxt, s, c, int(-c&31))
 	}
 	c += -c & (FuncAlign_asm8 - 1)
 	s.size = c
 	if false { /* debug['a'] > 1 */
-		var i int
 		fmt.Printf("span1 %s %d (%d tries)\n %.6x", s.name, s.size, n, 0)
 		for i = 0; i < len(s.p); i++ {
 			fmt.Printf(" %.2x", s.p[i])
 			if i%16 == 15 {
-				fmt.Printf("\n  %.6x", uint64(i+1))
+				fmt.Printf("\n  %.6x", uint(i+1))
 			}
 		}
 		if i%16 != 0 {
@@ -1827,8 +1827,8 @@ func span8(ctxt *Link, s *LSym) {
 func instinit_asm8() {
 	var i int
 	for i = 1; optab_asm8[i].as != 0; i++ {
-		if i != int(optab_asm8[i].as) {
-			log.Fatalf("phase error in optab: at %v found %v", Aconv_list8(i), Aconv_list8(int(optab_asm8[i].as)))
+		if i != optab_asm8[i].as {
+			log.Fatalf("phase error in optab: at %v found %v", Aconv_list8(i), Aconv_list8(optab_asm8[i].as))
 		}
 	}
 	for i = 0; i < Ymax_asm8; i++ {
@@ -1873,21 +1873,21 @@ func instinit_asm8() {
 	for i = 0; i < D_NONE_8; i++ {
 		reg_asm8[i] = -1
 		if i >= D_AL_8 && i <= D_BH_8 {
-			reg_asm8[i] = int((i - D_AL_8) & 7)
+			reg_asm8[i] = (i - D_AL_8) & 7
 		}
 		if i >= D_AX_8 && i <= D_DI_8 {
-			reg_asm8[i] = int((i - D_AX_8) & 7)
+			reg_asm8[i] = (i - D_AX_8) & 7
 		}
 		if i >= D_F0_8 && i <= D_F0_8+7 {
-			reg_asm8[i] = int((i - D_F0_8) & 7)
+			reg_asm8[i] = (i - D_F0_8) & 7
 		}
 		if i >= D_X0_8 && i <= D_X0_8+7 {
-			reg_asm8[i] = int((i - D_X0_8) & 7)
+			reg_asm8[i] = (i - D_X0_8) & 7
 		}
 	}
 }
 
-func prefixof_asm8(ctxt *Link, a *Addr) int32 {
+func prefixof_asm8(ctxt *Link, a *Addr) int {
 	switch a.typ {
 	case D_INDIR_8 + D_CS_8:
 		return 0x2e
@@ -1921,7 +1921,7 @@ func prefixof_asm8(ctxt *Link, a *Addr) int32 {
 }
 
 func oclass_asm8(a *Addr) int {
-	var v int64
+	var v int
 	if (a.typ >= D_INDIR_8 && a.typ < 2*D_INDIR_8) || a.index != D_NONE_8 {
 		if a.index != D_NONE_8 && a.scale == 0 {
 			if a.typ == D_ADDR_8 {
@@ -2066,7 +2066,7 @@ func oclass_asm8(a *Addr) int {
 		D_CONST2_8,
 		D_ADDR_8:
 		if a.sym == nil {
-			v = int64(int32(a.offset))
+			v = int(int32(a.offset))
 			if v == 0 {
 				return Yi0_asm8
 			}
@@ -2084,7 +2084,7 @@ func oclass_asm8(a *Addr) int {
 	return Yxxx_asm8
 }
 
-func asmidx_asm8(ctxt *Link, scale int64, index int64, base int64) {
+func asmidx_asm8(ctxt *Link, scale int, index int, base int) {
 	var i int
 	switch index {
 	default:
@@ -2167,7 +2167,7 @@ func relput4_asm8(ctxt *Link, p *Prog, a *Addr) {
 }
 
 func vaddr_asm8(ctxt *Link, a *Addr, r *Reloc) int64 {
-	var t int64
+	var t int
 	var v int64
 	var s *LSym
 	if r != nil {
@@ -2211,8 +2211,8 @@ func vaddr_asm8(ctxt *Link, a *Addr, r *Reloc) int64 {
 
 func asmand_asm8(ctxt *Link, a *Addr, r int) {
 	var v int64
-	var t int64
-	var scale int64
+	var t int
+	var scale int
 	var rel Reloc
 	v = a.offset
 	t = a.typ
@@ -2237,26 +2237,26 @@ func asmand_asm8(ctxt *Link, a *Addr, r int) {
 		if t == D_NONE_8 {
 			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm8(ctxt, a.scale, a.index, t)
+			asmidx_asm8(ctxt, int(a.scale), a.index, t)
 			goto putrelv
 		}
 		if v == 0 && rel.siz == 0 && t != D_BP_8 {
 			ctxt.andptr[0] = uint8(0<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm8(ctxt, a.scale, a.index, t)
+			asmidx_asm8(ctxt, int(a.scale), a.index, t)
 			return
 		}
 		if v >= -128 && v < 128 && rel.siz == 0 {
 			ctxt.andptr[0] = uint8(1<<6 | 4<<0 | r<<3)
 			ctxt.andptr = ctxt.andptr[1:]
-			asmidx_asm8(ctxt, a.scale, a.index, t)
+			asmidx_asm8(ctxt, int(a.scale), a.index, t)
 			ctxt.andptr[0] = uint8(v)
 			ctxt.andptr = ctxt.andptr[1:]
 			return
 		}
 		ctxt.andptr[0] = uint8(2<<6 | 4<<0 | r<<3)
 		ctxt.andptr = ctxt.andptr[1:]
-		asmidx_asm8(ctxt, a.scale, a.index, t)
+		asmidx_asm8(ctxt, int(a.scale), a.index, t)
 		goto putrelv
 	}
 	if t >= D_AL_8 && t <= D_F7_8 || t >= D_X0_8 && t <= D_X7_8 {
@@ -2267,7 +2267,7 @@ func asmand_asm8(ctxt *Link, a *Addr, r int) {
 		ctxt.andptr = ctxt.andptr[1:]
 		return
 	}
-	scale = a.scale
+	scale = int(a.scale)
 	if t < D_INDIR_8 || t >= 2*D_INDIR_8 {
 		switch a.typ {
 		default:
@@ -2934,7 +2934,7 @@ var ymovtab_asm8 = []uint8{
 // which is not referenced in a->type.
 // If a is empty, it returns BX to account for MULB-like instructions
 // that might use DX and AX.
-func byteswapreg_asm8(ctxt *Link, a *Addr) int64 {
+func byteswapreg_asm8(ctxt *Link, a *Addr) int {
 	var cana int
 	var canb int
 	var canc int
@@ -2997,7 +2997,7 @@ func byteswapreg_asm8(ctxt *Link, a *Addr) int64 {
 	return 0
 }
 
-func subreg_asm8(p *Prog, from int64, to int64) {
+func subreg_asm8(p *Prog, from int, to int) {
 	if false { /* debug['Q'] */
 		fmt.Printf("\n%v\ts/%v/%v/\n", p, Rconv_list8(from), Rconv_list8(to))
 	}
@@ -3031,7 +3031,7 @@ func subreg_asm8(p *Prog, from int64, to int64) {
 	}
 }
 
-func mediaop_asm8(ctxt *Link, o *Optab_asm8, op int64, osize int, z int64) int64 {
+func mediaop_asm8(ctxt *Link, o *Optab_asm8, op int, osize int, z int) int {
 	switch op {
 	case Pm_asm8,
 		Pe_asm8,
@@ -3045,7 +3045,7 @@ func mediaop_asm8(ctxt *Link, o *Optab_asm8, op int64, osize int, z int64) int64
 			ctxt.andptr[0] = Pm_asm8
 			ctxt.andptr = ctxt.andptr[1:]
 			z++
-			op = int64(o.op[z])
+			op = int(o.op[z])
 			break
 		}
 		fallthrough
@@ -3066,13 +3066,13 @@ func doasm_asm8(ctxt *Link, p *Prog) {
 	var q *Prog
 	var pp Prog
 	var t []uint8
-	var z int64
-	var op int64
+	var z int
+	var op int
 	var ft int
 	var tt int
-	var breg int64
+	var breg int
 	var v int64
-	var pre int32
+	var pre int
 	var rel Reloc
 	var r *Reloc
 	var a *Addr
@@ -3101,7 +3101,7 @@ func doasm_asm8(ctxt *Link, p *Prog) {
 		ctxt.diag("asmins: noproto %P", p)
 		return
 	}
-	for z = 0; t[0] != 0; (func() { z += int64(t[3]); t = t[4:] })() {
+	for z = 0; t[0] != 0; (func() { z += int(t[3]); t = t[4:] })() {
 		if ycover_asm8[ft+int(t[0])] != 0 {
 			if ycover_asm8[tt+int(t[1])] != 0 {
 				goto found
@@ -3131,7 +3131,7 @@ found:
 	case Pb_asm8: /* botch */
 		break
 	}
-	op = int64(o.op[z])
+	op = int(o.op[z])
 	switch t[2] {
 	default:
 		ctxt.diag("asmins: unknown z %d %P", t[2], p)
@@ -3140,8 +3140,8 @@ found:
 		break
 	case Zlit_asm8:
 		for ; ; z++ {
-			op = int64(o.op[z])
-			if !(op != 0) {
+			op = int(o.op[z])
+			if op == 0 {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
@@ -3149,8 +3149,8 @@ found:
 		}
 	case Zlitm_r_asm8:
 		for ; ; z++ {
-			op = int64(o.op[z])
-			if !(op != 0) {
+			op = int(o.op[z])
+			if op == 0 {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
@@ -3179,8 +3179,8 @@ found:
 		for {
 			tmp2 := z
 			z++
-			op = int64(o.op[tmp2])
-			if !(op != 0) {
+			op = int(o.op[tmp2])
+			if op == 0 {
 				break
 			}
 			ctxt.andptr[0] = uint8(op)
@@ -3254,12 +3254,12 @@ found:
 		ctxt.andptr[0] = uint8(v)
 		ctxt.andptr = ctxt.andptr[1:]
 	case Zib_rp_asm8:
-		ctxt.andptr[0] = uint8(op + int64(reg_asm8[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + reg_asm8[p.to.typ])
 		ctxt.andptr = ctxt.andptr[1:]
 		ctxt.andptr[0] = uint8(vaddr_asm8(ctxt, &p.from, nil))
 		ctxt.andptr = ctxt.andptr[1:]
 	case Zil_rp_asm8:
-		ctxt.andptr[0] = uint8(op + int64(reg_asm8[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + reg_asm8[p.to.typ])
 		ctxt.andptr = ctxt.andptr[1:]
 		if o.prefix == Pe_asm8 {
 			v = vaddr_asm8(ctxt, &p.from, nil)
@@ -3328,10 +3328,10 @@ found:
 			relput4_asm8(ctxt, p, &p.from)
 		}
 	case Z_rp_asm8:
-		ctxt.andptr[0] = uint8(op + int64(reg_asm8[p.to.typ]))
+		ctxt.andptr[0] = uint8(op + reg_asm8[p.to.typ])
 		ctxt.andptr = ctxt.andptr[1:]
 	case Zrp__asm8:
-		ctxt.andptr[0] = uint8(op + int64(reg_asm8[p.from.typ]))
+		ctxt.andptr[0] = uint8(op + reg_asm8[p.from.typ])
 		ctxt.andptr = ctxt.andptr[1:]
 	case Zclr_asm8:
 		ctxt.andptr[0] = uint8(op)
@@ -3469,7 +3469,7 @@ found:
 	case Zbyte_asm8:
 		v = vaddr_asm8(ctxt, &p.from, &rel)
 		if rel.siz != 0 {
-			rel.siz = op
+			rel.siz = uint8(op)
 			r = addrel(ctxt.cursym)
 			*r = rel
 			r.off = p.pc + int64(-cap(ctxt.andptr)+cap(ctxt.and[:]))

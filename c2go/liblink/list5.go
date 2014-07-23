@@ -116,7 +116,7 @@ func Dconv_list5(p *Prog, flag int, a *Addr) string {
 	var str string
 	var fp string
 	var op string
-	var v int64
+	var v int
 
 	switch a.typ {
 	default:
@@ -135,8 +135,8 @@ func Dconv_list5(p *Prog, flag int, a *Addr) string {
 	case D_CONST2_5:
 		str = fmt.Sprintf("$%d-%d", a.offset, a.offset2)
 	case D_SHIFT_5:
-		v = a.offset
-		op = "<<>>->@>"[((v>>5)&3)<<1:]
+		v = int(a.offset)
+		op = string("<<>>->@>"[((v>>5)&3)<<1:])
 		if v&(1<<4) != 0 {
 			str = fmt.Sprintf("R%d%c%cR%d", v&15, op[0], op[1], (v>>8)&15)
 		} else {
@@ -189,8 +189,8 @@ func Dconv_list5(p *Prog, flag int, a *Addr) string {
 func RAconv_list5(a *Addr) string {
 	var str string
 	var fp string
-	var i int64
-	var v int64
+	var i int
+	var v int
 
 	str = fmt.Sprintf("GOK-reglist")
 	switch a.typ {
@@ -202,10 +202,10 @@ func RAconv_list5(a *Addr) string {
 		if a.sym != nil {
 			break
 		}
-		v = a.offset
+		v = int(a.offset)
 		str = ""
 		for i = 0; i < NREG_5; i++ {
-			if v&(1<<uint64(i)) != 0 {
+			if v&(1<<uint(i)) != 0 {
 				if str[0] == 0 {
 					str += "[R"
 				} else {
@@ -236,14 +236,14 @@ func Mconv_list5(a *Addr) string {
 
 	s = a.sym
 	if s == nil {
-		str = fmt.Sprintf("%d", int(a.offset))
+		str = fmt.Sprintf("%d", int32(a.offset))
 		goto out
 	}
 	switch a.name {
 	default:
 		str = fmt.Sprintf("GOK-name(%d)", a.name)
 	case D_NONE_5:
-		str = fmt.Sprintf("%d", a.offset)
+		str = fmt.Sprintf("%d", int32(a.offset))
 	case D_EXTERN_5:
 		str = fmt.Sprintf("%s+%d(SB)", s.name, int(a.offset))
 	case D_STATIC_5:

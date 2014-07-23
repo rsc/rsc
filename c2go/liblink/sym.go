@@ -38,8 +38,8 @@ import (
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-func yy_isalpha_sym(c int) int {
-	return bool2int('A' <= c && c <= 'Z' || 'a' <= c && c <= 'z')
+func yy_isalpha_sym(c int) bool {
+	return 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z'
 }
 
 var headers_sym = []struct {
@@ -115,7 +115,7 @@ func linknew(arch *LinkArch) *Link {
 	if err != nil {
 		buf = "/???"
 	}
-	if yy_isalpha_sym(int(buf[0])) != 0 && buf[1] == ':' {
+	if yy_isalpha_sym(int(buf[0])) && buf[1] == ':' {
 		// On Windows.
 		ctxt.windows = 1
 		// Canonicalize path by converting \ to / (Windows accepts both).
@@ -179,7 +179,7 @@ func linknew(arch *LinkArch) *Link {
 		p = getgoarm()
 		if p != "" {
 			x, _ := strconv.Atoi(p)
-			ctxt.goarm = int32(x)
+			ctxt.goarm = x
 		} else {
 			ctxt.goarm = 6
 		}
@@ -187,7 +187,7 @@ func linknew(arch *LinkArch) *Link {
 	return ctxt
 }
 
-func linknewsym(ctxt *Link, symb string, v int64) *LSym {
+func linknewsym(ctxt *Link, symb string, v uint32) *LSym {
 	var s *LSym
 	s = new(LSym)
 	*s = LSym{}
@@ -206,15 +206,13 @@ func linknewsym(ctxt *Link, symb string, v int64) *LSym {
 	return s
 }
 
-func _lookup_sym(ctxt *Link, symb string, v int64, creat int) *LSym {
+func _lookup_sym(ctxt *Link, symb string, v uint32, creat int) *LSym {
 	var s *LSym
 	var p string
-	var h int64
-	var c int
+	var h uint32
 	h = v
 	for p = symb; len(p) > 0; p = p[1:] {
-		c = int(p[0])
-		h = h + h + h + int64(c)
+		h = h + h + h + uint32(p[0])
 	}
 	h &= 0xffffff
 	h %= LINKHASH
@@ -223,7 +221,7 @@ func _lookup_sym(ctxt *Link, symb string, v int64, creat int) *LSym {
 			return s
 		}
 	}
-	if !(creat != 0) {
+	if creat == 0 {
 		return nil
 	}
 	s = linknewsym(ctxt, symb, v)
@@ -233,12 +231,12 @@ func _lookup_sym(ctxt *Link, symb string, v int64, creat int) *LSym {
 	return s
 }
 
-func linklookup(ctxt *Link, name string, v int64) *LSym {
+func linklookup(ctxt *Link, name string, v uint32) *LSym {
 	return _lookup_sym(ctxt, name, v, 1)
 }
 
 // read-only lookup
-func linkrlookup(ctxt *Link, name string, v int64) *LSym {
+func linkrlookup(ctxt *Link, name string, v uint32) *LSym {
 	return _lookup_sym(ctxt, name, v, 0)
 }
 

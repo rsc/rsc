@@ -23,12 +23,12 @@ func addvarint_pcln(ctxt *Link, d *Pcdata, val uint32) {
 //
 // where func is the function, val is the current value, p is the instruction being
 // considered, and arg can be used to further parameterize valfunc.
-func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc func(*Link, *LSym, int32, *Prog, int32, interface{}) int32, arg interface{}) {
+func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc func(*Link, *LSym, int, *Prog, int, interface{}) int, arg interface{}) {
 	var dbg int
-	var i int64
-	var oldval int32
-	var val int32
-	var started int32
+	var i int
+	var oldval int
+	var val int
+	var started int
 	var delta uint32
 	var pc int64
 	var p *Prog
@@ -36,7 +36,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 	dbg = 0
 	//dbg = strcmp(func->name, "main.main") == 0;
 	//dbg = strcmp(desc, "pctofile") == 0;
-	ctxt.debugpcln += int32(dbg)
+	ctxt.debugpcln += dbg
 	dst.p = dst.p[:0]
 	if ctxt.debugpcln != 0 {
 		Bprint(ctxt.bso, "funcpctab %s [valfunc=%s]\n", fun.name, desc)
@@ -44,12 +44,12 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 	val = -1
 	oldval = val
 	if fun.text == nil {
-		ctxt.debugpcln -= int32(dbg)
+		ctxt.debugpcln -= dbg
 		return
 	}
 	pc = fun.text.pc
 	if ctxt.debugpcln != 0 {
-		Bprint(ctxt.bso, "%6x %6d %v\n", pc, val, fun.text)
+		Bprint(ctxt.bso, "%6x %6d %v\n", uint64(pc), val, fun.text)
 	}
 	started = 0
 	for p = fun.text; p != nil; p = p.link {
@@ -58,7 +58,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 		if val == oldval && started != 0 {
 			val = valfunc(ctxt, fun, val, p, 1, arg)
 			if ctxt.debugpcln != 0 {
-				Bprint(ctxt.bso, "%6x %6s %v\n", int64(p.pc), "", p)
+				Bprint(ctxt.bso, "%6x %6s %v\n", uint64(int64(p.pc)), "", p)
 			}
 			continue
 		}
@@ -69,7 +69,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 		if p.link != nil && p.link.pc == p.pc {
 			val = valfunc(ctxt, fun, val, p, 1, arg)
 			if ctxt.debugpcln != 0 {
-				Bprint(ctxt.bso, "%6x %6s %v\n", int64(p.pc), "", p)
+				Bprint(ctxt.bso, "%6x %6s %v\n", uint64(int64(p.pc)), "", p)
 			}
 			continue
 		}
@@ -87,7 +87,7 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 		// as variable-length little-endian base-128 integers,
 		// where the 0x80 bit indicates that the integer continues.
 		if ctxt.debugpcln != 0 {
-			Bprint(ctxt.bso, "%6x %6d %v\n", int64(p.pc), val, p)
+			Bprint(ctxt.bso, "%6x %6d %v\n", uint64(int64(p.pc)), val, p)
 		}
 		if started != 0 {
 			addvarint_pcln(ctxt, dst, uint32((p.pc-pc)/int64(ctxt.arch.minlc)))
@@ -106,64 +106,63 @@ func funcpctab_pcln(ctxt *Link, dst *Pcdata, fun *LSym, desc string, valfunc fun
 	}
 	if started != 0 {
 		if ctxt.debugpcln != 0 {
-			Bprint(ctxt.bso, "%6x done\n", int64(fun.text.pc)+fun.size)
+			Bprint(ctxt.bso, "%6x done\n", uint64(int64(fun.text.pc)+fun.size))
 		}
 		addvarint_pcln(ctxt, dst, uint32((fun.value+fun.size-pc)/int64(ctxt.arch.minlc)))
 		addvarint_pcln(ctxt, dst, 0) // terminator
 	}
 	if ctxt.debugpcln != 0 {
 		Bprint(ctxt.bso, "wrote %d bytes to %p\n", len(dst.p), dst)
-		for i = 0; i < int64(len(dst.p)); i++ {
+		for i = 0; i < len(dst.p); i++ {
 			Bprint(ctxt.bso, " %02x", dst.p[i])
 		}
 		Bprint(ctxt.bso, "\n")
 	}
-	ctxt.debugpcln -= int32(dbg)
+	ctxt.debugpcln -= dbg
 }
 
 // pctofileline computes either the file number (arg == 0)
 // or the line number (arg == 1) to use at p.
 // Because p->lineno applies to p, phase == 0 (before p)
 // takes care of the update.
-func pctofileline_pcln(ctxt *Link, sym *LSym, oldval int32, p *Prog, phase int32, arg interface{}) int32 {
-	var i int64
-	var l int32
+func pctofileline_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg interface{}) int {
+	var i int
+	var l int
 	var f *LSym
 	var pcln *Pcln
 	if p.as == ctxt.arch.ATEXT || p.as == ctxt.arch.ANOP || p.as == ctxt.arch.AUSEFIELD || p.lineno == 0 || phase == 1 {
-		return int32(oldval)
+		return oldval
 	}
 	linkgetline(ctxt, p.lineno, &f, &l)
 	if f == nil {
-		panic("getline")
-		//	print("getline failed for %s %v\n", ctxt->cursym->name, p);
-		return int32(oldval)
+		//	print("getline failed for %s %P\n", ctxt->cursym->name, p);
+		return oldval
 	}
 	if arg == nil {
 		return l
 	}
 	pcln = arg.(*Pcln)
 	if f == pcln.lastfile {
-		return int32(pcln.lastindex)
+		return pcln.lastindex
 	}
-	for i = 0; i < int64(len(pcln.file)); i++ {
+	for i = 0; i < len(pcln.file); i++ {
 		if pcln.file[i] == f {
 			pcln.lastfile = f
 			pcln.lastindex = i
-			return int32(i)
+			return i
 		}
 	}
 	pcln.file = append(pcln.file, f)
 	pcln.lastfile = f
 	pcln.lastindex = i
-	return int32(i)
+	return i
 }
 
 // pctospadj computes the sp adjustment in effect.
 // It is oldval plus any adjustment made by p itself.
 // The adjustment by p takes effect only after p, so we
 // apply the change during phase == 1.
-func pctospadj_pcln(ctxt *Link, sym *LSym, oldval int32, p *Prog, phase int32, arg interface{}) int32 {
+func pctospadj_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg interface{}) int {
 	if oldval == -1 { // starting
 		oldval = 0
 	}
@@ -174,7 +173,7 @@ func pctospadj_pcln(ctxt *Link, sym *LSym, oldval int32, p *Prog, phase int32, a
 		ctxt.diag("overflow in spadj: %d + %d = %d", oldval, p.spadj, int64(oldval)+p.spadj)
 		log.Fatalf("bad code")
 	}
-	return int32(int64(oldval) + p.spadj)
+	return int(int64(oldval) + p.spadj)
 }
 
 // pctopcdata computes the pcdata value in effect at p.
@@ -182,24 +181,24 @@ func pctospadj_pcln(ctxt *Link, sym *LSym, oldval int32, p *Prog, phase int32, a
 // non-PCDATA instructions.
 // Since PCDATA instructions have no width in the final code,
 // it does not matter which phase we use for the update.
-func pctopcdata_pcln(ctxt *Link, sym *LSym, oldval int32, p *Prog, phase int32, arg interface{}) int32 {
-	if phase == 0 || p.as != ctxt.arch.APCDATA || p.from.offset != int64(arg.(uint32)) {
+func pctopcdata_pcln(ctxt *Link, sym *LSym, oldval int, p *Prog, phase int, arg interface{}) int {
+	if phase == 0 || p.as != ctxt.arch.APCDATA || p.from.offset != int64(arg.(int)) {
 		return oldval
 	}
-	if int64(int32(p.to.offset)) != p.to.offset {
-		ctxt.diag("overflow in PCDATA instruction: %v", p)
+	if int64(int(p.to.offset)) != p.to.offset {
+		ctxt.diag("overflow in PCDATA instruction: %P", p)
 		log.Fatalf("bad code")
 	}
-	return int32(p.to.offset)
+	return int(p.to.offset)
 }
 
 func linkpcln(ctxt *Link, cursym *LSym) {
 	var p *Prog
 	var pcln *Pcln
-	var i int64
-	var npcdata int64
-	var nfuncdata int64
-	var n int32
+	var i int
+	var npcdata int
+	var nfuncdata int
+	var n int
 	var havepc []uint32
 	var havefunc []uint32
 	ctxt.cursym = cursym
@@ -208,15 +207,15 @@ func linkpcln(ctxt *Link, cursym *LSym) {
 	npcdata = 0
 	nfuncdata = 0
 	for p = cursym.text; p != nil; p = p.link {
-		if p.as == ctxt.arch.APCDATA && p.from.offset >= npcdata {
-			npcdata = p.from.offset + 1
+		if p.as == ctxt.arch.APCDATA && p.from.offset >= int64(npcdata) {
+			npcdata = int(p.from.offset + 1)
 		}
-		if p.as == ctxt.arch.AFUNCDATA && p.from.offset >= nfuncdata {
-			nfuncdata = p.from.offset + 1
+		if p.as == ctxt.arch.AFUNCDATA && p.from.offset >= int64(nfuncdata) {
+			nfuncdata = int(p.from.offset + 1)
 		}
 	}
 	pcln.pcdata = make([]Pcdata, npcdata)
-	pcln.npcdata = npcdata
+	pcln.pcdata = pcln.pcdata[:npcdata]
 	pcln.funcdata = make([]*LSym, nfuncdata)
 	pcln.funcdataoff = make([]int64, nfuncdata)
 	pcln.nfuncdata = nfuncdata
@@ -224,8 +223,8 @@ func linkpcln(ctxt *Link, cursym *LSym) {
 	funcpctab_pcln(ctxt, &pcln.pcfile, cursym, "pctofile", pctofileline_pcln, pcln)
 	funcpctab_pcln(ctxt, &pcln.pcline, cursym, "pctoline", pctofileline_pcln, nil)
 	// tabulate which pc and func data we have.
-	n = int32(((npcdata+31)/32 + (nfuncdata+31)/32) * 4)
-	havepc = make([]uint32, n/4)
+	n = ((npcdata+31)/32 + (nfuncdata+31)/32)
+	havepc = make([]uint32, n)
 	havefunc = havepc[(npcdata+31)/32:]
 	for p = cursym.text; p != nil; p = p.link {
 		if p.as == ctxt.arch.AFUNCDATA {
@@ -240,16 +239,16 @@ func linkpcln(ctxt *Link, cursym *LSym) {
 	}
 	// pcdata.
 	for i = 0; i < npcdata; i++ {
-		if (havepc[i/32]>>uint64(i%32))&1 == 0 {
+		if (havepc[i/32]>>uint(i%32))&1 == 0 {
 			continue
 		}
-		funcpctab_pcln(ctxt, &pcln.pcdata[i], cursym, "pctopcdata", pctopcdata_pcln, uint32(i))
+		funcpctab_pcln(ctxt, &pcln.pcdata[i], cursym, "pctopcdata", pctopcdata_pcln, i)
 	}
 	// funcdata
 	if nfuncdata > 0 {
 		for p = cursym.text; p != nil; p = p.link {
 			if p.as == ctxt.arch.AFUNCDATA {
-				i = p.from.offset
+				i = int(p.from.offset)
 				pcln.funcdataoff[i] = p.to.offset
 				if p.to.typ != ctxt.arch.D_CONST {
 					// TODO: Dedup.
@@ -272,7 +271,7 @@ func getvarint_pcln(pp *[]uint8) uint32 {
 		v |= uint32(p[0]&0x7F) << uint(shift)
 		tmp7 := p
 		p = p[1:]
-		if !(tmp7[0]&0x80 != 0) {
+		if tmp7[0]&0x80 == 0 {
 			break
 		}
 	}
@@ -282,7 +281,7 @@ func getvarint_pcln(pp *[]uint8) uint32 {
 
 func pciternext(it *Pciter) {
 	var v uint32
-	var dv int32
+	var dv int
 	it.pc = it.nextpc
 	if it.done != 0 {
 		return
@@ -293,12 +292,12 @@ func pciternext(it *Pciter) {
 	}
 	// value delta
 	v = getvarint_pcln(&it.p)
-	if v == 0 && !(it.start != 0) {
+	if v == 0 && it.start == 0 {
 		it.done = 1
 		return
 	}
 	it.start = 0
-	dv = int32(v>>1) ^ (int32(v<<31) >> 31)
+	dv = int(v>>1) ^ (int(v<<31) >> 31)
 	it.value += dv
 	// pc delta
 	v = getvarint_pcln(&it.p)

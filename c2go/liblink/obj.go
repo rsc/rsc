@@ -15,10 +15,10 @@ func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
 		incl *Hist
 		idel int
 		line *Hist
-		ldel int32
+		ldel int
 	}
 	lno1 := lno
-	var d int32
+	var d int
 	var i int
 	var n int
 	var h *Hist
@@ -36,7 +36,7 @@ func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
 				// #line directive
 				if n > 0 && n < int(HISTSZ_obj) {
 					a[n-1].line = h
-					a[n-1].ldel = int32(h.line) - h.offset + 1
+					a[n-1].ldel = h.line - h.offset + 1
 				}
 			} else {
 				// beginning of file
@@ -51,7 +51,7 @@ func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
 		}
 		n--
 		if n > 0 && n < int(HISTSZ_obj) {
-			d = int32(h.line) - int32(a[n].incl.line)
+			d = h.line - a[n].incl.line
 			a[n-1].ldel += d
 			a[n-1].idel += int(d)
 		}
@@ -70,7 +70,7 @@ func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
 			fp += fmt.Sprintf("%s/", ctxt.pathname)
 		}
 		if a[i].line != nil {
-			fp += fmt.Sprintf("%s:%d[%s:%d]", a[i].line.name, int32(lno)-a[i].ldel+1, a[i].incl.name, lno-a[i].idel+1)
+			fp += fmt.Sprintf("%s:%d[%s:%d]", a[i].line.name, lno-a[i].ldel+1, a[i].incl.name, lno-a[i].idel+1)
 		} else {
 			fp += fmt.Sprintf("%s:%d", a[i].incl.name, lno-a[i].idel+1)
 		}
@@ -112,55 +112,48 @@ func haspathprefix_obj(s string, t string) bool {
 			return false
 		}
 	}
-	return i == len(s) || s[i] == '/' || s[i] == '\\'
+	return i >= len(s) || s[i] == '/' || s[i] == '\\'
 }
 
 // This is a simplified copy of linklinefmt above.
 // It doesn't allow printing the full stack, and it returns the file name and line number separately.
 // TODO: Unify with linklinefmt somehow.
-func linkgetline(ctxt *Link, line int32, f **LSym, l *int32) {
+func linkgetline(ctxt *Link, line int, f **LSym, l *int) {
 	var a [HISTSZ_obj]struct {
 		incl *Hist
 		idel int
 		line *Hist
-		ldel int32
+		ldel int
 	}
 	var lno int
-	var d int32
-	var dlno int32
+	var d int
+	var dlno int
 	var n int
 	var h *Hist
 	var buf string
+	var buf1 string
 	var file string
-	lno = int(line)
-	lno0 := lno
+	lno = line
 	n = 0
 	for h = ctxt.hist; h != nil; h = h.link {
 		if h.offset < 0 {
 			continue
 		}
-		if lno < int(h.line) {
+		if lno < h.line {
 			break
 		}
 		if h.name != "XXXXXXX" {
 			if h.offset > 0 {
 				// #line directive
-				if n > 0 && n < int(HISTSZ_obj) {
+				if n > 0 && n < HISTSZ_obj {
 					a[n-1].line = h
-					a[n-1].ldel = int32(h.line) - h.offset + 1
+					a[n-1].ldel = h.line - h.offset + 1
 				}
 			} else {
 				// beginning of file
-				if n < int(HISTSZ_obj) {
-					if n < 0 {
-						println("linkgetline", lno0, n, h)
-						for h := ctxt.hist; h != nil; h = h.link {
-							fmt.Printf("%p %v\n", h, *h)
-						}
-						panic("linkgetline")
-					}
+				if n < HISTSZ_obj {
 					a[n].incl = h
-					a[n].idel = int(h.line)
+					a[n].idel = h.line
 					a[n].line = nil
 				}
 				n++
@@ -168,14 +161,14 @@ func linkgetline(ctxt *Link, line int32, f **LSym, l *int32) {
 			continue
 		}
 		n--
-		if n > 0 && n < int(HISTSZ_obj) {
-			d = int32(h.line) - int32(a[n].incl.line)
+		if n > 0 && n < HISTSZ_obj {
+			d = h.line - a[n].incl.line
 			a[n-1].ldel += d
-			a[n-1].idel += int(d)
+			a[n-1].idel += d
 		}
 	}
-	if n > int(HISTSZ_obj) {
-		n = int(HISTSZ_obj)
+	if n > HISTSZ_obj {
+		n = HISTSZ_obj
 	}
 	if n <= 0 {
 		*f = linklookup(ctxt, "??", HistVersion)
@@ -188,10 +181,10 @@ func linkgetline(ctxt *Link, line int32, f **LSym, l *int32) {
 		dlno = a[n].ldel - 1
 	} else {
 		file = a[n].incl.name
-		dlno = int32(a[n].idel) - 1
+		dlno = a[n].idel - 1
 	}
-	if (!(ctxt.windows != 0) && file[0] == '/') || (ctxt.windows != 0 && file[1] == ':') || file[0] == '<' {
-		buf = file
+	if (ctxt.windows == 0 && file[0] == '/') || (ctxt.windows != 0 && file[1] == ':') || file[0] == '<' {
+		buf = fmt.Sprintf("%s", file)
 	} else {
 		buf = fmt.Sprintf("%s/%s", ctxt.pathname, file)
 	}
@@ -200,23 +193,22 @@ func linkgetline(ctxt *Link, line int32, f **LSym, l *int32) {
 		if len(buf) == len(ctxt.trimpath) {
 			buf = "??"
 		} else {
-			buf1 := buf[len(ctxt.trimpath)+1:]
-			if buf1 == "" {
+			buf1 = fmt.Sprintf("%s", buf[len(ctxt.trimpath)+1:])
+			if buf1[0] == '\x00' {
 				buf1 = "??"
 			}
 			buf = buf1
 		}
-	} else {
-		if ctxt.goroot_final != "" && haspathprefix_obj(buf, ctxt.goroot) {
-			buf = ctxt.goroot_final + buf[len(ctxt.goroot):]
-		}
+	} else if ctxt.goroot_final != "" && haspathprefix_obj(buf, ctxt.goroot) {
+		buf1 = fmt.Sprintf("%s%s", ctxt.goroot_final, buf[len(ctxt.goroot):])
+		buf = buf1
 	}
-	lno -= int(dlno)
+	lno -= dlno
 	*f = linklookup(ctxt, buf, HistVersion)
-	*l = int32(lno)
+	*l = lno
 }
 
-func linklinehist(ctxt *Link, lineno int32, f string, offset int32) {
+func linklinehist(ctxt *Link, lineno int, f string, offset int) {
 	var h *Hist
 	if false { // debug['f']
 		if f != "" {
@@ -244,12 +236,12 @@ func linklinehist(ctxt *Link, lineno int32, f string, offset int32) {
 	ctxt.ehist = h
 }
 
-func linkprfile(ctxt *Link, l int32) {
+func linkprfile(ctxt *Link, l int) {
 	var i int
 	var n int
 	var a [HISTSZ_obj]Hist
 	var h *Hist
-	var d int32
+	var d int
 	n = 0
 	for h = ctxt.hist; h != nil; h = h.link {
 		if l < h.line {
@@ -257,13 +249,13 @@ func linkprfile(ctxt *Link, l int32) {
 		}
 		if h.name != "XXXXXXX" {
 			if h.offset == 0 {
-				if n >= 0 && n < int(HISTSZ_obj) {
+				if n >= 0 && n < HISTSZ_obj {
 					a[n] = *h
 				}
 				n++
 				continue
 			}
-			if n > 0 && n < int(HISTSZ_obj) {
+			if n > 0 && n < HISTSZ_obj {
 				if a[n-1].offset == 0 {
 					a[n] = *h
 					n++
@@ -274,18 +266,18 @@ func linkprfile(ctxt *Link, l int32) {
 			continue
 		}
 		n--
-		if n >= 0 && n < int(HISTSZ_obj) {
-			d = int32(h.line) - int32(a[n].line)
+		if n >= 0 && n < HISTSZ_obj {
+			d = h.line - a[n].line
 			for i = 0; i < n; i++ {
 				a[i].line += d
 			}
 		}
 	}
-	if n > int(HISTSZ_obj) {
-		n = int(HISTSZ_obj)
+	if n > HISTSZ_obj {
+		n = HISTSZ_obj
 	}
 	for i = 0; i < n; i++ {
-		print("%s:%d ", a[i].name, int32(int32(l-a[i].line)+a[i].offset+1))
+		fmt.Printf("%s:%d ", a[i].name, int(l-a[i].line+a[i].offset+1))
 	}
 }
 

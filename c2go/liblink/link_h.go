@@ -43,14 +43,14 @@ type Addr struct {
 	}
 	sym     *LSym
 	gotype  *LSym
-	typ     int64
-	index   int64
-	scale   int64
-	reg     int64
-	name    int64
+	typ     int
+	index   int
+	scale   int8
+	reg     int
+	name    int
 	class   int
 	etype   uint8
-	offset2 int64
+	offset2 int
 	node    *struct{}
 	width   int64
 }
@@ -58,10 +58,10 @@ type Addr struct {
 type Prog struct {
 	ctxt     *Link
 	pc       int64
-	lineno   int32
+	lineno   int
 	link     *Prog
 	as       int
-	reg      int64
+	reg      int
 	scond    int
 	from     Addr
 	to       Addr
@@ -71,14 +71,15 @@ type Prog struct {
 	comefrom *Prog
 	pcrel    *Prog
 	spadj    int64
-	mark     int64
+	mark     int
 	back     int
 	ft       uint8
 	tt       uint8
 	optab    int
-	isize    int64
+	isize    int
+	printed  uint8
 	width    int8
-	mode     int64
+	mode     int
 	TEXTFLAG uint8
 }
 
@@ -86,31 +87,39 @@ func (p *Prog) Line() string {
 	return linklinefmt(p.ctxt, int(p.lineno), false, false)
 }
 
+func (p *Prog) String() string {
+	if p.ctxt == nil {
+		return fmt.Sprintf("<Prog without ctxt>")
+	}
+	return p.ctxt.arch.Pconv(p)
+}
+
 type LSym struct {
 	name        string
 	extname     string
-	typ         int64
-	version     int64
-	dupok       int64
+	typ         int
+	version     uint32
+	dupok       int
 	external    uint8
-	nosplit     int64
+	nosplit     uint8
 	reachable   uint8
 	cgoexport   uint8
 	special     uint8
 	stkcheck    uint8
 	hide        uint8
-	leaf        int64
+	leaf        uint8
 	fnptr       uint8
 	seenglobl   uint8
 	onlist      uint8
+	printed     uint8
 	symid       int16
-	dynid       int32
-	sig         int32
-	plt         int32
-	got         int32
-	align       int32
-	elfsym      int32
-	args        int64
+	dynid       int
+	sig         int
+	plt         int
+	got         int
+	align       int
+	elfsym      int
+	args        int
 	locals      int64
 	value       int64
 	size        int64
@@ -136,9 +145,9 @@ type LSym struct {
 
 type Reloc struct {
 	off  int64
-	siz  int64
+	siz  uint8
 	done uint8
-	typ  int64
+	typ  int
 	add  int64
 	xadd int64
 	sym  *LSym
@@ -148,46 +157,46 @@ type Reloc struct {
 type Auto struct {
 	asym    *LSym
 	link    *Auto
-	aoffset int64
-	typ     int64
+	aoffset int
+	typ     int
 	gotype  *LSym
 }
 
 type Hist struct {
 	link   *Hist
 	name   string
-	line   int32
-	offset int32
+	line   int
+	offset int
 }
 
 type Link struct {
-	thechar        int32
+	thechar        int
 	thestring      string
-	goarm          int32
+	goarm          int
 	headtype       int
 	arch           *LinkArch
-	ignore         func(string) int32
-	debugasm       int32
-	debugline      int32
-	debughist      int32
-	debugread      int32
-	debugvlog      int32
-	debugstack     int32
-	debugzerostack int32
-	debugdivmod    int32
-	debugfloat     int32
-	debugpcln      int32
-	flag_shared    int32
-	iself          int32
+	ignore         func(string) int
+	debugasm       int
+	debugline      int
+	debughist      int
+	debugread      int
+	debugvlog      int
+	debugstack     int
+	debugzerostack int
+	debugdivmod    int
+	debugfloat     int
+	debugpcln      int
+	flag_shared    int
+	iself          int
 	bso            *Biobuf
 	pathname       string
-	windows        int32
+	windows        int
 	trimpath       string
 	goroot         string
 	goroot_final   string
 	hash           [LINKHASH]*LSym
 	allsym         *LSym
-	nsymbol        int32
+	nsymbol        int
 	hist           *Hist
 	ehist          *Hist
 	plist          *Plist
@@ -207,27 +216,33 @@ type Link struct {
 	rep            int
 	repn           int
 	lock           int
-	asmode         int64
+	asmode         int
 	andptr         []uint8
 	and            [100]uint8
-	instoffset     int32
-	autosize       int32
-	armsize        int32
+	instoffset     int
+	autosize       int
+	armsize        int
 	pc             int64
 	libdir         []string
 	library        []Library
 	tlsoffset      int
 	diag           func(string, ...interface{})
-	mode           int64
+	mode           int
 	curauto        *Auto
 	curhist        *Auto
 	cursym         *LSym
-	version        int64
+	version        uint32
 	textp          *LSym
 	etextp         *LSym
-	histdepth      int32
-	nhistfile      int32
+	histdepth      int
+	nhistfile      int
 	filesyms       *LSym
+}
+
+func (ctxt *Link) prg() *Prog {
+	p := ctxt.arch.prg()
+	p.ctxt = ctxt
+	return p
 }
 
 type Plist struct {
@@ -240,6 +255,8 @@ type Plist struct {
 type LinkArch struct {
 	name          string
 	thechar       int
+	byteOrder     binary.ByteOrder
+	Pconv         func(*Prog) string
 	addstacksplit func(*Link, *LSym)
 	assemble      func(*Link, *LSym)
 	datasize      func(*Prog) int
@@ -254,18 +271,16 @@ type LinkArch struct {
 	minlc         uint32
 	ptrsize       int64
 	regsize       int
-	byteOrder     binary.ByteOrder
-	Pconv         func(*Prog) string
-	D_ADDR        int64
-	D_AUTO        int64
-	D_BRANCH      int64
-	D_CONST       int64
-	D_EXTERN      int64
-	D_FCONST      int64
-	D_NONE        int64
-	D_PARAM       int64
-	D_SCONST      int64
-	D_STATIC      int64
+	D_ADDR        int
+	D_AUTO        int
+	D_BRANCH      int
+	D_CONST       int
+	D_EXTERN      int
+	D_FCONST      int
+	D_NONE        int
+	D_PARAM       int
+	D_SCONST      int
+	D_STATIC      int
 	ACALL         int
 	ADATA         int
 	AEND          int
@@ -292,13 +307,12 @@ type Pcln struct {
 	pcfile      Pcdata
 	pcline      Pcdata
 	pcdata      []Pcdata
-	npcdata     int64
 	funcdata    []*LSym
 	funcdataoff []int64
-	nfuncdata   int64
+	nfuncdata   int
 	file        []*LSym
 	lastfile    *LSym
-	lastindex   int64
+	lastindex   int
 }
 
 type Pcdata struct {
@@ -311,7 +325,7 @@ type Pciter struct {
 	pc      uint32
 	nextpc  uint32
 	pcscale uint32
-	value   int32
+	value   int
 	start   int
 	done    int
 }
@@ -432,30 +446,3 @@ const (
 // data.c
 // go.c
 // ld.c
-
-const (
-	fmtLong = 1 << iota
-)
-
-const (
-	NOPROF_textflag   = 1
-	DUPOK_textflag    = 2
-	NOSPLIT_textflag  = 4
-	RODATA_textflag   = 8
-	NOPTR_textflag    = 16
-	WRAPPER_textflag  = 32
-	NEEDCTXT_textflag = 64
-)
-
-func (ctxt *Link) prg() *Prog {
-	p := ctxt.arch.prg()
-	p.ctxt = ctxt
-	return p
-}
-
-func (p *Prog) String() string {
-	if p.ctxt == nil {
-		return fmt.Sprintf("PROG MISSING CTXT")
-	}
-	return p.ctxt.arch.Pconv(p)
-}
