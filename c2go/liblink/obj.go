@@ -1,4 +1,4 @@
-package main
+package liblink
 
 import "fmt"
 
@@ -6,12 +6,12 @@ import "fmt"
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 const (
-	HISTSZ_obj = 10
-	NSYM_obj   = 50
+	HISTSZ = 10
+	NSYM   = 50
 )
 
 func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
-	var a [HISTSZ_obj]struct {
+	var a [HISTSZ]struct {
 		incl *Hist
 		idel int
 		line *Hist
@@ -24,25 +24,25 @@ func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
 	var h *Hist
 	n = 0
 	var fp string
-	for h = ctxt.hist; h != nil; h = h.link {
-		if h.offset < 0 {
+	for h = ctxt.Hist; h != nil; h = h.Link {
+		if h.Offset < 0 {
 			continue
 		}
-		if lno < int(h.line) {
+		if lno < int(h.Line) {
 			break
 		}
-		if h.name != "XXXXXXX" {
-			if h.offset > 0 {
+		if h.Name != "XXXXXXX" {
+			if h.Offset > 0 {
 				// #line directive
-				if n > 0 && n < int(HISTSZ_obj) {
+				if n > 0 && n < int(HISTSZ) {
 					a[n-1].line = h
-					a[n-1].ldel = h.line - h.offset + 1
+					a[n-1].ldel = h.Line - h.Offset + 1
 				}
 			} else {
 				// beginning of file
-				if n < int(HISTSZ_obj) {
+				if n < int(HISTSZ) {
 					a[n].incl = h
-					a[n].idel = int(h.line)
+					a[n].idel = int(h.Line)
 					a[n].line = nil
 				}
 				n++
@@ -50,14 +50,14 @@ func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
 			continue
 		}
 		n--
-		if n > 0 && n < int(HISTSZ_obj) {
-			d = h.line - a[n].incl.line
+		if n > 0 && n < int(HISTSZ) {
+			d = h.Line - a[n].incl.Line
 			a[n-1].ldel += d
 			a[n-1].idel += int(d)
 		}
 	}
-	if n > int(HISTSZ_obj) {
-		n = int(HISTSZ_obj)
+	if n > int(HISTSZ) {
+		n = int(HISTSZ)
 	}
 	for i = n - 1; i >= 0; i-- {
 		if i != n-1 {
@@ -66,18 +66,18 @@ func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
 			}
 			fp += " "
 		}
-		if ctxt.debugline != 0 || showFullPath {
-			fp += fmt.Sprintf("%s/", ctxt.pathname)
+		if ctxt.Debugline != 0 || showFullPath {
+			fp += fmt.Sprintf("%s/", ctxt.Pathname)
 		}
 		if a[i].line != nil {
-			fp += fmt.Sprintf("%s:%d[%s:%d]", a[i].line.name, lno-a[i].ldel+1, a[i].incl.name, lno-a[i].idel+1)
+			fp += fmt.Sprintf("%s:%d[%s:%d]", a[i].line.Name, lno-a[i].ldel+1, a[i].incl.Name, lno-a[i].idel+1)
 		} else {
-			fp += fmt.Sprintf("%s:%d", a[i].incl.name, lno-a[i].idel+1)
+			fp += fmt.Sprintf("%s:%d", a[i].incl.Name, lno-a[i].idel+1)
 		}
-		lno = int(a[i].incl.line - 1) // now print out start of this file
+		lno = int(a[i].incl.Line - 1) // now print out start of this file
 	}
 	if n == 0 {
-		fp += fmt.Sprintf("<unknown line number %d %d %d %s>", lno1, ctxt.hist.offset, ctxt.hist.line, ctxt.hist.name)
+		fp += fmt.Sprintf("<unknown line number %d %d %d %s>", lno1, ctxt.Hist.Offset, ctxt.Hist.Line, ctxt.Hist.Name)
 	}
 	return fp
 }
@@ -86,7 +86,7 @@ func linklinefmt(ctxt *Link, lno int, showAll, showFullPath bool) string {
 // That is, does s == t or does s begin with t followed by a slash?
 // For portability, we allow ASCII case folding, so that haspathprefix("a/b/c", "A/B") is true.
 // Similarly, we allow slash folding, so that haspathprefix("a/b/c", "a\\b") is true.
-func haspathprefix_obj(s string, t string) bool {
+func haspathprefix(s string, t string) bool {
 	var i int
 	var cs int
 	var ct int
@@ -119,7 +119,7 @@ func haspathprefix_obj(s string, t string) bool {
 // It doesn't allow printing the full stack, and it returns the file name and line number separately.
 // TODO: Unify with linklinefmt somehow.
 func linkgetline(ctxt *Link, line int, f **LSym, l *int) {
-	var a [HISTSZ_obj]struct {
+	var a [HISTSZ]struct {
 		incl *Hist
 		idel int
 		line *Hist
@@ -135,25 +135,25 @@ func linkgetline(ctxt *Link, line int, f **LSym, l *int) {
 	var file string
 	lno = line
 	n = 0
-	for h = ctxt.hist; h != nil; h = h.link {
-		if h.offset < 0 {
+	for h = ctxt.Hist; h != nil; h = h.Link {
+		if h.Offset < 0 {
 			continue
 		}
-		if lno < h.line {
+		if lno < h.Line {
 			break
 		}
-		if h.name != "XXXXXXX" {
-			if h.offset > 0 {
+		if h.Name != "XXXXXXX" {
+			if h.Offset > 0 {
 				// #line directive
-				if n > 0 && n < HISTSZ_obj {
+				if n > 0 && n < HISTSZ {
 					a[n-1].line = h
-					a[n-1].ldel = h.line - h.offset + 1
+					a[n-1].ldel = h.Line - h.Offset + 1
 				}
 			} else {
 				// beginning of file
-				if n < HISTSZ_obj {
+				if n < HISTSZ {
 					a[n].incl = h
-					a[n].idel = h.line
+					a[n].idel = h.Line
 					a[n].line = nil
 				}
 				n++
@@ -161,50 +161,50 @@ func linkgetline(ctxt *Link, line int, f **LSym, l *int) {
 			continue
 		}
 		n--
-		if n > 0 && n < HISTSZ_obj {
-			d = h.line - a[n].incl.line
+		if n > 0 && n < HISTSZ {
+			d = h.Line - a[n].incl.Line
 			a[n-1].ldel += d
 			a[n-1].idel += d
 		}
 	}
-	if n > HISTSZ_obj {
-		n = HISTSZ_obj
+	if n > HISTSZ {
+		n = HISTSZ
 	}
 	if n <= 0 {
-		*f = linklookup(ctxt, "??", HistVersion)
+		*f = Linklookup(ctxt, "??", HistVersion)
 		*l = 0
 		return
 	}
 	n--
 	if a[n].line != nil {
-		file = a[n].line.name
+		file = a[n].line.Name
 		dlno = a[n].ldel - 1
 	} else {
-		file = a[n].incl.name
+		file = a[n].incl.Name
 		dlno = a[n].idel - 1
 	}
-	if (ctxt.windows == 0 && file[0] == '/') || (ctxt.windows != 0 && file[1] == ':') || file[0] == '<' {
+	if (ctxt.Windows == 0 && file[0] == '/') || (ctxt.Windows != 0 && file[1] == ':') || file[0] == '<' {
 		buf = fmt.Sprintf("%s", file)
 	} else {
-		buf = fmt.Sprintf("%s/%s", ctxt.pathname, file)
+		buf = fmt.Sprintf("%s/%s", ctxt.Pathname, file)
 	}
 	// Remove leading ctxt->trimpath, or else rewrite $GOROOT to $GOROOT_FINAL.
-	if ctxt.trimpath != "" && haspathprefix_obj(buf, ctxt.trimpath) {
-		if len(buf) == len(ctxt.trimpath) {
+	if ctxt.Trimpath != "" && haspathprefix(buf, ctxt.Trimpath) {
+		if len(buf) == len(ctxt.Trimpath) {
 			buf = "??"
 		} else {
-			buf1 = fmt.Sprintf("%s", buf[len(ctxt.trimpath)+1:])
+			buf1 = fmt.Sprintf("%s", buf[len(ctxt.Trimpath)+1:])
 			if buf1[0] == '\x00' {
 				buf1 = "??"
 			}
 			buf = buf1
 		}
-	} else if ctxt.goroot_final != "" && haspathprefix_obj(buf, ctxt.goroot) {
-		buf1 = fmt.Sprintf("%s%s", ctxt.goroot_final, buf[len(ctxt.goroot):])
+	} else if ctxt.Goroot_final != "" && haspathprefix(buf, ctxt.Goroot) {
+		buf1 = fmt.Sprintf("%s%s", ctxt.Goroot_final, buf[len(ctxt.Goroot):])
 		buf = buf1
 	}
 	lno -= dlno
-	*f = linklookup(ctxt, buf, HistVersion)
+	*f = Linklookup(ctxt, buf, HistVersion)
 	*l = lno
 }
 
@@ -223,40 +223,40 @@ func linklinehist(ctxt *Link, lineno int, f string, offset int) {
 	}
 	h = new(Hist)
 	*h = Hist{}
-	h.name = f
-	h.line = lineno
-	h.offset = offset
-	h.link = nil
-	if ctxt.ehist == nil {
-		ctxt.hist = h
-		ctxt.ehist = h
+	h.Name = f
+	h.Line = lineno
+	h.Offset = offset
+	h.Link = nil
+	if ctxt.Ehist == nil {
+		ctxt.Hist = h
+		ctxt.Ehist = h
 		return
 	}
-	ctxt.ehist.link = h
-	ctxt.ehist = h
+	ctxt.Ehist.Link = h
+	ctxt.Ehist = h
 }
 
 func linkprfile(ctxt *Link, l int) {
 	var i int
 	var n int
-	var a [HISTSZ_obj]Hist
+	var a [HISTSZ]Hist
 	var h *Hist
 	var d int
 	n = 0
-	for h = ctxt.hist; h != nil; h = h.link {
-		if l < h.line {
+	for h = ctxt.Hist; h != nil; h = h.Link {
+		if l < h.Line {
 			break
 		}
-		if h.name != "XXXXXXX" {
-			if h.offset == 0 {
-				if n >= 0 && n < HISTSZ_obj {
+		if h.Name != "XXXXXXX" {
+			if h.Offset == 0 {
+				if n >= 0 && n < HISTSZ {
 					a[n] = *h
 				}
 				n++
 				continue
 			}
-			if n > 0 && n < HISTSZ_obj {
-				if a[n-1].offset == 0 {
+			if n > 0 && n < HISTSZ {
+				if a[n-1].Offset == 0 {
 					a[n] = *h
 					n++
 				} else {
@@ -266,33 +266,33 @@ func linkprfile(ctxt *Link, l int) {
 			continue
 		}
 		n--
-		if n >= 0 && n < HISTSZ_obj {
-			d = h.line - a[n].line
+		if n >= 0 && n < HISTSZ {
+			d = h.Line - a[n].Line
 			for i = 0; i < n; i++ {
-				a[i].line += d
+				a[i].Line += d
 			}
 		}
 	}
-	if n > HISTSZ_obj {
-		n = HISTSZ_obj
+	if n > HISTSZ {
+		n = HISTSZ
 	}
 	for i = 0; i < n; i++ {
-		fmt.Printf("%s:%d ", a[i].name, int(l-a[i].line+a[i].offset+1))
+		fmt.Printf("%s:%d ", a[i].Name, int(l-a[i].Line+a[i].Offset+1))
 	}
 }
 
 /*
  * start a new Prog list.
  */
-func linknewplist(ctxt *Link) *Plist {
+func Linknewplist(ctxt *Link) *Plist {
 	var pl *Plist
 	pl = new(Plist)
 	*pl = Plist{}
-	if ctxt.plist == nil {
-		ctxt.plist = pl
+	if ctxt.Plist == nil {
+		ctxt.Plist = pl
 	} else {
-		ctxt.plast.link = pl
+		ctxt.Plast.Link = pl
 	}
-	ctxt.plast = pl
+	ctxt.Plast = pl
 	return pl
 }

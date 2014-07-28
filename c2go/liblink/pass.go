@@ -1,4 +1,4 @@
-package main
+package liblink
 
 // Inferno utils/6l/pass.c
 // http://code.google.com/p/inferno-os/source/browse/utils/6l/pass.c
@@ -30,13 +30,13 @@ package main
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 // Code and data passes.
-func brchain(ctxt *Link, p *Prog) *Prog {
+func Brchain(ctxt *Link, p *Prog) *Prog {
 	var i int
 	for i = 0; i < 20; i++ {
-		if p == nil || p.as != ctxt.arch.AJMP {
+		if p == nil || p.As != ctxt.Arch.AJMP {
 			return p
 		}
-		p = p.pcond
+		p = p.Pcond
 	}
 	return nil
 }
@@ -45,8 +45,8 @@ func brloop(ctxt *Link, p *Prog) *Prog {
 	var c int
 	var q *Prog
 	c = 0
-	for q = p; q != nil; q = q.pcond {
-		if q.as != ctxt.arch.AJMP {
+	for q = p; q != nil; q = q.Pcond {
+		if q.As != ctxt.Arch.AJMP {
 			break
 		}
 		c++
@@ -61,53 +61,53 @@ func linkpatch(ctxt *Link, sym *LSym) {
 	var c int64
 	var p *Prog
 	var q *Prog
-	ctxt.cursym = sym
-	for p = sym.text; p != nil; p = p.link {
-		if ctxt.arch.progedit != nil {
-			ctxt.arch.progedit(ctxt, p)
+	ctxt.Cursym = sym
+	for p = sym.Text; p != nil; p = p.Link {
+		if ctxt.Arch.Progedit != nil {
+			ctxt.Arch.Progedit(ctxt, p)
 		}
-		if p.to.typ != ctxt.arch.D_BRANCH {
+		if p.To.Typ != ctxt.Arch.D_BRANCH {
 			continue
 		}
-		if p.to.u.branch != nil {
+		if p.To.U.Branch != nil {
 			// TODO: Remove to.u.branch in favor of p->pcond.
-			p.pcond = p.to.u.branch
+			p.Pcond = p.To.U.Branch
 			continue
 		}
-		if p.to.sym != nil {
+		if p.To.Sym != nil {
 			continue
 		}
-		c = p.to.offset
-		for q = sym.text; q != nil; {
-			if c == q.pc {
+		c = p.To.Offset
+		for q = sym.Text; q != nil; {
+			if c == q.Pc {
 				break
 			}
-			if q.forwd != nil && c >= q.forwd.pc {
-				q = q.forwd
+			if q.Forwd != nil && c >= q.Forwd.Pc {
+				q = q.Forwd
 			} else {
-				q = q.link
+				q = q.Link
 			}
 		}
 		if q == nil {
 			var tmp string
-			if p.to.sym != nil {
-				tmp = p.to.sym.name
+			if p.To.Sym != nil {
+				tmp = p.To.Sym.Name
 			} else {
 				tmp = "<nil>"
 			}
-			ctxt.diag("branch out of range (%#ux)\n%P [%s]", c, p, tmp)
-			p.to.typ = ctxt.arch.D_NONE
+			ctxt.Diag("branch out of range (%#ux)\n%P [%s]", c, p, tmp)
+			p.To.Typ = ctxt.Arch.D_NONE
 		}
-		p.to.u.branch = q
-		p.pcond = q
+		p.To.U.Branch = q
+		p.Pcond = q
 	}
-	for p = sym.text; p != nil; p = p.link {
-		p.mark = 0 /* initialization for follow */
-		if p.pcond != nil {
-			p.pcond = brloop(ctxt, p.pcond)
-			if p.pcond != nil {
-				if p.to.typ == ctxt.arch.D_BRANCH {
-					p.to.offset = p.pcond.pc
+	for p = sym.Text; p != nil; p = p.Link {
+		p.Mark = 0 /* initialization for follow */
+		if p.Pcond != nil {
+			p.Pcond = brloop(ctxt, p.Pcond)
+			if p.Pcond != nil {
+				if p.To.Typ == ctxt.Arch.D_BRANCH {
+					p.To.Offset = p.Pcond.Pc
 				}
 			}
 		}

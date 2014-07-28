@@ -1,4 +1,4 @@
-package main
+package liblink
 
 // Copyright 2011 The Go Authors.  All rights reserved.
 // Use of this source code is governed by a BSD-style
@@ -53,16 +53,16 @@ The linkers explore all possible call traces involving non-splitting
 functions to make sure that this limit cannot be violated.
 */
 const (
-	StackSystem_stack        = 0
-	StackExtra_stack         = 2048
-	StackMin_stack           = 8192
-	StackSystemRounded_stack = StackSystem_stack + (-StackSystem_stack & (StackMin_stack - 1))
-	FixedStack_stack         = StackMin_stack + StackSystemRounded_stack
-	StackBig_stack           = 4096
-	StackGuard_stack         = 256 + StackSystem_stack
-	StackSmall_stack         = 128
-	StackLimit_stack         = StackGuard_stack - StackSystem_stack - StackSmall_stack
-	StackTop_stack           = 88
+	StackSystem        = 0
+	StackExtra         = 2048
+	StackMin           = 8192
+	StackSystemRounded = StackSystem + (-StackSystem & (StackMin - 1))
+	FixedStack         = StackMin + StackSystemRounded
+	StackBig           = 4096
+	StackGuard         = 256 + StackSystem
+	StackSmall         = 128
+	StackLimit         = StackGuard - StackSystem - StackSmall
+	StackTop           = 88
 )
 
 // Goroutine preemption request.
@@ -70,5 +70,5 @@ const (
 // Must be greater than any real sp.
 // 0xfffffade in hex.
 const (
-	StackPreempt_stack = -1314
+	StackPreempt = -1314
 )

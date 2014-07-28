@@ -1,4 +1,4 @@
-package main
+package liblink
 
 import (
 	"encoding/binary"
@@ -35,242 +35,242 @@ import (
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 type Addr struct {
-	offset int64
-	u      struct {
-		sval   string
-		dval   float64
-		branch *Prog
+	Offset int64
+	U      struct {
+		Sval   string
+		Dval   float64
+		Branch *Prog
 	}
-	sym     *LSym
-	gotype  *LSym
-	typ     int
-	index   int
-	scale   int8
-	reg     int
-	name    int
-	class   int
-	etype   uint8
-	offset2 int
-	node    *struct{}
-	width   int64
+	Sym     *LSym
+	Gotype  *LSym
+	Typ     int
+	Index   int
+	Scale   int8
+	Reg     int
+	Name    int
+	Class   int
+	Etype   uint8
+	Offset2 int
+	Node    *struct{}
+	Width   int64
 }
 
 type Prog struct {
-	ctxt     *Link
-	pc       int64
-	lineno   int
-	link     *Prog
-	as       int
-	reg      int
-	scond    int
-	from     Addr
-	to       Addr
-	opt      *struct{}
-	forwd    *Prog
-	pcond    *Prog
-	comefrom *Prog
-	pcrel    *Prog
-	spadj    int64
-	mark     int
-	back     int
-	ft       uint8
-	tt       uint8
-	optab    int
-	isize    int
-	printed  uint8
-	width    int8
-	mode     int
+	Ctxt     *Link
+	Pc       int64
+	Lineno   int
+	Link     *Prog
+	As       int
+	Reg      int
+	Scond    int
+	From     Addr
+	To       Addr
+	Opt      *struct{}
+	Forwd    *Prog
+	Pcond    *Prog
+	Comefrom *Prog
+	Pcrel    *Prog
+	Spadj    int64
+	Mark     int
+	Back     int
+	Ft       uint8
+	Tt       uint8
+	Optab    int
+	Isize    int
+	Printed  uint8
+	Width    int8
+	Mode     int
 	TEXTFLAG uint8
 }
 
 func (p *Prog) Line() string {
-	return linklinefmt(p.ctxt, int(p.lineno), false, false)
+	return linklinefmt(p.Ctxt, int(p.Lineno), false, false)
 }
 
 func (p *Prog) String() string {
-	if p.ctxt == nil {
+	if p.Ctxt == nil {
 		return fmt.Sprintf("<Prog without ctxt>")
 	}
-	return p.ctxt.arch.Pconv(p)
+	return p.Ctxt.Arch.Pconv(p)
 }
 
 type LSym struct {
-	name        string
-	extname     string
-	typ         int
-	version     uint32
-	dupok       int
-	external    uint8
-	nosplit     uint8
-	reachable   uint8
-	cgoexport   uint8
-	special     uint8
-	stkcheck    uint8
-	hide        uint8
-	leaf        uint8
-	fnptr       uint8
-	seenglobl   uint8
-	onlist      uint8
-	printed     uint8
-	symid       int16
-	dynid       int
-	sig         int
-	plt         int
-	got         int
-	align       int
-	elfsym      int
-	args        int
-	locals      int64
-	value       int64
-	size        int64
-	hash        *LSym
-	allsym      *LSym
-	next        *LSym
-	sub         *LSym
-	outer       *LSym
-	gotype      *LSym
-	reachparent *LSym
-	queue       *LSym
-	file        string
-	dynimplib   string
-	dynimpvers  string
-	sect        *struct{}
-	autom       *Auto
-	text        *Prog
-	etext       *Prog
-	pcln        *Pcln
-	p           []uint8
-	r           []Reloc
+	Name        string
+	Extname     string
+	Typ         int
+	Version     uint32
+	Dupok       int
+	External    uint8
+	Nosplit     uint8
+	Reachable   uint8
+	Cgoexport   uint8
+	Special     uint8
+	Stkcheck    uint8
+	Hide        uint8
+	Leaf        uint8
+	Fnptr       uint8
+	Seenglobl   uint8
+	Onlist      uint8
+	Printed     uint8
+	Symid       int16
+	Dynid       int
+	Sig         int
+	Plt         int
+	Got         int
+	Align       int
+	Elfsym      int
+	Args        int
+	Locals      int64
+	Value       int64
+	Size        int64
+	Hash        *LSym
+	Allsym      *LSym
+	Next        *LSym
+	Sub         *LSym
+	Outer       *LSym
+	Gotype      *LSym
+	Reachparent *LSym
+	Queue       *LSym
+	File        string
+	Dynimplib   string
+	Dynimpvers  string
+	Sect        *struct{}
+	Autom       *Auto
+	Text        *Prog
+	Etext       *Prog
+	Pcln        *Pcln
+	P           []uint8
+	R           []Reloc
 }
 
 type Reloc struct {
-	off  int64
-	siz  uint8
-	done uint8
-	typ  int
-	add  int64
-	xadd int64
-	sym  *LSym
-	xsym *LSym
+	Off  int64
+	Siz  uint8
+	Done uint8
+	Typ  int
+	Add  int64
+	Xadd int64
+	Sym  *LSym
+	Xsym *LSym
 }
 
 type Auto struct {
-	asym    *LSym
-	link    *Auto
-	aoffset int
-	typ     int
-	gotype  *LSym
+	Asym    *LSym
+	Link    *Auto
+	Aoffset int
+	Typ     int
+	Gotype  *LSym
 }
 
 type Hist struct {
-	link   *Hist
-	name   string
-	line   int
-	offset int
+	Link   *Hist
+	Name   string
+	Line   int
+	Offset int
 }
 
 type Link struct {
-	thechar        int
-	thestring      string
-	goarm          int
-	headtype       int
-	arch           *LinkArch
-	ignore         func(string) int
-	debugasm       int
-	debugline      int
-	debughist      int
-	debugread      int
-	debugvlog      int
-	debugstack     int
-	debugzerostack int
-	debugdivmod    int
-	debugfloat     int
-	debugpcln      int
-	flag_shared    int
-	iself          int
-	bso            *Biobuf
-	pathname       string
-	windows        int
-	trimpath       string
-	goroot         string
-	goroot_final   string
-	hash           [LINKHASH]*LSym
-	allsym         *LSym
-	nsymbol        int
-	hist           *Hist
-	ehist          *Hist
-	plist          *Plist
-	plast          *Plist
-	sym_div        *LSym
-	sym_divu       *LSym
-	sym_mod        *LSym
-	sym_modu       *LSym
-	symmorestack   [20]*LSym
-	tlsg           *LSym
-	plan9privates  *LSym
-	curp           *Prog
-	printp         *Prog
-	blitrl         *Prog
-	elitrl         *Prog
-	rexflag        int
-	rep            int
-	repn           int
-	lock           int
-	asmode         int
-	andptr         []uint8
-	and            [100]uint8
-	instoffset     int
-	autosize       int
-	armsize        int
-	pc             int64
-	libdir         []string
-	library        []Library
-	tlsoffset      int
-	diag           func(string, ...interface{})
-	mode           int
-	curauto        *Auto
-	curhist        *Auto
-	cursym         *LSym
-	version        uint32
-	textp          *LSym
-	etextp         *LSym
-	histdepth      int
-	nhistfile      int
-	filesyms       *LSym
+	Thechar        int
+	Thestring      string
+	Goarm          int
+	Headtype       int
+	Arch           *LinkArch
+	Ignore         func(string) int
+	Debugasm       int
+	Debugline      int
+	Debughist      int
+	Debugread      int
+	Debugvlog      int
+	Debugstack     int
+	Debugzerostack int
+	Debugdivmod    int
+	Debugfloat     int
+	Debugpcln      int
+	Flag_shared    int
+	Iself          int
+	Bso            *Biobuf
+	Pathname       string
+	Windows        int
+	Trimpath       string
+	Goroot         string
+	Goroot_final   string
+	Hash           [LINKHASH]*LSym
+	Allsym         *LSym
+	Nsymbol        int
+	Hist           *Hist
+	Ehist          *Hist
+	Plist          *Plist
+	Plast          *Plist
+	Sym_div        *LSym
+	Sym_divu       *LSym
+	Sym_mod        *LSym
+	Sym_modu       *LSym
+	Symmorestack   [20]*LSym
+	Tlsg           *LSym
+	Plan9privates  *LSym
+	Curp           *Prog
+	Printp         *Prog
+	Blitrl         *Prog
+	Elitrl         *Prog
+	Rexflag        int
+	Rep            int
+	Repn           int
+	Lock           int
+	Asmode         int
+	Andptr         []uint8
+	And            [100]uint8
+	Instoffset     int
+	Autosize       int
+	Armsize        int
+	Pc             int64
+	Libdir         []string
+	Library        []Library
+	Tlsoffset      int
+	Diag           func(string, ...interface{})
+	Mode           int
+	Curauto        *Auto
+	Curhist        *Auto
+	Cursym         *LSym
+	Version        uint32
+	Textp          *LSym
+	Etextp         *LSym
+	Histdepth      int
+	Nhistfile      int
+	Filesyms       *LSym
 }
 
-func (ctxt *Link) prg() *Prog {
-	p := ctxt.arch.prg()
-	p.ctxt = ctxt
+func (ctxt *Link) Prg() *Prog {
+	p := ctxt.Arch.Prg()
+	p.Ctxt = ctxt
 	return p
 }
 
 type Plist struct {
-	name    *LSym
-	firstpc *Prog
-	recur   int
-	link    *Plist
+	Name    *LSym
+	Firstpc *Prog
+	Recur   int
+	Link    *Plist
 }
 
 type LinkArch struct {
-	name          string
-	thechar       int
-	byteOrder     binary.ByteOrder
+	Name          string
+	Thechar       int
+	ByteOrder     binary.ByteOrder
 	Pconv         func(*Prog) string
-	addstacksplit func(*Link, *LSym)
-	assemble      func(*Link, *LSym)
-	datasize      func(*Prog) int
-	follow        func(*Link, *LSym)
-	iscall        func(*Prog) int
-	isdata        func(*Prog) int
-	prg           func() *Prog
-	progedit      func(*Link, *Prog)
-	settextflag   func(*Prog, int)
-	symtype       func(*Addr) int
-	textflag      func(*Prog) int
-	minlc         uint32
-	ptrsize       int64
-	regsize       int
+	Addstacksplit func(*Link, *LSym)
+	Assemble      func(*Link, *LSym)
+	Datasize      func(*Prog) int
+	Follow        func(*Link, *LSym)
+	Iscall        func(*Prog) int
+	Isdata        func(*Prog) int
+	Prg           func() *Prog
+	Progedit      func(*Link, *Prog)
+	Settextflag   func(*Prog, int)
+	Symtype       func(*Addr) int
+	Textflag      func(*Prog) int
+	Minlc         uint32
+	Ptrsize       int64
+	Regsize       int
 	D_ADDR        int
 	D_AUTO        int
 	D_BRANCH      int
@@ -296,27 +296,27 @@ type LinkArch struct {
 }
 
 type Library struct {
-	objref string
-	srcref string
-	file   string
-	pkg    string
+	Objref string
+	Srcref string
+	File   string
+	Pkg    string
 }
 
 type Pcln struct {
-	pcsp        Pcdata
-	pcfile      Pcdata
-	pcline      Pcdata
-	pcdata      []Pcdata
-	funcdata    []*LSym
-	funcdataoff []int64
-	nfuncdata   int
-	file        []*LSym
-	lastfile    *LSym
-	lastindex   int
+	Pcsp        Pcdata
+	Pcfile      Pcdata
+	Pcline      Pcdata
+	Pcdata      []Pcdata
+	Funcdata    []*LSym
+	Funcdataoff []int64
+	Nfuncdata   int
+	File        []*LSym
+	Lastfile    *LSym
+	Lastindex   int
 }
 
 type Pcdata struct {
-	p []uint8
+	P []uint8
 }
 
 type Pciter struct {

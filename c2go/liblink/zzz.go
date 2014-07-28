@@ -1,4 +1,4 @@
-package main
+package liblink
 
 import (
 	"bufio"
@@ -7,9 +7,10 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 )
 
-func cputime() float64 {
+func Cputime() float64 {
 	return 0
 }
 
@@ -17,26 +18,19 @@ func sysfatal(format string, args ...interface{}) {
 	log.Fatalf(format, args...)
 }
 
-func bool2int(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func getgoroot() string {
+func Getgoroot() string {
 	return build.Default.GOROOT
 }
 
-func getgoos() string {
+func Getgoos() string {
 	return build.Default.GOOS
 }
 
-func getgoarch() string {
+func Getgoarch() string {
 	return build.Default.GOARCH
 }
 
-func getgoarm() string {
+func Getgoarm() string {
 	p := os.Getenv("GOARM")
 	if p == "" {
 		p = "6"
@@ -103,17 +97,19 @@ func Bwrite(b *Biobuf, buf []byte) int {
 	return n
 }
 
-func getgoversion() string {
-	return "gorsc"
+func (b *Biobuf) Write(buf []byte) (int, error) {
+	n, err := b.w.Write(buf)
+	b.written += int64(n)
+	return n, err
+}
+
+func Getgoversion() string {
+	return runtime.Version()
 }
 
 func Binitw(f io.Writer) *Biobuf {
 	return &Biobuf{w: bufio.NewWriter(f)}
 }
-
-const (
-	fmtLong = 1 << iota
-)
 
 const (
 	NOPROF_textflag   = 1
