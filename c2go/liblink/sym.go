@@ -1,4 +1,4 @@
-package main
+package liblink
 
 import (
 	"fmt"
@@ -38,11 +38,11 @@ import (
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-func yy_isalpha_sym(c int) bool {
+func yy_isalpha(c int) bool {
 	return 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z'
 }
 
-var headers_sym = []struct {
+var headers = []struct {
 	name string
 	val  int
 }{
@@ -78,59 +78,59 @@ var headers_sym = []struct {
 
 func headtype(name string) int {
 	var i int
-	for i = 0; headers_sym[i].name != ""; i++ {
-		if name == headers_sym[i].name {
-			return headers_sym[i].val
+	for i = 0; headers[i].name != ""; i++ {
+		if name == headers[i].name {
+			return headers[i].val
 		}
 	}
 	return -1
 }
 
-func headstr(v int) string {
-	var buf_sym string
+func Headstr(v int) string {
+	var buf string
 	var i int
-	for i = 0; headers_sym[i].name != ""; i++ {
-		if v == headers_sym[i].val {
-			return headers_sym[i].name
+	for i = 0; headers[i].name != ""; i++ {
+		if v == headers[i].val {
+			return headers[i].name
 		}
 	}
-	buf_sym = fmt.Sprintf("%d", v)
-	return buf_sym
+	buf = fmt.Sprintf("%d", v)
+	return buf
 }
 
-func linknew(arch *LinkArch) *Link {
+func Linknew(arch *LinkArch) *Link {
 	var ctxt *Link
 	var p string
 	var buf string
 	ctxt = new(Link)
-	ctxt.arch = arch
-	ctxt.version = HistVersion
-	ctxt.goroot = getgoroot()
-	ctxt.goroot_final = os.Getenv("GOROOT_FINAL")
-	p = getgoarch()
-	if p != arch.name {
-		log.Fatalf("invalid goarch %s (want %s)", p, arch.name)
+	ctxt.Arch = arch
+	ctxt.Version = HistVersion
+	ctxt.Goroot = Getgoroot()
+	ctxt.Goroot_final = os.Getenv("GOROOT_FINAL")
+	p = Getgoarch()
+	if p != arch.Name {
+		log.Fatalf("invalid goarch %s (want %s)", p, arch.Name)
 	}
 	buf, err := os.Getwd()
 	if err != nil {
 		buf = "/???"
 	}
-	if yy_isalpha_sym(int(buf[0])) && buf[1] == ':' {
+	if yy_isalpha(int(buf[0])) && buf[1] == ':' {
 		// On Windows.
-		ctxt.windows = 1
+		ctxt.Windows = 1
 		// Canonicalize path by converting \ to / (Windows accepts both).
 		buf = strings.Replace(buf, `\`, `/`, -1)
 	}
-	ctxt.pathname = buf
-	ctxt.headtype = headtype(getgoos())
-	if ctxt.headtype < 0 {
-		log.Fatalf("unknown goos %s", getgoos())
+	ctxt.Pathname = buf
+	ctxt.Headtype = headtype(Getgoos())
+	if ctxt.Headtype < 0 {
+		log.Fatalf("unknown goos %s", Getgoos())
 	}
 	// Record thread-local storage offset.
 	// TODO(rsc): Move tlsoffset back into the linker.
-	switch ctxt.headtype {
+	switch ctxt.Headtype {
 	default:
-		log.Fatalf("unknown thread-local storage offset for %s", headstr(ctxt.headtype))
+		log.Fatalf("unknown thread-local storage offset for %s", Headstr(ctxt.Headtype))
 	case Hplan9,
 		Hwindows:
 		break
@@ -145,17 +145,17 @@ func linknew(arch *LinkArch) *Link {
 		Hopenbsd,
 		Hdragonfly,
 		Hsolaris:
-		ctxt.tlsoffset = int(-2 * ctxt.arch.ptrsize)
+		ctxt.Tlsoffset = int(-2 * ctxt.Arch.Ptrsize)
 	case Hnacl:
-		switch ctxt.arch.thechar {
+		switch ctxt.Arch.Thechar {
 		default:
-			log.Fatalf("unknown thread-local storage offset for nacl/%s", ctxt.arch.name)
+			log.Fatalf("unknown thread-local storage offset for nacl/%s", ctxt.Arch.Name)
 		case '6':
-			ctxt.tlsoffset = 0
+			ctxt.Tlsoffset = 0
 		case '8':
-			ctxt.tlsoffset = -8
+			ctxt.Tlsoffset = -8
 		case '5':
-			ctxt.tlsoffset = 0
+			ctxt.Tlsoffset = 0
 			break
 		}
 	/*
@@ -163,25 +163,25 @@ func linknew(arch *LinkArch) *Link {
 	 * Explained in ../../pkg/runtime/cgo/gcc_darwin_*.c.
 	 */
 	case Hdarwin:
-		switch ctxt.arch.thechar {
+		switch ctxt.Arch.Thechar {
 		default:
-			log.Fatalf("unknown thread-local storage offset for darwin/%s", ctxt.arch.name)
+			log.Fatalf("unknown thread-local storage offset for darwin/%s", ctxt.Arch.Name)
 		case '6':
-			ctxt.tlsoffset = 0x8a0
+			ctxt.Tlsoffset = 0x8a0
 		case '8':
-			ctxt.tlsoffset = 0x468
+			ctxt.Tlsoffset = 0x468
 			break
 		}
 		break
 	}
 	// On arm, record goarm.
-	if ctxt.arch.thechar == '5' {
-		p = getgoarm()
+	if ctxt.Arch.Thechar == '5' {
+		p = Getgoarm()
 		if p != "" {
 			x, _ := strconv.Atoi(p)
-			ctxt.goarm = x
+			ctxt.Goarm = x
 		} else {
-			ctxt.goarm = 6
+			ctxt.Goarm = 6
 		}
 	}
 	return ctxt
@@ -191,22 +191,22 @@ func linknewsym(ctxt *Link, symb string, v uint32) *LSym {
 	var s *LSym
 	s = new(LSym)
 	*s = LSym{}
-	s.dynid = -1
-	s.plt = -1
-	s.got = -1
-	s.name = symb
-	s.typ = 0
-	s.version = v
-	s.value = 0
-	s.sig = 0
-	s.size = 0
-	ctxt.nsymbol++
-	s.allsym = ctxt.allsym
-	ctxt.allsym = s
+	s.Dynid = -1
+	s.Plt = -1
+	s.Got = -1
+	s.Name = symb
+	s.Typ = 0
+	s.Version = v
+	s.Value = 0
+	s.Sig = 0
+	s.Size = 0
+	ctxt.Nsymbol++
+	s.Allsym = ctxt.Allsym
+	ctxt.Allsym = s
 	return s
 }
 
-func _lookup_sym(ctxt *Link, symb string, v uint32, creat int) *LSym {
+func _lookup(ctxt *Link, symb string, v uint32, creat int) *LSym {
 	var s *LSym
 	var p string
 	var h uint32
@@ -216,8 +216,8 @@ func _lookup_sym(ctxt *Link, symb string, v uint32, creat int) *LSym {
 	}
 	h &= 0xffffff
 	h %= LINKHASH
-	for s = ctxt.hash[h]; s != nil; s = s.hash {
-		if s.version == v && s.name == symb {
+	for s = ctxt.Hash[h]; s != nil; s = s.Hash {
+		if s.Version == v && s.Name == symb {
 			return s
 		}
 	}
@@ -225,19 +225,19 @@ func _lookup_sym(ctxt *Link, symb string, v uint32, creat int) *LSym {
 		return nil
 	}
 	s = linknewsym(ctxt, symb, v)
-	s.extname = s.name
-	s.hash = ctxt.hash[h]
-	ctxt.hash[h] = s
+	s.Extname = s.Name
+	s.Hash = ctxt.Hash[h]
+	ctxt.Hash[h] = s
 	return s
 }
 
-func linklookup(ctxt *Link, name string, v uint32) *LSym {
-	return _lookup_sym(ctxt, name, v, 1)
+func Linklookup(ctxt *Link, name string, v uint32) *LSym {
+	return _lookup(ctxt, name, v, 1)
 }
 
 // read-only lookup
 func linkrlookup(ctxt *Link, name string, v uint32) *LSym {
-	return _lookup_sym(ctxt, name, v, 0)
+	return _lookup(ctxt, name, v, 0)
 }
 
 func linksymfmt(s *LSym) string {
@@ -247,6 +247,6 @@ func linksymfmt(s *LSym) string {
 		f += "<nil>"
 		return f
 	}
-	f += s.name
+	f += s.Name
 	return f
 }

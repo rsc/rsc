@@ -1,6 +1,10 @@
-package main
+package amd64
 
-import "fmt"
+import (
+	"fmt"
+
+	"code.google.com/p/rsc/c2go/liblink"
+)
 
 // Inferno utils/6c/list.c
 // http://code.google.com/p/inferno-os/source/browse/utils/6c/list.c
@@ -44,24 +48,24 @@ import "fmt"
 //
 //	%$ char*	String constant addresses (for internal use only)
 const (
-	STRINGSZ_list6 = 1000
+	STRINGSZ = 1000
 )
 
-func Pconv_list6(p *Prog) string {
+func Pconv(p *liblink.Prog) string {
 	var str string
 	var fp string
 
-	switch p.as {
-	case ADATA_6:
-		str = fmt.Sprintf("%.5d (%v)\t%v\t%v/%d,%v", p.pc, p.Line(), Aconv_list6(p.as), Dconv_list6(p, 0, &p.from), p.from.scale, Dconv_list6(p, 0, &p.to))
-	case ATEXT_6:
-		if p.from.scale != 0 {
-			str = fmt.Sprintf("%.5d (%v)\t%v\t%v,%d,%v", p.pc, p.Line(), Aconv_list6(p.as), Dconv_list6(p, 0, &p.from), p.from.scale, Dconv_list6(p, fmtLong, &p.to))
+	switch p.As {
+	case ADATA:
+		str = fmt.Sprintf("%.5d (%v)\t%v\t%v/%d,%v", p.Pc, p.Line(), Aconv(p.As), Dconv(p, 0, &p.From), p.From.Scale, Dconv(p, 0, &p.To))
+	case ATEXT:
+		if p.From.Scale != 0 {
+			str = fmt.Sprintf("%.5d (%v)\t%v\t%v,%d,%v", p.Pc, p.Line(), Aconv(p.As), Dconv(p, 0, &p.From), p.From.Scale, Dconv(p, fmtLong, &p.To))
 			break
 		}
-		str = fmt.Sprintf("%.5d (%v)\t%v\t%v,%v", p.pc, p.Line(), Aconv_list6(p.as), Dconv_list6(p, 0, &p.from), Dconv_list6(p, fmtLong, &p.to))
+		str = fmt.Sprintf("%.5d (%v)\t%v\t%v,%v", p.Pc, p.Line(), Aconv(p.As), Dconv(p, 0, &p.From), Dconv(p, fmtLong, &p.To))
 	default:
-		str = fmt.Sprintf("%.5d (%v)\t%v\t%v,%v", p.pc, p.Line(), Aconv_list6(p.as), Dconv_list6(p, 0, &p.from), Dconv_list6(p, 0, &p.to))
+		str = fmt.Sprintf("%.5d (%v)\t%v\t%v,%v", p.Pc, p.Line(), Aconv(p.As), Dconv(p, 0, &p.From), Dconv(p, 0, &p.To))
 		break
 	}
 
@@ -69,89 +73,89 @@ func Pconv_list6(p *Prog) string {
 	return fp
 }
 
-func Aconv_list6(i int) string {
+func Aconv(i int) string {
 	var fp string
 
-	fp += anames6[i]
+	fp += Anames6[i]
 	return fp
 }
 
-func Dconv_list6(p *Prog, flag int, a *Addr) string {
+func Dconv(p *liblink.Prog, flag int, a *liblink.Addr) string {
 	var str string
 	var s string
 	var fp string
 	var i int
 
-	i = a.typ
+	i = a.Typ
 	if flag&fmtLong != 0 /*untyped*/ {
-		if i == D_CONST_6 {
-			str = fmt.Sprintf("$%d-%d", a.offset&0xffffffff, a.offset>>32)
+		if i == D_CONST {
+			str = fmt.Sprintf("$%d-%d", a.Offset&0xffffffff, a.Offset>>32)
 		} else {
 			// ATEXT dst is not constant
-			str = fmt.Sprintf("!!%v", Dconv_list6(p, 0, a))
+			str = fmt.Sprintf("!!%v", Dconv(p, 0, a))
 		}
 		goto brk
 	}
-	if i >= D_INDIR_6 {
-		if a.offset != 0 {
-			str = fmt.Sprintf("%d(%v)", a.offset, Rconv_list6(i-D_INDIR_6))
+	if i >= D_INDIR {
+		if a.Offset != 0 {
+			str = fmt.Sprintf("%d(%v)", a.Offset, Rconv(i-D_INDIR))
 		} else {
-			str = fmt.Sprintf("(%v)", Rconv_list6(i-D_INDIR_6))
+			str = fmt.Sprintf("(%v)", Rconv(i-D_INDIR))
 		}
 		goto brk
 	}
 	switch i {
 	default:
-		if a.offset != 0 {
-			str = fmt.Sprintf("$%d,%v", a.offset, Rconv_list6(i))
+		if a.Offset != 0 {
+			str = fmt.Sprintf("$%d,%v", a.Offset, Rconv(i))
 		} else {
-			str = fmt.Sprintf("%v", Rconv_list6(i))
+			str = fmt.Sprintf("%v", Rconv(i))
 		}
-	case D_NONE_6:
+	case D_NONE:
 		str = ""
-	case D_BRANCH_6:
-		if a.sym != nil {
-			str = fmt.Sprintf("%s(SB)", a.sym.name)
-		} else if p != nil && p.pcond != nil {
-			str = fmt.Sprintf("%d", p.pcond.pc)
-		} else if a.u.branch != nil {
-			str = fmt.Sprintf("%d", a.u.branch.pc)
+	case D_BRANCH:
+		if a.Sym != nil {
+			str = fmt.Sprintf("%s(SB)", a.Sym.Name)
+		} else if p != nil && p.Pcond != nil {
+			str = fmt.Sprintf("%d", p.Pcond.Pc)
+		} else if a.U.Branch != nil {
+			str = fmt.Sprintf("%d", a.U.Branch.Pc)
 		} else {
-			str = fmt.Sprintf("%d(PC)", a.offset)
+			str = fmt.Sprintf("%d(PC)", a.Offset)
 		}
-	case D_EXTERN_6:
-		str = fmt.Sprintf("%s+%d(SB)", a.sym.name, a.offset)
-	case D_STATIC_6:
-		str = fmt.Sprintf("%s<>+%d(SB)", a.sym.name, a.offset)
-	case D_AUTO_6:
-		if a.sym != nil {
-			str = fmt.Sprintf("%s+%d(SP)", a.sym.name, a.offset)
+	case D_EXTERN:
+		str = fmt.Sprintf("%s+%d(SB)", a.Sym.Name, a.Offset)
+	case D_STATIC:
+		str = fmt.Sprintf("%s<>+%d(SB)", a.Sym.Name, a.Offset)
+	case D_AUTO:
+		if a.Sym != nil {
+			str = fmt.Sprintf("%s+%d(SP)", a.Sym.Name, a.Offset)
 		} else {
-			str = fmt.Sprintf("%d(SP)", a.offset)
+			str = fmt.Sprintf("%d(SP)", a.Offset)
 		}
-	case D_PARAM_6:
-		if a.sym != nil {
-			str = fmt.Sprintf("%s+%d(FP)", a.sym.name, a.offset)
+	case D_PARAM:
+		if a.Sym != nil {
+			str = fmt.Sprintf("%s+%d(FP)", a.Sym.Name, a.Offset)
 		} else {
-			str = fmt.Sprintf("%d(FP)", a.offset)
+			str = fmt.Sprintf("%d(FP)", a.Offset)
 		}
-	case D_CONST_6:
-		str = fmt.Sprintf("$%d", a.offset)
-	case D_FCONST_6:
-		str = fmt.Sprintf("$(%.17g)", a.u.dval)
-	case D_SCONST_6:
-		str = fmt.Sprintf("$\"%q\"", a.u.sval)
-	case D_ADDR_6:
-		a.typ = a.index
-		a.index = D_NONE_6
-		str = fmt.Sprintf("$%v", Dconv_list6(p, 0, a))
-		a.index = a.typ
-		a.typ = D_ADDR_6
+	case D_CONST:
+		str = fmt.Sprintf("$%d", a.Offset)
+	case D_FCONST:
+		str = fmt.Sprintf("$(%.17g)", a.U.Dval)
+	case D_SCONST:
+		str = fmt.Sprintf("$\"%q\"", a.U.Sval)
+	case D_ADDR:
+		a.Typ = a.Index
+		a.Index = D_NONE
+		str = fmt.Sprintf("$%v", Dconv(p, 0, a))
+		a.Index = a.Typ
+		a.Typ = D_ADDR
 		goto conv
 	}
 brk:
-	if a.index != D_NONE_6 {
-		s = fmt.Sprintf("(%v*%d)", Rconv_list6(int(a.index)), int(a.scale))
+	if a.Index != D_NONE {
+		s = fmt.Sprintf("(%v*%d)", Rconv(int(a.Index)), int(a.Scale))
 		str += s
 	}
 conv:
@@ -159,7 +163,7 @@ conv:
 	return fp
 }
 
-var regstr_list6 = []string{
+var Regstr = []string{
 	"AL", /* [D_AL] */
 	"CL",
 	"DL",
@@ -275,12 +279,12 @@ var regstr_list6 = []string{
 	"NONE", /* [D_NONE] */
 }
 
-func Rconv_list6(r int) string {
+func Rconv(r int) string {
 	var str string
 	var fp string
 
-	if r >= D_AL_6 && r <= D_NONE_6 {
-		str = fmt.Sprintf("%s", regstr_list6[r-D_AL_6])
+	if r >= D_AL && r <= D_NONE {
+		str = fmt.Sprintf("%s", Regstr[r-D_AL])
 	} else {
 		str = fmt.Sprintf("gok(%d)", r)
 	}

@@ -1,4 +1,4 @@
-package main
+package liblink
 
 import (
 	"log"
@@ -39,19 +39,19 @@ func mangle(file string) {
 	log.Fatalf("%s: mangled input file", file)
 }
 
-func symgrow(ctxt *Link, s *LSym, lsiz int64) {
+func Symgrow(ctxt *Link, s *LSym, lsiz int64) {
 	var siz int
 	siz = int(lsiz)
 	if int64(siz) != lsiz {
-		sysfatal("symgrow size %d too long", lsiz)
+		sysfatal("Symgrow size %d too long", lsiz)
 	}
-	if len(s.p) >= siz {
+	if len(s.P) >= siz {
 		return
 	}
-	for cap(s.p) < siz {
-		s.p = append(s.p[:cap(s.p)], 0)
+	for cap(s.P) < siz {
+		s.P = append(s.P[:cap(s.P)], 0)
 	}
-	s.p = s.p[:siz]
+	s.P = s.P[:siz]
 }
 
 func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
@@ -60,60 +60,60 @@ func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
 	var i int
 	var o int64
 	var r *Reloc
-	off = int(p.from.offset)
-	siz = ctxt.arch.datasize(p)
+	off = int(p.From.Offset)
+	siz = ctxt.Arch.Datasize(p)
 	if off < 0 || siz < 0 || off >= 1<<30 || siz >= 100 {
 		mangle(pn)
 	}
-	symgrow(ctxt, s, int64(off+siz))
-	if p.to.typ == ctxt.arch.D_FCONST {
+	Symgrow(ctxt, s, int64(off+siz))
+	if p.To.Typ == ctxt.Arch.D_FCONST {
 		switch siz {
 		default:
 		case 4:
-			ctxt.arch.byteOrder.PutUint32(s.p[off:], math.Float32bits(float32(p.to.u.dval)))
+			ctxt.Arch.ByteOrder.PutUint32(s.P[off:], math.Float32bits(float32(p.To.U.Dval)))
 		case 8:
-			ctxt.arch.byteOrder.PutUint64(s.p[off:], math.Float64bits(p.to.u.dval))
+			ctxt.Arch.ByteOrder.PutUint64(s.P[off:], math.Float64bits(p.To.U.Dval))
 		}
 	} else {
-		if p.to.typ == ctxt.arch.D_SCONST {
+		if p.To.Typ == ctxt.Arch.D_SCONST {
 			for i = 0; i < siz; i++ {
-				s.p[off+i] = uint8(p.to.u.sval[i])
+				s.P[off+i] = uint8(p.To.U.Sval[i])
 			}
 		} else {
-			if p.to.typ == ctxt.arch.D_CONST {
-				if p.to.sym != nil {
-					r = addrel(s)
-					r.off = int64(off)
-					r.siz = uint8(siz)
-					r.sym = p.to.sym
-					r.typ = int(R_ADDR)
-					r.add = p.to.offset
+			if p.To.Typ == ctxt.Arch.D_CONST {
+				if p.To.Sym != nil {
+					r = Addrel(s)
+					r.Off = int64(off)
+					r.Siz = uint8(siz)
+					r.Sym = p.To.Sym
+					r.Typ = int(R_ADDR)
+					r.Add = p.To.Offset
 					goto out
 				}
-				o = p.to.offset
+				o = p.To.Offset
 				switch siz {
 				default:
-					ctxt.diag("bad nuxi %d\n%v", siz, p)
+					ctxt.Diag("bad nuxi %d\n%v", siz, p)
 					break
 				case 1:
-					s.p[off] = byte(o)
+					s.P[off] = byte(o)
 				case 2:
-					ctxt.arch.byteOrder.PutUint16(s.p[off:], uint16(o))
+					ctxt.Arch.ByteOrder.PutUint16(s.P[off:], uint16(o))
 				case 4:
-					ctxt.arch.byteOrder.PutUint32(s.p[off:], uint32(o))
+					ctxt.Arch.ByteOrder.PutUint32(s.P[off:], uint32(o))
 				case 8:
-					ctxt.arch.byteOrder.PutUint64(s.p[off:], uint64(o))
+					ctxt.Arch.ByteOrder.PutUint64(s.P[off:], uint64(o))
 				}
 			} else {
-				if p.to.typ == ctxt.arch.D_ADDR {
-					r = addrel(s)
-					r.off = int64(off)
-					r.siz = uint8(siz)
-					r.sym = p.to.sym
-					r.typ = int(R_ADDR)
-					r.add = p.to.offset
+				if p.To.Typ == ctxt.Arch.D_ADDR {
+					r = Addrel(s)
+					r.Off = int64(off)
+					r.Siz = uint8(siz)
+					r.Sym = p.To.Sym
+					r.Typ = int(R_ADDR)
+					r.Add = p.To.Offset
 				} else {
-					ctxt.diag("bad data: %v", p)
+					ctxt.Diag("bad data: %v", p)
 				}
 			}
 		out:
@@ -121,37 +121,37 @@ func savedata(ctxt *Link, s *LSym, p *Prog, pn string) {
 	}
 }
 
-func addrel(s *LSym) *Reloc {
-	s.r = append(s.r, Reloc{})
-	return &s.r[len(s.r)-1]
+func Addrel(s *LSym) *Reloc {
+	s.R = append(s.R, Reloc{})
+	return &s.R[len(s.R)-1]
 }
 
 func setuintxx(ctxt *Link, s *LSym, off int64, v uint64, wid int64) int64 {
-	if s.typ == 0 {
-		s.typ = int(SDATA)
+	if s.Typ == 0 {
+		s.Typ = int(SDATA)
 	}
-	s.reachable = 1
-	if s.size < off+wid {
-		s.size = off + wid
-		symgrow(ctxt, s, s.size)
+	s.Reachable = 1
+	if s.Size < off+wid {
+		s.Size = off + wid
+		Symgrow(ctxt, s, s.Size)
 	}
 	switch wid {
 	case 1:
-		s.p[off] = uint8(v)
+		s.P[off] = uint8(v)
 		break
 	case 2:
-		ctxt.arch.byteOrder.PutUint16(s.p[off:], uint16(v))
+		ctxt.Arch.ByteOrder.PutUint16(s.P[off:], uint16(v))
 	case 4:
-		ctxt.arch.byteOrder.PutUint32(s.p[off:], uint32(v))
+		ctxt.Arch.ByteOrder.PutUint32(s.P[off:], uint32(v))
 	case 8:
-		ctxt.arch.byteOrder.PutUint64(s.p[off:], uint64(v))
+		ctxt.Arch.ByteOrder.PutUint64(s.P[off:], uint64(v))
 	}
 	return off + wid
 }
 
 func adduintxx(ctxt *Link, s *LSym, v uint64, wid int64) int64 {
 	var off int64
-	off = s.size
+	off = s.Size
 	setuintxx(ctxt, s, off, v, wid)
 	return off
 }
@@ -164,11 +164,11 @@ func adduint16(ctxt *Link, s *LSym, v uint16) int64 {
 	return adduintxx(ctxt, s, uint64(v), 2)
 }
 
-func adduint32(ctxt *Link, s *LSym, v uint32) int64 {
+func Adduint32(ctxt *Link, s *LSym, v uint32) int64 {
 	return adduintxx(ctxt, s, uint64(v), 4)
 }
 
-func adduint64(ctxt *Link, s *LSym, v uint64) int64 {
+func Adduint64(ctxt *Link, s *LSym, v uint64) int64 {
 	return adduintxx(ctxt, s, v, 8)
 }
 
@@ -191,39 +191,39 @@ func setuint64(ctxt *Link, s *LSym, r int64, v uint64) int64 {
 func addaddrplus(ctxt *Link, s *LSym, t *LSym, add int64) int64 {
 	var i int64
 	var r *Reloc
-	if s.typ == 0 {
-		s.typ = SDATA
+	if s.Typ == 0 {
+		s.Typ = SDATA
 	}
-	s.reachable = 1
-	i = s.size
-	s.size += ctxt.arch.ptrsize
-	symgrow(ctxt, s, s.size)
-	r = addrel(s)
-	r.sym = t
-	r.off = i
-	r.siz = uint8(ctxt.arch.ptrsize)
-	r.typ = R_ADDR
-	r.add = add
-	return i + int64(r.siz)
+	s.Reachable = 1
+	i = s.Size
+	s.Size += ctxt.Arch.Ptrsize
+	Symgrow(ctxt, s, s.Size)
+	r = Addrel(s)
+	r.Sym = t
+	r.Off = i
+	r.Siz = uint8(ctxt.Arch.Ptrsize)
+	r.Typ = R_ADDR
+	r.Add = add
+	return i + int64(r.Siz)
 }
 
 func addpcrelplus(ctxt *Link, s *LSym, t *LSym, add int64) int64 {
 	var i int64
 	var r *Reloc
-	if s.typ == 0 {
-		s.typ = SDATA
+	if s.Typ == 0 {
+		s.Typ = SDATA
 	}
-	s.reachable = 1
-	i = s.size
-	s.size += 4
-	symgrow(ctxt, s, s.size)
-	r = addrel(s)
-	r.sym = t
-	r.off = i
-	r.add = add
-	r.typ = R_PCREL
-	r.siz = 4
-	return i + int64(r.siz)
+	s.Reachable = 1
+	i = s.Size
+	s.Size += 4
+	Symgrow(ctxt, s, s.Size)
+	r = Addrel(s)
+	r.Sym = t
+	r.Off = i
+	r.Add = add
+	r.Typ = R_PCREL
+	r.Siz = 4
+	return i + int64(r.Siz)
 }
 
 func addaddr(ctxt *Link, s *LSym, t *LSym) int64 {
@@ -232,21 +232,21 @@ func addaddr(ctxt *Link, s *LSym, t *LSym) int64 {
 
 func setaddrplus(ctxt *Link, s *LSym, off int64, t *LSym, add int64) int64 {
 	var r *Reloc
-	if s.typ == 0 {
-		s.typ = SDATA
+	if s.Typ == 0 {
+		s.Typ = SDATA
 	}
-	s.reachable = 1
-	if off+ctxt.arch.ptrsize > s.size {
-		s.size = off + ctxt.arch.ptrsize
-		symgrow(ctxt, s, s.size)
+	s.Reachable = 1
+	if off+ctxt.Arch.Ptrsize > s.Size {
+		s.Size = off + ctxt.Arch.Ptrsize
+		Symgrow(ctxt, s, s.Size)
 	}
-	r = addrel(s)
-	r.sym = t
-	r.off = off
-	r.siz = uint8(ctxt.arch.ptrsize)
-	r.typ = R_ADDR
-	r.add = add
-	return off + int64(r.siz)
+	r = Addrel(s)
+	r.Sym = t
+	r.Off = off
+	r.Siz = uint8(ctxt.Arch.Ptrsize)
+	r.Typ = R_ADDR
+	r.Add = add
+	return off + int64(r.Siz)
 }
 
 func setaddr(ctxt *Link, s *LSym, off int64, t *LSym) int64 {
@@ -256,36 +256,36 @@ func setaddr(ctxt *Link, s *LSym, off int64, t *LSym) int64 {
 func addsize(ctxt *Link, s *LSym, t *LSym) int64 {
 	var i int64
 	var r *Reloc
-	if s.typ == 0 {
-		s.typ = SDATA
+	if s.Typ == 0 {
+		s.Typ = SDATA
 	}
-	s.reachable = 1
-	i = s.size
-	s.size += ctxt.arch.ptrsize
-	symgrow(ctxt, s, s.size)
-	r = addrel(s)
-	r.sym = t
-	r.off = i
-	r.siz = uint8(ctxt.arch.ptrsize)
-	r.typ = R_SIZE
-	return i + int64(r.siz)
+	s.Reachable = 1
+	i = s.Size
+	s.Size += ctxt.Arch.Ptrsize
+	Symgrow(ctxt, s, s.Size)
+	r = Addrel(s)
+	r.Sym = t
+	r.Off = i
+	r.Siz = uint8(ctxt.Arch.Ptrsize)
+	r.Typ = R_SIZE
+	return i + int64(r.Siz)
 }
 
 func addaddrplus4(ctxt *Link, s *LSym, t *LSym, add int64) int64 {
 	var i int64
 	var r *Reloc
-	if s.typ == 0 {
-		s.typ = SDATA
+	if s.Typ == 0 {
+		s.Typ = SDATA
 	}
-	s.reachable = 1
-	i = s.size
-	s.size += 4
-	symgrow(ctxt, s, s.size)
-	r = addrel(s)
-	r.sym = t
-	r.off = i
-	r.siz = 4
-	r.typ = R_ADDR
-	r.add = add
-	return i + int64(r.siz)
+	s.Reachable = 1
+	i = s.Size
+	s.Size += 4
+	Symgrow(ctxt, s, s.Size)
+	r = Addrel(s)
+	r.Sym = t
+	r.Off = i
+	r.Siz = 4
+	r.Typ = R_ADDR
+	r.Add = add
+	return i + int64(r.Siz)
 }

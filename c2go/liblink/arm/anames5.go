@@ -1,4 +1,15 @@
-package main
+package arm
+
+func bool2int(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+const (
+	fmtLong = 1 << iota
+)
 
 // list[568].c
 // obj.c
@@ -8,7 +19,7 @@ package main
 // sym.c
 // TODO(ality): remove this workaround.
 //   It's here because Pconv in liblink/list?.c references %L.
-var anames5 = []string{
+var Anames5 = []string{
 	"XXX",
 	"AND",
 	"EOR",

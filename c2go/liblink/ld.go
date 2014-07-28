@@ -1,4 +1,4 @@
-package main
+package liblink
 
 import (
 	"os"
@@ -44,19 +44,19 @@ func addlib(ctxt *Link, src string, obj string, pathname string) {
 	short := strings.TrimSuffix(name, ".a")
 
 	// already loaded?
-	for i := range ctxt.library {
-		if ctxt.library[i].pkg == short {
+	for i := range ctxt.Library {
+		if ctxt.Library[i].Pkg == short {
 			return
 		}
 	}
 
 	var pname string
 	// runtime -> runtime.a for search
-	if (!(ctxt.windows != 0) && name[0] == '/') || (ctxt.windows != 0 && name[1] == ':') {
+	if (!(ctxt.Windows != 0) && name[0] == '/') || (ctxt.Windows != 0 && name[1] == ':') {
 		pname = name
 	} else {
 		// try dot, -L "libdir", and then goroot.
-		for _, dir := range ctxt.libdir {
+		for _, dir := range ctxt.Libdir {
 			pname = dir + "/" + name
 			if _, err := os.Stat(pname); !os.IsNotExist(err) {
 				break
@@ -68,8 +68,8 @@ func addlib(ctxt *Link, src string, obj string, pathname string) {
 	// runtime.a -> runtime
 	pname = strings.TrimSuffix(pname, ".a")
 
-	if ctxt.debugvlog > 1 && ctxt.bso != nil {
-		Bprint(ctxt.bso, "%5.2f addlib: %s %s pulls in %s\n", cputime(), obj, src, pname)
+	if ctxt.Debugvlog > 1 && ctxt.Bso != nil {
+		Bprint(ctxt.Bso, "%5.2f addlib: %s %s pulls in %s\n", Cputime(), obj, src, pname)
 	}
 	addlibpath(ctxt, src, obj, pname, name)
 }
@@ -82,73 +82,73 @@ func addlib(ctxt *Link, src string, obj string, pathname string) {
  *	pkg: package import path, e.g. container/vector
  */
 func addlibpath(ctxt *Link, srcref string, objref string, file string, pkg string) {
-	for i := range ctxt.library {
-		if file == ctxt.library[i].file {
+	for i := range ctxt.Library {
+		if file == ctxt.Library[i].File {
 			return
 		}
 	}
-	if ctxt.debugvlog > 1 && ctxt.bso != nil {
-		Bprint(ctxt.bso, "%5.2f addlibpath: srcref: %s objref: %s file: %s pkg: %s\n", cputime(), srcref, objref, file, pkg)
+	if ctxt.Debugvlog > 1 && ctxt.Bso != nil {
+		Bprint(ctxt.Bso, "%5.2f addlibpath: srcref: %s objref: %s file: %s pkg: %s\n", Cputime(), srcref, objref, file, pkg)
 	}
-	ctxt.library = append(ctxt.library, Library{
-		objref: objref,
-		srcref: srcref,
-		file:   file,
-		pkg:    pkg,
+	ctxt.Library = append(ctxt.Library, Library{
+		Objref: objref,
+		Srcref: srcref,
+		File:   file,
+		Pkg:    pkg,
 	})
 }
 
 const (
-	LOG_ld = 5
+	LOG = 5
 )
 
 func mkfwd(sym *LSym) {
 	var p *Prog
 	var i int
-	var dwn [LOG_ld]int
-	var cnt [LOG_ld]int
-	var lst [LOG_ld]*Prog
-	for i = 0; i < LOG_ld; i++ {
+	var dwn [LOG]int
+	var cnt [LOG]int
+	var lst [LOG]*Prog
+	for i = 0; i < LOG; i++ {
 		if i == 0 {
 			cnt[i] = 1
 		} else {
-			cnt[i] = LOG_ld * cnt[i-1]
+			cnt[i] = LOG * cnt[i-1]
 		}
 		dwn[i] = 1
 		lst[i] = nil
 	}
 	i = 0
-	for p = sym.text; p != nil && p.link != nil; p = p.link {
+	for p = sym.Text; p != nil && p.Link != nil; p = p.Link {
 		i--
 		if i < 0 {
-			i = LOG_ld - 1
+			i = LOG - 1
 		}
-		p.forwd = nil
+		p.Forwd = nil
 		dwn[i]--
 		if dwn[i] <= 0 {
 			dwn[i] = cnt[i]
 			if lst[i] != nil {
-				lst[i].forwd = p
+				lst[i].Forwd = p
 			}
 			lst[i] = p
 		}
 	}
 }
 
-func copyp(ctxt *Link, q *Prog) *Prog {
+func Copyp(ctxt *Link, q *Prog) *Prog {
 	var p *Prog
-	p = ctxt.prg()
+	p = ctxt.Prg()
 	*p = *q
 	return p
 }
 
-func appendp(ctxt *Link, q *Prog) *Prog {
+func Appendp(ctxt *Link, q *Prog) *Prog {
 	var p *Prog
-	p = ctxt.prg()
-	p.link = q.link
-	q.link = p
-	p.lineno = q.lineno
-	p.mode = q.mode
+	p = ctxt.Prg()
+	p.Link = q.Link
+	q.Link = p
+	p.Lineno = q.Lineno
+	p.Mode = q.Mode
 	return p
 }
 

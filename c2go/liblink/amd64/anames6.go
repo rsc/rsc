@@ -1,6 +1,17 @@
-package main
+package amd64
 
-var anames6 = []string{
+func bool2int(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+const (
+	fmtLong = 1 << iota
+)
+
+var Anames6 = []string{
 	"XXX",
 	"AAA",
 	"AAD",

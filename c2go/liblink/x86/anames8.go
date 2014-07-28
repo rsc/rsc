@@ -1,6 +1,17 @@
-package main
+package x86
 
-var anames8 = []string{
+func bool2int(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+const (
+	fmtLong = 1 << iota
+)
+
+var Anames8 = []string{
 	"XXX",
 	"AAA",
 	"AAD",
