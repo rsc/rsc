@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"code.google.com/p/rsc/cc"
@@ -29,9 +30,10 @@ func fprintf(span cc.Span, format string, args ...interface{}) {
 }
 
 type Printer struct {
-	buf    bytes.Buffer
-	indent int
-	html   bool
+	Package string
+	buf     bytes.Buffer
+	indent  int
+	html    bool
 
 	printed map[interface{}]bool
 	suffix  []cc.Comment // suffix comments to print at next newline
@@ -431,6 +433,9 @@ func (p *Printer) printExpr(x *cc.Expr, prec int) {
 		name := x.Text
 		if x.XDecl != nil {
 			name = x.XDecl.Name
+			if x.XDecl.GoPackage != "" && p.Package != "" && x.XDecl.GoPackage != p.Package {
+				name = path.Base(x.XDecl.GoPackage) + "." + name
+			}
 		}
 		p.Print(name)
 
@@ -743,6 +748,10 @@ func (p *Printer) printType(t *cc.Type) {
 		if t.Base != nil && typemap[t.Base.Kind] != "" && strings.ToLower(t.Name) == t.Name {
 			p.Print(typemap[t.Base.Kind])
 			return
+		}
+		if t.TypeDecl != nil && t.TypeDecl.GoPackage != "" && p.Package != "" && t.TypeDecl.GoPackage != p.Package {
+			p.Print(path.Base(t.TypeDecl.GoPackage) + "." + t.Name)
+			break
 		}
 		p.Print(t.Name)
 

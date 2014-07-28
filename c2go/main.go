@@ -14,6 +14,8 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strings"
+	"unicode/utf8"
 
 	"code.google.com/p/rsc/c2go"
 	"code.google.com/p/rsc/cc"
@@ -22,7 +24,7 @@ import (
 var (
 	src     = flag.String("src", "", "src of search")
 	dst     = flag.String("dst", "", "dst of search")
-	out     = flag.String("o", "/tmp/c2go", "output directory")
+	out     = flag.String("o", "/tmp/c2go/src", "output directory")
 	strip   = flag.String("", "", "strip from input paths when writing in output directory")
 	inc     = flag.String("I", "", "include directory")
 	fixFile = flag.String("f", "", "file containing func redefinitions")
@@ -62,7 +64,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	renameDecls(prog)
+	renameDecls(fixes, prog)
 	inferTypes(fixes, prog)
 	rewriteSyntax(prog)
 	rewriteTypes(prog)
@@ -73,6 +75,7 @@ func main() {
 	fixGoTypes(prog)
 	fixBools(prog)
 	finalEdits(prog)
+	doExports(fixes, prog)
 	write(prog, files, fixes)
 	for _, d := range fixes.Diffs {
 		if d.Used == 0 {
@@ -118,25 +121,25 @@ func declKey(d *cc.Decl) string {
 }
 
 var override = map[string]*cc.Type{
-	"oprrr_asm5.return": uint32Type,
-	"opbra_asm5.return": uint32Type,
-	"olr_asm5.return":   uint32Type,
-	"olhr_asm5.return":  uint32Type,
-	"olrr_asm5.return":  uint32Type,
-	"osr_asm5.return":   uint32Type,
-	"olhrr_asm5.return": uint32Type,
-	"oshr_asm5.return":  uint32Type,
-	"ofsr_asm5.return":  uint32Type,
-	"osrr_asm5.return":  uint32Type,
-	"oshrr_asm5.return": uint32Type,
-	"omvl_asm5.return":  uint32Type,
-	"ocmp_asm5.return":  uint32Type,
+	"oprrr.return": uint32Type,
+	"opbra.return": uint32Type,
+	"olr.return":   uint32Type,
+	"olhr.return":  uint32Type,
+	"olrr.return":  uint32Type,
+	"osr.return":   uint32Type,
+	"olhrr.return": uint32Type,
+	"oshr.return":  uint32Type,
+	"ofsr.return":  uint32Type,
+	"osrr.return":  uint32Type,
+	"oshrr.return": uint32Type,
+	"omvl.return":  uint32Type,
+	"ocmp.return":  uint32Type,
 
-	"asmout_asm5.o1":  uint32Type,
-	"asmout_asm5.o4":  uint32Type,
-	"asmout_asm5.o5":  uint32Type,
-	"asmout_asm5.o6":  uint32Type,
-	"asmout_asm5.rel": &cc.Type{Kind: cc.Ptr},
+	"asmout.o1":  uint32Type,
+	"asmout.o4":  uint32Type,
+	"asmout.o5":  uint32Type,
+	"asmout.o6":  uint32Type,
+	"asmout.rel": &cc.Type{Kind: cc.Ptr},
 
 	"setuintxx.wid": int64Type,
 
@@ -144,13 +147,13 @@ var override = map[string]*cc.Type{
 
 	"chipfloat5.h": uint32Type,
 
-	"oplook_asm5.return": &cc.Type{Kind: cc.Ptr},
-	"oplook_asm5.c1":     &cc.Type{Kind: c2go.Slice},
-	"oplook_asm5.c3":     &cc.Type{Kind: c2go.Slice},
+	"oplook.return": &cc.Type{Kind: cc.Ptr},
+	"oplook.c1":     &cc.Type{Kind: c2go.Slice},
+	"oplook.c3":     &cc.Type{Kind: c2go.Slice},
 
-	"Oprang_asm5.start": &cc.Type{Kind: c2go.Slice},
+	"Oprang.start": &cc.Type{Kind: c2go.Slice},
 
-	"asmout_asm5.out": &cc.Type{Kind: c2go.Slice, Base: uint32Type},
+	"asmout.out": &cc.Type{Kind: c2go.Slice, Base: uint32Type},
 
 	"span5.out": &cc.Type{Kind: cc.Array, Base: uint32Type, Width: &cc.Expr{Op: cc.Number, Text: "9"}},
 
@@ -453,7 +456,7 @@ func toGoType(g *flowGroup, x cc.Syntax, typ *cc.Type, cache map[*cc.Type]*cc.Ty
 
 		// Otherwise assume it is a struct or some such, and preserve the name
 		// but translate the base.
-		t := &cc.Type{Kind: cc.TypedefType, Name: typ.Name}
+		t := &cc.Type{Kind: cc.TypedefType, Name: typ.Name, TypeDecl: typ.TypeDecl}
 		cache[typ] = t
 		t.Base = toGoType(nil, nil, typ.Base, cache)
 		return t
@@ -538,6 +541,10 @@ func fixGoTypesStmt(prog *cc.Prog, fn *cc.Decl, x *cc.Stmt) {
 				return
 			case "memset":
 				fixMemset(prog, fn, x)
+				return
+			case "free":
+				x.Op = cc.Empty
+				x.Expr = nil
 				return
 			}
 		}
@@ -790,7 +797,7 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 		if fixPrintf(fn, x) {
 			return x.XType
 		}
-		if fixSpecialCall(fn, x) {
+		if fixSpecialCall(fn, x, targ) {
 			return x.XType
 		}
 		left := fixGoTypesExpr(fn, x.Left, nil)
@@ -881,10 +888,17 @@ func fixGoTypesExpr(fn *cc.Decl, x *cc.Expr, targ *cc.Type) (ret *cc.Type) {
 
 	case cc.Name:
 		if x.Text == "nelem" {
+		}
+		switch x.Text {
+		case "T", "S", "N", "L", "P":
+			x.Text = "nil"
+			x.XDecl = nil
+			return nil
+		case "nelem":
 			x.Text = "len"
 			x.XDecl = nil
-		}
-		if x.Text == "len" {
+			fallthrough
+		case "len":
 			return &cc.Type{Kind: cc.Func, Base: intType}
 		}
 		if x.XDecl == nil {
@@ -1161,7 +1175,7 @@ func isSliceOrArray(typ *cc.Type) bool {
 	return typ != nil && (typ.Kind == c2go.Slice || typ.Kind == cc.Array)
 }
 
-func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
+func fixSpecialCall(fn *cc.Decl, x *cc.Expr, targ *cc.Type) bool {
 	if x.Left.Op != cc.Name {
 		return false
 	}
@@ -1250,7 +1264,7 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 		fprintf(x.Span, "unsupported %v (%v %v)", x, c2go.GoString(left), c2go.GoString(right))
 		return true
 
-	case "malloc", "emallocz":
+	case "mal", "malloc", "emallocz":
 		if len(x.List) != 1 {
 			fprintf(x.Span, "unsupported %v - too many args", x)
 			return false
@@ -1329,6 +1343,20 @@ func fixSpecialCall(fn *cc.Decl, x *cc.Expr) bool {
 		x.Left.Text = "len"
 		x.Left.XDecl = nil
 		x.XType = intType
+		return true
+
+	case "TUP", "CASE":
+		if len(x.List) != 2 {
+			fprintf(x.Span, "unsupported %v - too many args", x)
+			return false
+		}
+		left := fixGoTypesExpr(fn, x.List[0], targ)
+		right := fixGoTypesExpr(fn, x.List[1], targ)
+		x.Op = cc.Or
+		x.Left = &cc.Expr{Op: cc.Lsh, Left: x.List[0], Right: &cc.Expr{Op: cc.Number, Text: "16"}, XType: left}
+		x.Right = x.List[1]
+		x.List = nil
+		x.XType = fixBinary(fn, x, left, right, targ)
 		return true
 	}
 
@@ -1659,4 +1687,57 @@ func finalEdits(prog *cc.Prog) {
 			}
 		}
 	})
+}
+
+func doExports(cfg *Config, prog *cc.Prog) {
+	for _, d := range cfg.TopDecls {
+		if shouldExport(cfg, d.Name) {
+			exportDecl(d)
+		}
+		pkg := d.GoPackage
+		if pkg == "" {
+			continue
+		}
+		cc.Preorder(d, func(x cc.Syntax) {
+			switch x := x.(type) {
+			case *cc.Expr:
+				if x.Op == cc.Name && x.XDecl != nil && x.XDecl.GoPackage != "" && x.XDecl.GoPackage != pkg {
+					exportDecl(x.XDecl)
+				}
+			case *cc.Type:
+				if x.Kind == cc.TypedefType && x.TypeDecl != nil && x.TypeDecl.GoPackage != "" && x.TypeDecl.GoPackage != pkg {
+					exportDecl(x.TypeDecl)
+					x.Name = x.TypeDecl.Name
+				}
+			}
+		})
+	}
+}
+
+func shouldExport(cfg *Config, name string) bool {
+	for _, s := range cfg.Exports {
+		if s == name {
+			return true
+		}
+	}
+	return false
+}
+
+func exportDecl(d *cc.Decl) {
+	d.Name = exportName(d.Name)
+	if d.Storage&cc.Typedef != 0 && d.Type.Kind == cc.Struct {
+		for _, dd := range d.Type.Decls {
+			exportDecl(dd)
+			if dd.Name == "U" {
+				for _, dd := range dd.Type.Decls {
+					exportDecl(dd)
+				}
+			}
+		}
+	}
+}
+
+func exportName(name string) string {
+	_, size := utf8.DecodeRuneInString(name)
+	return strings.ToUpper(name[:size]) + name[size:]
 }
