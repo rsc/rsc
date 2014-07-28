@@ -11,51 +11,121 @@ import (
 	"code.google.com/p/rsc/cc"
 )
 
+var goKeyword = map[string]string{
+	"chan":        "chan_",
+	"defer":       "defer_",
+	"fallthrough": "fallthrough_",
+	"func":        "fun",
+	"go":          "go_",
+	"import":      "import_",
+	"interface":   "interface_",
+	"iota":        "iota_", // not a keyword but still need to avoid
+	"map":         "map_",
+	"package":     "pkg",
+	"range":       "range_",
+	"select":      "select_",
+	"type":        "typ",
+	"var":         "var_",
+}
+
 // renameDecls renames file-local declarations to make them
 // unique across the whole set of files being considered.
 // For now, it appends the file base name to the declared name.
 // Eventually it could be smarter and not do that when not necessary.
 // It also renames names like 'type' and 'func' to avoid Go keywords.
-func renameDecls(prog *cc.Prog) {
+func renameDecls(cfg *Config, prog *cc.Prog) {
+	// Rewrite C identifiers to avoid important Go words (keywords, iota, etc).
 	cc.Preorder(prog, func(x cc.Syntax) {
 		switch x := x.(type) {
 		case *cc.Decl:
-			// Rewrite declaration names to avoid Go keywords.
-			switch x.Name {
-			case "type":
-				x.Name = "typ"
-			case "func":
-				x.Name = "fun"
+			if k := goKeyword[x.Name]; k != "" {
+				x.Name = k
 			}
 
-			// Add file name to file-static variables to avoid conflicts.
-			// TODO: Don't do this when there's no conflict?
-			if x.Storage&cc.Static != 0 || x.Name != "" && x.Type != nil && (x.Storage&cc.Typedef != 0 || x.Type.Kind == cc.Enum) && !strings.Contains(x.Span.Start.File, "/include/") {
-				file := filepath.Base(x.Span.Start.File)
-				if i := strings.Index(file, "."); i >= 0 {
-					file = file[:i]
+		case *cc.Stmt:
+			for _, lab := range x.Labels {
+				if k := goKeyword[lab.Name]; k != "" {
+					lab.Name = k
 				}
-				x.Name += "_" + file
+			}
+			switch x.Op {
+			case cc.Goto:
+				if k := goKeyword[x.Text]; k != "" {
+					x.Text = k
+				}
 			}
 		}
 	})
 
-	cc.Preorder(prog, func(x cc.Syntax) {
-		switch x := x.(type) {
-		case *cc.Type:
-			// Add file name to file-local types to avoid conflicts.
-			if x.Kind == cc.Struct && x.Tag != "" && !strings.Contains(x.Span.Start.File, "/include/") {
-				file := filepath.Base(x.Span.Start.File)
-				if i := strings.Index(file, "."); i >= 0 {
-					file = file[:i]
-				}
-				x.Tag += "_" + file
-			}
-			if x.Kind == cc.TypedefType && x.TypeDecl != nil {
-				x.Name = x.TypeDecl.Name
-			}
+	// Build list of declared top-level names.
+	// Not just prog.Decls because of enums and struct definitions.
+	typedefs := map[*cc.Type]bool{}
+	for _, d := range prog.Decls {
+		if d.Storage&cc.Typedef != 0 {
+			typedefs[d.Type] = true
 		}
-	})
+	}
+
+	var decls []*cc.Decl
+	for _, d := range prog.Decls {
+		if d.Name == "" {
+			if typedefs[d.Type] {
+				continue
+			}
+			switch d.Type.Kind {
+			case cc.Struct:
+				if d.Type.Tag != "" {
+					decls = append(decls, d)
+					d.Name = d.Type.Tag
+					d.Storage = cc.Typedef
+				}
+				if d.Type.TypeDecl == nil {
+					d.Type.TypeDecl = d
+				}
+			case cc.Enum:
+				d.Type.Tag = "" // enum tags are worthless
+				for _, dd := range d.Type.Decls {
+					decls = append(decls, dd)
+				}
+			}
+			continue
+		}
+		decls = append(decls, d)
+		if d.Storage&cc.Typedef != 0 && d.Type != nil && d.Type.TypeDecl == nil {
+			d.Type.TypeDecl = d
+		}
+	}
+
+	// Assign declarations to packages and identify conflicts.
+	count := make(map[string]int)
+	src := make(map[string]string)
+	for _, d := range decls {
+		pkg := findPkg(cfg, d.Span.Start.File)
+		if pkg == "" {
+			continue
+		}
+		d.GoPackage = pkg
+		key := d.GoPackage + "." + d.Name
+		if count[key]++; count[key] > 1 {
+			fprintf(d.Span, "conflicting name %s in %s (last at %s)", d.Name, pkg, src[key])
+			continue
+		}
+		src[key] = fmt.Sprintf("%s:%d", d.Span.Start.File, d.Span.Start.Line)
+	}
+
+	// Rename static, conflicting names.
+	for _, d := range decls {
+		key := d.GoPackage + "." + d.Name
+		if count[key] > 1 {
+			file := filepath.Base(d.Span.Start.File)
+			if i := strings.Index(file, "."); i >= 0 {
+				file = file[:i]
+			}
+			d.Name += "_" + file
+		}
+	}
+
+	cfg.TopDecls = decls
 }
 
 func cutParen(x *cc.Expr, ops ...cc.ExprOp) {
@@ -87,11 +157,14 @@ func rewriteSyntax(prog *cc.Prog) {
 		case *cc.Expr:
 			switch x.Op {
 			case cc.Number:
-				// Rewrite char literal \0 to \x00.
+				// Rewrite char literal.
 				// In general we'd need to rewrite all string and char literals
-				// but this is the only form that comes up.
-				if x.Text == `'\0'` {
+				// but these are the only forms that comes up.
+				switch x.Text {
+				case `'\0'`:
 					x.Text = `'\x00'`
+				case `'\"'`:
+					x.Text = `'"'`
 				}
 
 			case cc.Paren:
@@ -267,7 +340,16 @@ func rewriteStmt(stmt *cc.Stmt) {
 
 	case cc.Switch:
 		// TODO: Change default fallthrough to default break.
+		before, _ := extractSideEffects(stmt.Expr, sideNoAfter)
 		rewriteSwitch(stmt)
+		if len(before) > 0 {
+			old := copyStmt(stmt)
+			stmt.Expr = nil
+			stmt.Body = nil
+			stmt.Else = nil
+			stmt.Op = c2go.BlockNoBrace
+			stmt.Block = append(before, old)
+		}
 	}
 }
 

@@ -71,7 +71,10 @@ func fixPrintf(curfn *cc.Decl, x *cc.Expr) bool {
 	if tryPrintf(curfn, x, "ctxt.diag", 0, "ctxt.diag") {
 		return true
 	}
-	if tryPrintf(curfn, x, "Bprint", 1, "Bprint") {
+	if tryPrintf(curfn, x, "Bprint", 1, "fmt.Fprintf") {
+		return true
+	}
+	if tryPrintf(curfn, x, "smprint", 0, "fmt.Sprintf") {
 		return true
 	}
 
@@ -96,13 +99,6 @@ func fixPrintFormat(curfn *cc.Decl, fx *cc.Expr, args []*cc.Expr) {
 	}
 
 	suffix := ""
-	if strings.HasSuffix(curfn.Span.Start.File, "5.c") {
-		suffix = "_list5"
-	} else if strings.HasSuffix(curfn.Span.Start.File, "8.c") {
-		suffix = "_list8"
-	} else if strings.HasSuffix(curfn.Span.Start.File, "6.c") {
-		suffix = "_list6"
-	}
 
 	var buf bytes.Buffer
 	start := 0

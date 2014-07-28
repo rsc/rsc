@@ -59,6 +59,7 @@ func fixQsort(prog *cc.Prog, x *cc.Expr) {
 	}
 
 	typeDecl := &cc.Decl{
+		GoPackage:  decl.GoPackage,
 		SyntaxInfo: cc.SyntaxInfo{Span: decl.Span},
 		Name:       cmp,
 		Storage:    cc.Typedef,
@@ -69,6 +70,7 @@ func fixQsort(prog *cc.Prog, x *cc.Expr) {
 	}
 
 	lenFunc := &cc.Decl{
+		GoPackage:  decl.GoPackage,
 		SyntaxInfo: cc.SyntaxInfo{Span: decl.Span},
 		Name:       "(x " + cmp + ") Len",
 		Type: &cc.Type{
@@ -90,6 +92,7 @@ func fixQsort(prog *cc.Prog, x *cc.Expr) {
 	}
 
 	swapFunc := &cc.Decl{
+		GoPackage:  decl.GoPackage,
 		SyntaxInfo: cc.SyntaxInfo{Span: decl.Span},
 		Name:       "(x " + cmp + ") Swap",
 		Type: &cc.Type{

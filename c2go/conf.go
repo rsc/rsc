@@ -20,7 +20,12 @@ type Config struct {
 	ForceType map[string]*cc.Type
 	Len       map[string]string // map T.n to T.p where t.n = len(t.p)
 	StopFlow  map[string]bool
+	Packages  []Package
 	Diffs     []Diff
+	Exports   []string
+
+	// Derived during analysis
+	TopDecls []*cc.Decl
 }
 
 type Diff struct {
@@ -28,6 +33,11 @@ type Diff struct {
 	Before string
 	After  string
 	Used   int
+}
+
+type Package struct {
+	Pattern    string
+	ImportPath string
 }
 
 func readConfig(file string) (*Config, error) {
@@ -96,6 +106,19 @@ func readConfig(file string) (*Config, error) {
 				cfg.Delete[f] = true
 			}
 
+		case strings.HasPrefix(s, "package "):
+			fields := strings.Fields(s)[1:]
+			pkg, fields := fields[0], fields[1:]
+			if len(fields) == 0 {
+				fields = append(fields, "")
+			}
+			for _, f := range fields {
+				cfg.Packages = append(cfg.Packages, Package{Pattern: f, ImportPath: pkg})
+			}
+
+		case strings.HasPrefix(s, "export "):
+			cfg.Exports = append(cfg.Exports, strings.Fields(s)[1:]...)
+
 		case strings.HasPrefix(s, "stopflow "):
 			for _, f := range strings.Fields(s)[1:] {
 				cfg.StopFlow[f] = true
@@ -104,7 +127,7 @@ func readConfig(file string) (*Config, error) {
 		case strings.HasPrefix(s, "uselen "):
 			fields := strings.Fields(s)
 			if len(fields) != 3 {
-				fmt.Fprintf(os.Stderr, "invalid uselen: %s\n", strings.TrimSuffix(line, "\n"))
+				fmt.Fprintf(os.Stderr, "%s:%d: invalid uselen: %s\n", file, lineno, strings.TrimSuffix(line, "\n"))
 				continue
 			}
 			cfg.Len[fields[1]] = fields[2]
@@ -152,4 +175,23 @@ func readConfig(file string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func findPkg(cfg *Config, file string) string {
+	best := "main"
+	for _, p := range cfg.Packages {
+		if strings.HasSuffix(p.Pattern, "/") {
+			if strings.Contains(file, p.Pattern) {
+				best = p.ImportPath
+			}
+		} else {
+			if strings.HasSuffix(file, p.Pattern) {
+				best = p.ImportPath
+			}
+		}
+	}
+	if best == "none" {
+		best = ""
+	}
+	return best
 }

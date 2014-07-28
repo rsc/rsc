@@ -19,6 +19,9 @@ func ReadMany(names []string, readers []io.Reader) (*Prog, error) {
 	lx := &lexer{}
 	var prog *Prog
 	for i, name := range names {
+		if lx.includeSeen[name] != nil {
+			continue
+		}
 		r := readers[i]
 		data, err := ioutil.ReadAll(r)
 		if err != nil {

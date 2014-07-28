@@ -318,6 +318,7 @@ type Decl struct {
 	XOuter    *Decl
 	CurFn     *Decl
 	OuterType *Type
+	GoPackage string
 }
 
 func (d *Decl) String() string {
