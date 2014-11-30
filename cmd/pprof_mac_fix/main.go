@@ -22,10 +22,11 @@
 //
 // This program has been used successfully on the following systems:
 //
-//	OS X 10.6 Snow Leopard      / Darwin 10.8 / i386 only
-//	OS X 10.7 Lion              / Darwin 11.4 / i386 and x86_64
-//	OS X 10.8 Mountain Lion     / Darwin 12.4 / x86_64 only
-//	OS X 10.9 Mavericks         / Darwin 13.0 / x86_64 only
+//	OS X 10.6  Snow Leopard      / Darwin 10.8 / i386 only
+//	OS X 10.7  Lion              / Darwin 11.4 / i386 and x86_64
+//	OS X 10.8  Mountain Lion     / Darwin 12.4 / x86_64 only
+//	OS X 10.9  Mavericks         / Darwin 13.0 / x86_64 only
+//	OS X 10.10 Yosemite          / Darwin 14.0 / x86_64 only
 //
 // Snow Leopard x86_64 may work too but is untried.
 //
@@ -43,16 +44,14 @@
 //
 // First, read the warning above.
 //
-// Next, install this program and run it to create a modified kernel in /tmp:
+// Next, install this program and run it. If the program finds that it knows
+// how to patch your kernel, it will reinvoke itself using sudo, which will
+// prompt for your password and install the new kernel. It saves the old
+// kernel as a numbered file in the kernel source directory (the root directory
+// or, for OS X 10.10 Yosemite, /System/Library/Kernels).
 //
 //	go get code.google.com/p/rsc/cmd/pprof_mac_fix
-//	pprof_mac_fix /mach_kernel /tmp/kernel
-//
-// Next, as root (sudo sh), make a backup of the standard kernel and then
-// install the new one.
-//
-//	cp /mach_kernel /mach_kernel0 # only the first time!
-//	cp /tmp/kernel /mach_kernel
+//	pprof_mac_fix
 //
 // Finally, cross your fingers and reboot.
 //
@@ -86,6 +85,12 @@
 //
 // I am not sure whether the bless command is strictly necessary.
 //
+// On OS X 10.10 Yosemite, the above command sequence changes to:
+//
+//	cd /Volumes/Mac*HD*/System/Library/Kernels
+//	cp kernel0 kernel
+//	bless /Volumes/Mac*HD*/System/Library/CoreServices
+//
 // Reboot. You should be back to the original, unmodified kernel.
 // Either way, you need to be able to
 // start Terminal and, if you are using FileVault whole-disk encryption, Disk Utility.
@@ -107,6 +112,8 @@
 // It is therefore unlikely to cause problems in programs not using the
 // signals. Of course, there are no safety nets when changing an operating
 // system kernel; caution is warranted.
+//
+// A more detailed description is at http://research.swtch.com/macpprof.
 //
 package main
 
@@ -141,41 +148,47 @@ func getArch() string {
 	return "x86_64"
 }
 
+func getOS() string {
+	out, _ := exec.Command("uname", "-r").CombinedOutput()
+	return strings.TrimSpace(string(out))
+}
+
 func main() {
 	log.SetFlags(0)
+	fmt.Fprintf(os.Stderr, "pprof_mac_fix version 10.10\n")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s [-arch ARCH] oldkernel newkernel\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s [-arch ARCH] [oldkernel newkernel]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "The -arch flag controls which kernel in a fat binary is modified.\n")
 		fmt.Fprintf(os.Stderr, "The default setting is the architecture reported by `uname -m`,\n")
 		fmt.Fprintf(os.Stderr, "on this machine %s.\n", getArch())
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "With no kernel files specified, the behavior is to check\n")
+		fmt.Fprintf(os.Stderr, "that the kernel is recognized and then update the kernel\n")
+		fmt.Fprintf(os.Stderr, "in place, leaving a numbered backup file.\n")
 		os.Exit(2)
 	}
 	flag.Parse()
 	if *dumpFlag {
 		if flag.NArg() != 1 {
-			fmt.Fprintf(os.Stderr, "usage: %s -dump oldkernel\n", os.Args[0])
+			fmt.Fprintf(os.Stderr, "usage: %s -dump [oldkernel]\n", os.Args[0])
 			os.Exit(2)
 		}
 		dump(loadKernel(flag.Arg(0)))
 		return
 	}
+
+	if flag.NArg() == 0 {
+		automatic()
+		return
+	}
+
 	if flag.NArg() != 2 {
 		flag.Usage()
 	}
 
 	k := loadKernel(flag.Arg(0))
 	fmt.Printf("old: %s\n", k.version)
-
-	errs := fixAnyVersion(k)
-	if errs != nil {
-		fmt.Fprintf(os.Stderr, "unrecognized kernel code.\n")
-		for _, err := range errs {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-		}
-
-		fmt.Fprintf(os.Stderr, updateText, os.Args[0], k.file)
-		os.Exit(2)
-	}
+	fixIt(k)
 
 	// Update version string as displayed by uname -a.
 	copy(k.timestamp, []byte(time.Now().Format(time.UnixDate)))
@@ -186,10 +199,99 @@ func main() {
 	}
 }
 
+func fixIt(k *kernel) {
+	errs := fixAnyVersion(k)
+	if errs != nil {
+		if len(errs) == 1 && errs[0] == errPatched {
+			fmt.Fprintf(os.Stderr, "%s; not rewriting\n", errs[0])
+			os.Exit(2)
+		}
+		fmt.Fprintf(os.Stderr, "unrecognized kernel code.\n")
+		for _, err := range errs {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+		}
+
+		fmt.Fprintf(os.Stderr, updateText, os.Args[0], k.file)
+		os.Exit(2)
+	}
+}
+
+func automatic() {
+	file := "/mach_kernel"
+	if os := getOS(); os >= "14.0" {
+		// Yosemite and later.
+		file = "/System/Library/Kernels/kernel"
+	}
+	fmt.Printf("kernel in %s\n", file)
+	k := loadKernel(file)
+	old := string(k.version)
+	fixIt(k)
+	
+	// Now we know we can fix it. Make sure we are root.
+	if os.Getuid() != 0 {
+		fmt.Fprintf(os.Stderr, "recognized kernel. reinvoking under sudo in order to modify kernel.\n")
+		self, err := exec.LookPath(os.Args[0])
+		if err != nil {
+			log.Fatal("cannot find path to binary: %v", err)
+		}
+		cmd := exec.Command("sudo", self)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
+		if err != nil {
+			os.Exit(2)
+		}
+		return
+	}
+
+	oldBytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	n := 0
+	var newfile string
+	for ;; n++ {
+		newfile = fmt.Sprintf("%s%d", file, n)
+		_, err := os.Stat(newfile)
+		if os.IsNotExist(err) {
+			break
+		}
+		if n >= 10000 {
+			fmt.Fprintf(os.Stderr, "cannot back up %s: cannot find suitable backup name\n", file)
+		}
+	}
+	
+	err = ioutil.WriteFile(newfile, oldBytes, 0755)
+	if err != nil {
+		log.Fatalf("backing up kernel: %s", err)
+	}
+	fmt.Printf("kernel backed up to %s\n", newfile)
+
+	if err := os.Chmod(file, 0755); err != nil {
+		log.Fatalf("changing kernel mode: %s", err)
+	}
+	
+	fmt.Printf("old version: %s\n", old)
+
+	// Update version string as displayed by uname -a.
+	copy(k.timestamp, []byte(time.Now().Format(time.UnixDate)))
+	fmt.Printf("new version: %s\n", string(k.version))
+
+	if err := ioutil.WriteFile(file, k.data, 0755); err != nil {
+		log.Fatalf("writing new kernel: %s", err)
+	}
+
+	fmt.Printf("new kernel installed; reboot to use\n")
+}
+
 func fixAnyVersion(k *kernel) []error {
 	var errs []error
 	for _, f := range fixes {
 		err := f.apply(k.current_thread, k.bsd_ast)
+		if err == errPatched {
+			return []error{err}
+		}
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %v", f.version, err))
 			continue
@@ -198,6 +300,8 @@ func fixAnyVersion(k *kernel) []error {
 	}
 	return errs
 }
+
+var errPatched = fmt.Errorf("kernel already patched")
 
 var updateText = `
 For an update, mail rsc@golang.org with the output printed by:
@@ -336,10 +440,15 @@ func dump(k *kernel) {
 	dumpDisas(k, k.bsd_ast, "bsd_ast")
 }
 
-var disasRE = regexp.MustCompile(`0x[0-9a-f]+\s+<\w+\+(\d+)>:`)
+var disasRE = regexp.MustCompile(`0x[0-9a-f]+\s+<\w*\+(\d+)>:`)
 
 func dumpDisas(k *kernel, code []byte, name string) {
-	cmd := exec.Command("gdb", "-arch", *arch, k.file)
+	var args []string
+	if getOS() < "14." {
+		args = append(args, "-arch", *arch)
+	}
+	args = append(args, k.file)
+	cmd := exec.Command("gdb", args...)
 	cmd.Stdin = strings.NewReader("disas " + name + "\n")
 	disas, err := cmd.CombinedOutput()
 	fmt.Printf("$ gdb %s # disas %s\n", k.file, name)
@@ -485,7 +594,27 @@ func (f *fix) apply(current_thread []byte, bsd_ast []byte) error {
 	}
 
 	var replace [][]byte
-	if f.version >= "13." {
+	if f.version >= "14." {
+		if total != 2 || len(timers) != 1 || len(timers[0]) != 2 {
+			return fmt.Errorf("cannot match bsd_ast 14 timer call %d %d", total, len(timers[0]))
+		}
+		if strings.HasSuffix(f.version, "fixed") {
+			return errPatched
+		}
+		var err error
+		new, err := f.apply14(tlsOff, bsd_ast, timers)
+		if err != nil {
+			return err
+		}
+		if len(new) != len(bsd_ast) {
+			return fmt.Errorf("cannot replace bsd_ast 14 - wrong replacement length %d %d", len(bsd_ast), len(new))
+		}
+		copy(bsd_ast, new)
+		return nil
+	} else if f.version >= "13." {
+		if strings.HasSuffix(f.version, "fixed") && total == 2 {
+			return errPatched
+		}
 		if total != 3 || len(timers) != 2 || len(timers[0]) != 2 {
 			return fmt.Errorf("cannot match bsd_ast 13 timer call %d %d", total, len(timers[0]))
 		}
@@ -505,6 +634,9 @@ func (f *fix) apply(current_thread []byte, bsd_ast []byte) error {
 		return fmt.Errorf("%d matches for bsd_ast timer call %v, want 2", total, timers)
 	}
 
+	if strings.HasSuffix(f.version, "fixed") {
+		return errPatched
+	}
 	for i, timer1 := range timers {
 		for _, timer := range timer1 {
 			p := f.bsd_ast[i]
@@ -722,16 +854,56 @@ var bsd_ast_10_8_0_i386_b = mustCompile(`
     0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 81 call psignal_internal
 `)
 
+var bsd_ast_10_8_0_fixed = mustCompile(`
+	0x31 0xff                                       //      xor %edi, %edi
+	0x31 0xf6                                       //      xor %esi, %esi
+	0x65 0x48 0x8b 0x14 0x25 0x08 0x00 0x00 0x00    //      mov %gs:0x8, %rdx
+	0xb9 0x04 0x00 0x00 0x00                        //      mov $0x4, %ecx
+	0x41 0xb8 0x1a/0xfe 0x00 0x00 0x00              //      mov $0x1a, %r8d [or $0x1b]
+	0x90                                            //      nop
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    //      call psignal_internal
+`)
+
+var bsd_ast_10_8_0_i386_fixed = mustCompile(`
+	0x31 0xc0                                       //      xor %eax, %eax
+	0x31 0xd2                                       //      xor %edx, %edx
+	0x65 0x8b 0x0d 0x04 0x00 0x00 0x00              //      mov %gs:0x4, %ecx
+	0xc7 0x04 0x24 0x04 0x00 0x00 0x00              //      mov $0x4, (%esp)
+	0xc7 0x44 0x24 0x04 0x1a/0xfe 0x00 0x00 0x00    //      mov $0x1a, 0x4(%esp) [or $0x1b]
+	0x90                                            //      nop
+	0x90                                            //      nop
+	0x90                                            //      nop
+	0x90                                            //      nop
+	0x90                                            //      nop
+	0x90                                            //      nop
+	0x90                                            //      nop
+	0x90                                            //      nop
+	0x90                                            //      nop
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    //      call psignal_internal
+`)
+
 var fix_10_8_0 = fix{
 	"10.8.0",
 	current_thread_leave,
 	[]*pattern{bsd_ast_10_8_0_a, bsd_ast_10_8_0_b},
 }
 
+var fix_10_8_0_fixed = fix{
+	"10.8.0 fixed",
+	current_thread_leave,
+	[]*pattern{bsd_ast_10_8_0_fixed},
+}
+
 var fix_10_8_0_i386 = fix{
 	"10.8.0 (i386)",
 	current_thread_leave_i386,
 	[]*pattern{bsd_ast_10_8_0_i386_a, bsd_ast_10_8_0_i386_b},
+}
+
+var fix_10_8_0_i386_fixed = fix{
+	"10.8.0 (i386) fixed",
+	current_thread_leave_i386,
+	[]*pattern{bsd_ast_10_8_0_i386_fixed},
 }
 
 // Darwin 11.4.2 (Lion)
@@ -817,6 +989,12 @@ var fix_12_4_0 = fix{
 	[]*pattern{bsd_ast_12_4_0},
 }
 
+var fix_12_4_0_fixed = fix{
+	"12.4.0 fixed",
+	current_thread_pop,
+	[]*pattern{bsd_ast_12_4_0_fixed},
+}
+
 var bsd_ast_12_4_0 = mustCompile(`
     0x49 0x83 0xbf 0xc0/0xdf 0x01 0x00 0x00 0x00    //  0   cmpq $0x0, 0x1c0(%r15) [or 0x1e0]
     0x75 0x0a                                       //  8   jne +10 [20]
@@ -837,13 +1015,28 @@ var bsd_ast_12_4_0 = mustCompile(`
     0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    // 65   call psignal_internal
 `)
 
+var bsd_ast_12_4_0_fixed = mustCompile(`
+	0x31 0xff                                       //      xor %edi, %edi
+	0x31 0xf6                                       //      xor %esi, %esi
+	0x65 0x48 0x8b 0x14 0x25 0x08 0x00 0x00 0x00    //      mov %gs:0x8, %rdx
+	0xb9 0x04 0x00 0x00 0x00                        //      mov $0x4, %ecx
+	0x41 0xb8 0x1a/0xfe 0x00 0x00 0x00              //      mov $0x1a, %r8d [or $0x1b]
+    0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    //      call psignal_internal
+`)
+
 var fixes = []*fix{
 	&fix_10_8_0,
+	&fix_10_8_0_fixed,
 	&fix_10_8_0_i386,
+	&fix_10_8_0_i386_fixed,
 	&fix_11_4_2,
 	&fix_11_4_2_i386,
 	&fix_12_4_0,
+	&fix_12_4_0_fixed,
 	&fix_13_0_0,
+	&fix_13_0_0_fixed,
+	&fix_14_0_0,
+	&fix_14_0_0_fixed,
 }
 
 // Darwin 13.0.0 (Mavericks)
@@ -857,6 +1050,12 @@ var fix_13_0_0 = fix{
 	"13.0.0",
 	current_thread_pop,
 	[]*pattern{bsd_ast_13_0_0, bsd_ast_13_0_0_end},
+}
+
+var fix_13_0_0_fixed = fix{
+	"13.0.0 fixed",
+	current_thread_pop,
+	[]*pattern{bsd_ast_13_0_0_fixed_1, bsd_ast_13_0_0_fixed_2},
 }
 
 var bsd_ast_13_0_0 = mustCompile(`
@@ -884,6 +1083,33 @@ var bsd_ast_13_0_0_end = mustCompile(`
     0x0f 0x1f 0x84 0x00 0x00 0x00 0x00 0x00 *
 `)
 
+var bsd_ast_13_0_0_fixed_1 = mustCompile(`
+	* 0xbe 0x01 0x00 0x00 0x00                      //     mov $0x1, %esi
+	0xe8 0x02 0x00 0x00 0x00                        //     call L1
+	0xeb 0x16                                       //     jmp L2
+	0x49 0x8b 0x7f 0x18                             // L1: mov 0x18(%r15), %rdi
+	0x89 0xf3                                       //     mov %esi, %ebx
+	0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    //     call task_vtimer_set
+	0x31 0xff                                       //     xor %edi, %edi
+	0x31 0xf6                                       //     xor %esi, %esi
+	0xb9 0x04 0x00 0x00 0x00                        //     mov $0x4, %ecx
+	0xeb 0x00/0x00                                  //     jmp L3
+	0x49 0x83 0xbf 0xe8 0x01 0x00 0x00 0x00 *       // L2: cmpq $0x0, 0x1e8(%r15)
+`)
+
+var bsd_ast_13_0_0_fixed_2 = mustCompile(`
+	* 0xbe 0x02 0x00 0x00 0x00                      //      mov $0x2, %esi
+	0xe8 0x00/0x00 0xff 0xff 0xff                   //      call L1
+	0xeb 0x16                                       //      jmp L4
+	0x65 0x48 0x8b 0x14 0x25 0x08 0x00 0x00 0x00    // L3:  mov %gs:0x8, %rdx
+	0x67 0x44 0x8d 0x43 0x19                        //      lea 0x19(%ebx), %r8d
+	0xe8 0x00/0x00 0x00/0x00 0x00/0x00 0x00/0x00    //      call psignal_internal
+	0xc3                                            //      ret
+	0x90                                            //      nop
+	0x90                                            //      nop
+	0x49 0x83 0xbf 0xf8 0x01 0x00 0x00 0x00 *       // L4:  cmpq $0x0, 0x1f8(%r15)
+`)
+
 func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, error) {
 	p := f.bsd_ast[0]
 	match1 := p.matchStart(bsd_ast, timers[0][0])
@@ -893,36 +1119,50 @@ func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, 
 		// shouldn't happen - we found the offset above
 		return nil, fmt.Errorf("cannot re-match bsd_ast timer")
 	}
-
 	const asmLen = 34
 	if match1[0] != timers[0][0] || match2[0] != timers[0][1] || match3[0] != timers[1][0] || match1[4]-match1[0] != asmLen || match2[4]-match2[0] != asmLen {
 		return nil, fmt.Errorf("bsd_ast match mismatch")
 	}
 
+	repl1, repl2, l0, err := f.apply13top(tlsOff, bsd_ast, match1, match2)
+	if err != nil {
+		return nil, err
+	}
+	repl3, err := f.apply13bottom(tlsOff, bsd_ast, match1, match2, match3, repl1, repl2, l0)
+	if err != nil {
+		return nil, err
+	}
+
+	return [][]byte{repl1, repl2, repl3}, nil
+}
+
+func (f *fix) apply13top(tlsOff uint32, bsd_ast []byte, match1, match2 []int) (repl1, repl2 []byte, l0 uint32, err error) {
+	const asmLen = 34
+
 	mov1 := le.Uint32(bsd_ast[match1[1]+1:])
 	mov2 := le.Uint32(bsd_ast[match2[1]+1:])
 	if mov1 != 1 || mov2 != 2 {
-		return nil, fmt.Errorf("bsd_ast mov esi mismatch %#x %#x", mov1, mov2)
+		return nil, nil, 0, fmt.Errorf("bsd_ast mov esi mismatch %#x %#x", mov1, mov2)
 	}
 
 	call1 := le.Uint32(bsd_ast[match1[2]-4:]) + uint32(match1[2])
 	call1a := le.Uint32(bsd_ast[match2[2]-4:]) + uint32(match2[2])
 	if call1 != call1a {
-		return nil, fmt.Errorf("bsd_ast call task_vtimer_set mismatch %#x %#x", call1, call1a)
+		return nil, nil, 0, fmt.Errorf("bsd_ast call task_vtimer_set mismatch %#x %#x", call1, call1a)
 	}
 
 	call2 := le.Uint32(bsd_ast[match1[4]-4:]) + uint32(match1[4])
 	call2a := le.Uint32(bsd_ast[match2[4]-4:]) + uint32(match2[4])
 	if call2 != call2a {
-		return nil, fmt.Errorf("bsd_ast call psignal_internal mismatch %#x %#x", call2, call2a)
+		return nil, nil, 0, fmt.Errorf("bsd_ast call psignal_internal mismatch %#x %#x", call2, call2a)
 	}
 
 	if sig1, sig2 := bsd_ast[match1[3]], bsd_ast[match2[3]]; sig1 != 0x1a || sig2 != 0x1b {
-		return nil, fmt.Errorf("bsd_ast signal number mismatch %#x %#x", sig1, sig2)
+		return nil, nil, 0, fmt.Errorf("bsd_ast signal number mismatch %#x %#x", sig1, sig2)
 	}
 
-	repl1 := make([]byte, 0, asmLen)
-	repl2 := make([]byte, 0, asmLen)
+	repl1 = make([]byte, 0, asmLen)
+	repl2 = make([]byte, 0, asmLen)
 
 	repl1 = append(repl1, bsd_ast[match1[1]:match1[1]+5]...) // mov to %esi
 	repl1 = append(repl1,
@@ -942,7 +1182,7 @@ func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, 
 		0xe8, 0x00, 0x00, 0x00, 0x00,
 	)
 	le.PutUint32(repl1[len(repl1)-4:], call1-uint32(match1[0]+len(repl1)))
-	l0 := uint32(match1[0] + len(repl1))
+	l0 = uint32(match1[0] + len(repl1))
 	repl1 = append(repl1,
 		// L0:
 		// xor %edi, %edi
@@ -956,13 +1196,13 @@ func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, 
 	)
 	d := (match2[0] + 12) - (match1[0] + len(repl1))
 	if int(int8(d)) != d {
-		return nil, fmt.Errorf("bsd_ast jmp 3f too far %d", d)
+		return nil, nil, 0, fmt.Errorf("bsd_ast jmp 3f too far %d", d)
 	}
 	repl1[len(repl1)-1] = byte(d)
 	// 2:
 
 	if len(repl1) != asmLen {
-		return nil, fmt.Errorf("bsd_ast repl1 bad math %d %d", len(repl1), asmLen)
+		return nil, nil, 0, fmt.Errorf("bsd_ast repl1 bad math %d %d", len(repl1), asmLen)
 	}
 
 	repl2 = append(repl2, bsd_ast[match2[1]:match2[1]+5]...) // mov to %esi
@@ -995,8 +1235,13 @@ func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, 
 		repl2 = append(repl2, 0x90) // nop
 	}
 	if len(repl2) != asmLen {
-		return nil, fmt.Errorf("bsd_ast repl1 bad math %d %d", len(repl2), asmLen)
+		return nil, nil, 0, fmt.Errorf("bsd_ast repl1 bad math %d %d", len(repl2), asmLen)
 	}
+	
+	return repl1, repl2, l0, nil
+}
+
+func (f *fix) apply13bottom(tlsOff uint32, bsd_ast []byte, match1, match2, match3 []int, repl1, repl2 []byte, l0 uint32) (repl3 []byte, err error) {
 
 	// call task_vtimer_clear
 	call3 := le.Uint32(bsd_ast[match3[1]-4:]) + uint32(match3[1])
@@ -1014,7 +1259,6 @@ func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, 
 		return nil, fmt.Errorf("bsd_ast jmp2 mismatch %#x %#x", jmp2, match2[2])
 	}
 
-	var repl3 []byte
 	repl3 = append(repl3,
 		// mov $1, %esi
 		0xbe, 0x01, 0x00, 0x00, 0x00,
@@ -1074,5 +1318,5 @@ func (f *fix) apply13(tlsOff uint32, bsd_ast []byte, timers [][]int) ([][]byte, 
 		return nil, fmt.Errorf("bsd_ast bad repl3 len %d %d", len(repl3), match3[5]-match3[0])
 	}
 
-	return [][]byte{repl1, repl2, repl3}, nil
+	return repl3, nil
 }

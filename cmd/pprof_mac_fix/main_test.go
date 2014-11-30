@@ -19,6 +19,7 @@ var tests = []string{
 	"testdata/mach_kernel_11_4_2",
 	"testdata/mach_kernel_12_4_0",
 	"testdata/mach_kernel_13_0_0",
+	"testdata/mach_kernel_14_0_0",
 }
 
 func TestAll(t *testing.T) {
@@ -72,6 +73,15 @@ func TestAll(t *testing.T) {
 			os.Remove("/tmp/want")
 			os.Remove("/tmp/have")
 		}
+		errs1 := fixAnyVersion(k1)
+		if len(errs1) != 1 || errs1[0] != errPatched {
+			t.Errorf("%s: fixed kernel not recognized", tt)
+			for _, err := range errs {
+				t.Errorf("%s", err)
+			}
+			continue
+		}
+			
 	}
 }
 
