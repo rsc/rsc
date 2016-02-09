@@ -12,8 +12,8 @@ import (
 	"log"
 	"os"
 
-	"code.google.com/p/rsc/appfs/client"
-	"code.google.com/p/rsc/keychain"
+	"github.com/rsc/rsc/appfs/client"
+	"github.com/rsc/rsc/keychain"
 )
 
 var c client.Client
@@ -41,7 +41,7 @@ func main() {
 	if len(args) == 0 {
 		usage()
 	}
-	
+
 	if c.Password == "" {
 		var err error
 		c.User, c.Password, err = keychain.UserPasswd(c.Host, "")
