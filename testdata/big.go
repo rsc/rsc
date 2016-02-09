@@ -55,8555 +55,5194 @@ func main() {
 
 func init() {
 
-	
 	c <- n
-	
+
 	x = <-c
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case x = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *f(&x) = <-c:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-c:
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-c:
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[13] = <-c:
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
@@ -8611,1546 +5250,968 @@ func init() {
 }
 func init() {
 
-	
-	
 	c <- n
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
+
 	case dummy <- 1:
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
 	select {
-	
-	
-	
-	
+
 	case c <- n:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
@@ -10159,7471 +6220,4390 @@ func init() {
 }
 func init() {
 
-	
-	
-	
 	order = 0
 	c <- n
-	
-	
-	
-	
+
 	*fp(&x, 1) = <-fc(c, 2)
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	m[fn(13, 1)] = <-fc(c, 2)
 	x = m[13]
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case *fp(&x, 100) = <-fc(c, 1):
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case y := <-fc(c, 1):
 		x = y
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case i = <-fc(c, 1):
 		x = i.(int)
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
+
 	case fc(dummy, 2) <- fn(1, 3):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 4):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 5) <- fn(1, 6):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 7):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
 	c <- n
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case m[fn(13, 100)] = <-fc(c, 1):
 		x = m[13]
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	if x != n {
 		die(x)
 	}
@@ -17631,1693 +10611,1066 @@ func init() {
 }
 func init() {
 
-	
-	
-	
 	order = 0
-	
+
 	fc(c, 1) <- fn(n, 2)
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
+
 	default:
 		panic("nonblock")
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
+
 	case fc(dummy, 3) <- fn(1, 4):
 		panic("dummy send")
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
+
 	case <-fc(dummy, 5):
 		panic("dummy receive")
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
-	
-	
+
 	case fc(nilch, 6) <- fn(1, 7):
 		panic("nilch send")
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case <-fc(nilch, 8):
 		panic("nilch recv")
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
 	}
 	n++
 
-	
-	
-	
 	order = 0
-	
+
 	select {
-	
-	
-	
-	
+
 	case fc(c, 1) <- fn(n, 2):
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
-	
+
 	x = <-c
 	if x != n {
 		die(x)
@@ -19327,45 +11680,35 @@ func init() {
 func init() {
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19373,42 +11716,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19416,42 +11749,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19459,39 +11782,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19499,42 +11812,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19542,39 +11845,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19582,39 +11875,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19622,36 +11905,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19659,42 +11932,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19702,39 +11965,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19742,39 +11995,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19782,36 +12025,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19819,39 +12052,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19859,36 +12082,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19896,36 +12109,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19933,33 +12136,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -19967,42 +12160,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20010,39 +12193,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20050,39 +12223,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20090,36 +12253,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20127,39 +12280,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20167,36 +12310,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20204,36 +12337,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20241,33 +12364,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20275,39 +12388,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20315,36 +12418,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20352,36 +12445,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20389,33 +12472,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20423,36 +12496,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20460,33 +12523,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20494,33 +12547,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20528,30 +12571,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20559,42 +12592,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20602,39 +12625,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20642,39 +12655,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20682,36 +12685,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20719,39 +12712,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20759,36 +12742,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20796,36 +12769,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20833,33 +12796,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20867,39 +12820,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20907,36 +12850,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20944,36 +12877,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -20981,33 +12904,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21015,36 +12928,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21052,33 +12955,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21086,33 +12979,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21120,30 +13003,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21151,39 +13024,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21191,36 +13054,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21228,36 +13081,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21265,33 +13108,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21299,36 +13132,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21336,33 +13159,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21370,33 +13183,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21404,30 +13207,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21435,36 +13228,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21472,33 +13255,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21506,33 +13279,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21540,30 +13303,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21571,33 +13324,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21605,30 +13348,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21636,30 +13369,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21667,27 +13390,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21695,42 +13408,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21738,39 +13441,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21778,39 +13471,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21818,36 +13501,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21855,39 +13528,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21895,36 +13558,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21932,36 +13585,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -21969,33 +13612,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22003,39 +13636,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22043,36 +13666,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22080,36 +13693,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22117,33 +13720,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22151,36 +13744,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22188,33 +13771,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22222,33 +13795,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22256,30 +13819,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22287,39 +13840,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22327,36 +13870,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22364,36 +13897,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22401,33 +13924,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22435,36 +13948,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22472,33 +13975,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22506,33 +13999,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22540,30 +14023,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22571,36 +14044,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22608,33 +14071,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22642,33 +14095,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22676,30 +14119,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22707,33 +14140,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22741,30 +14164,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22772,30 +14185,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22803,27 +14206,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22831,39 +14224,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22871,36 +14254,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22908,36 +14281,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22945,33 +14308,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -22979,36 +14332,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23016,33 +14359,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23050,33 +14383,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23084,30 +14407,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23115,36 +14428,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23152,33 +14455,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23186,33 +14479,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23220,30 +14503,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23251,33 +14524,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23285,30 +14548,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23316,30 +14569,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23347,27 +14590,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23375,36 +14608,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23412,33 +14635,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23446,33 +14659,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23480,30 +14683,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23511,33 +14704,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23545,30 +14728,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23576,30 +14749,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23607,27 +14770,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23635,33 +14788,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23669,30 +14812,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23700,30 +14833,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23731,27 +14854,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23759,30 +14872,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23790,27 +14893,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23818,27 +14911,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23846,24 +14929,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23871,42 +14944,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23914,39 +14977,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23954,39 +15007,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -23994,36 +15037,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24031,39 +15064,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24071,36 +15094,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24108,36 +15121,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24145,33 +15148,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24179,39 +15172,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24219,36 +15202,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24256,36 +15229,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24293,33 +15256,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24327,36 +15280,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24364,33 +15307,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24398,33 +15331,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24432,30 +15355,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24463,39 +15376,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24503,36 +15406,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24540,36 +15433,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24577,33 +15460,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24611,36 +15484,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24648,33 +15511,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24682,33 +15535,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24716,30 +15559,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24747,36 +15580,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24784,33 +15607,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24818,33 +15631,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24852,30 +15655,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24883,33 +15676,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24917,30 +15700,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24948,30 +15721,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -24979,27 +15742,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25007,39 +15760,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25047,36 +15790,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25084,36 +15817,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25121,33 +15844,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25155,36 +15868,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25192,33 +15895,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25226,33 +15919,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25260,30 +15943,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25291,36 +15964,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25328,33 +15991,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25362,33 +16015,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25396,30 +16039,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25427,33 +16060,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25461,30 +16084,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25492,30 +16105,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25523,27 +16126,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25551,36 +16144,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25588,33 +16171,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25622,33 +16195,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25656,30 +16219,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25687,33 +16240,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25721,30 +16264,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25752,30 +16285,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25783,27 +16306,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25811,33 +16324,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25845,30 +16348,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25876,30 +16369,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25907,27 +16390,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25935,30 +16408,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25966,27 +16429,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -25994,27 +16447,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26022,24 +16465,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26047,39 +16480,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26087,36 +16510,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26124,36 +16537,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26161,33 +16564,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26195,36 +16588,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26232,33 +16615,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26266,33 +16639,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26300,30 +16663,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26331,36 +16684,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26368,33 +16711,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26402,33 +16735,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26436,30 +16759,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26467,33 +16780,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26501,30 +16804,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26532,30 +16825,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26563,27 +16846,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26591,36 +16864,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26628,33 +16891,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26662,33 +16915,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26696,30 +16939,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26727,33 +16960,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26761,30 +16984,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26792,30 +17005,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26823,27 +17026,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26851,33 +17044,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26885,30 +17068,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26916,30 +17089,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26947,27 +17110,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -26975,30 +17128,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27006,27 +17149,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27034,27 +17167,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27062,24 +17185,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27087,36 +17200,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27124,33 +17227,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27158,33 +17251,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27192,30 +17275,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27223,33 +17296,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27257,30 +17320,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27288,30 +17341,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27319,27 +17362,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27347,33 +17380,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27381,30 +17404,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27412,30 +17425,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27443,27 +17446,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27471,30 +17464,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27502,27 +17485,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27530,27 +17503,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27558,24 +17521,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27583,33 +17536,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27617,30 +17560,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27648,30 +17581,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27679,27 +17602,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27707,30 +17620,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27738,27 +17641,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27766,27 +17659,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27794,24 +17677,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27819,30 +17692,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27850,27 +17713,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27878,27 +17731,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27906,24 +17749,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27931,27 +17764,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27959,24 +17782,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -27984,24 +17797,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28009,21 +17812,11 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
+
 	default:
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28031,45 +17824,35 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28077,42 +17860,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28120,42 +17893,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28163,39 +17926,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28203,42 +17956,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28246,39 +17989,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28286,39 +18019,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28326,36 +18049,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28363,42 +18076,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28406,39 +18109,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28446,39 +18139,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28486,36 +18169,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28523,39 +18196,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28563,36 +18226,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28600,36 +18253,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28637,33 +18280,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28671,42 +18304,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28714,39 +18337,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28754,39 +18367,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28794,36 +18397,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28831,39 +18424,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28871,36 +18454,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28908,36 +18481,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28945,33 +18508,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -28979,39 +18532,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29019,36 +18562,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29056,36 +18589,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29093,33 +18616,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29127,36 +18640,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29164,33 +18667,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29198,33 +18691,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29232,30 +18715,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29263,42 +18736,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29306,39 +18769,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29346,39 +18799,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29386,36 +18829,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29423,39 +18856,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29463,36 +18886,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29500,36 +18913,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29537,33 +18940,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29571,39 +18964,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29611,36 +18994,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29648,36 +19021,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29685,33 +19048,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29719,36 +19072,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29756,33 +19099,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29790,33 +19123,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29824,30 +19147,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29855,39 +19168,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29895,36 +19198,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29932,36 +19225,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -29969,33 +19252,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30003,36 +19276,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30040,33 +19303,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30074,33 +19327,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30108,30 +19351,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30139,36 +19372,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30176,33 +19399,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30210,33 +19423,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30244,30 +19447,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30275,33 +19468,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30309,30 +19492,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30340,30 +19513,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30371,27 +19534,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30399,42 +19552,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30442,39 +19585,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30482,39 +19615,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30522,36 +19645,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30559,39 +19672,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30599,36 +19702,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30636,36 +19729,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30673,33 +19756,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30707,39 +19780,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30747,36 +19810,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30784,36 +19837,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30821,33 +19864,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30855,36 +19888,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30892,33 +19915,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30926,33 +19939,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30960,30 +19963,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -30991,39 +19984,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31031,36 +20014,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31068,36 +20041,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31105,33 +20068,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31139,36 +20092,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31176,33 +20119,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31210,33 +20143,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31244,30 +20167,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31275,36 +20188,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31312,33 +20215,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31346,33 +20239,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31380,30 +20263,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31411,33 +20284,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31445,30 +20308,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31476,30 +20329,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31507,27 +20350,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31535,39 +20368,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31575,36 +20398,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31612,36 +20425,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31649,33 +20452,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31683,36 +20476,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31720,33 +20503,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31754,33 +20527,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31788,30 +20551,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31819,36 +20572,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31856,33 +20599,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31890,33 +20623,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31924,30 +20647,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31955,33 +20668,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -31989,30 +20692,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32020,30 +20713,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32051,27 +20734,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32079,36 +20752,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32116,33 +20779,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32150,33 +20803,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32184,30 +20827,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32215,33 +20848,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32249,30 +20872,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32280,30 +20893,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32311,27 +20914,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32339,33 +20932,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32373,30 +20956,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32404,30 +20977,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32435,27 +20998,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32463,30 +21016,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32494,27 +21037,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32522,27 +21055,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32550,24 +21073,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
+
 	case dummy <- 1:
 		panic("dummy <- 1")
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32575,42 +21088,32 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32618,39 +21121,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32658,39 +21151,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32698,36 +21181,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32735,39 +21208,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32775,36 +21238,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32812,36 +21265,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32849,33 +21292,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32883,39 +21316,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32923,36 +21346,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32960,36 +21373,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -32997,33 +21400,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33031,36 +21424,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33068,33 +21451,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33102,33 +21475,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33136,30 +21499,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33167,39 +21520,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33207,36 +21550,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33244,36 +21577,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33281,33 +21604,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33315,36 +21628,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33352,33 +21655,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33386,33 +21679,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33420,30 +21703,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33451,36 +21724,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33488,33 +21751,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33522,33 +21775,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33556,30 +21799,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33587,33 +21820,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33621,30 +21844,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33652,30 +21865,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33683,27 +21886,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33711,39 +21904,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33751,36 +21934,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33788,36 +21961,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33825,33 +21988,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33859,36 +22012,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33896,33 +22039,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33930,33 +22063,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33964,30 +22087,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -33995,36 +22108,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34032,33 +22135,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34066,33 +22159,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34100,30 +22183,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34131,33 +22204,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34165,30 +22228,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34196,30 +22249,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34227,27 +22270,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34255,36 +22288,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34292,33 +22315,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34326,33 +22339,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34360,30 +22363,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34391,33 +22384,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34425,30 +22408,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34456,30 +22429,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34487,27 +22450,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34515,33 +22468,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34549,30 +22492,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34580,30 +22513,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34611,27 +22534,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34639,30 +22552,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34670,27 +22573,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34698,27 +22591,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34726,24 +22609,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
+
 	case nilch <- 1:
 		panic("nilch <- 1")
-	
-	
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34751,39 +22624,29 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34791,36 +22654,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34828,36 +22681,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34865,33 +22708,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34899,36 +22732,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34936,33 +22759,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -34970,33 +22783,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35004,30 +22807,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35035,36 +22828,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35072,33 +22855,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35106,33 +22879,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35140,30 +22903,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35171,33 +22924,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35205,30 +22948,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35236,30 +22969,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35267,27 +22990,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35295,36 +23008,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35332,33 +23035,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35366,33 +23059,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35400,30 +23083,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35431,33 +23104,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35465,30 +23128,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35496,30 +23149,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35527,27 +23170,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35555,33 +23188,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35589,30 +23212,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35620,30 +23233,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35651,27 +23254,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35679,30 +23272,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35710,27 +23293,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35738,27 +23311,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35766,24 +23329,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
+
 	case <-dummy:
 		panic("<-dummy")
-	
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35791,36 +23344,26 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35828,33 +23371,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35862,33 +23395,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35896,30 +23419,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35927,33 +23440,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35961,30 +23464,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -35992,30 +23485,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36023,27 +23506,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36051,33 +23524,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36085,30 +23548,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36116,30 +23569,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36147,27 +23590,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36175,30 +23608,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36206,27 +23629,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36234,27 +23647,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36262,24 +23665,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
+
 	case x = <-dummy:
 		panic("<-dummy x")
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36287,33 +23680,23 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36321,30 +23704,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36352,30 +23725,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36383,27 +23746,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36411,30 +23764,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36442,27 +23785,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36470,27 +23803,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36498,24 +23821,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-dummy:
 		panic("<-dummy (and didn't crash saving result!)")
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36523,30 +23836,20 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36554,27 +23857,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36582,27 +23875,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36610,24 +23893,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
-	
+
 	case <-nilch:
 		panic("<-nilch")
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36635,27 +23908,17 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36663,24 +23926,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case x = <-nilch:
 		panic("<-nilch x")
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36688,24 +23941,14 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	case **(**int)(nil) = <-nilch:
 		panic("<-nilch (and didn't crash saving result!)")
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
@@ -36713,25 +23956,16 @@ func init() {
 	n++
 
 	x = n
-	
-	
+
 	select {
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	default:
-	
+
 	}
 	if x != n {
 		die(x)
 	}
 	n++
 }
+
 // 1045 cases
