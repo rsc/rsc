@@ -24,7 +24,7 @@ import (
 	"os"
 	"strings"
 
-	"code.google.com/p/rsc/oauthprompt"
+	"github.com/rsc/rsc/oauthprompt"
 )
 
 const (

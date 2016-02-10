@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
-	"code.google.com/p/rsc/issue"
-	"code.google.com/p/rsc/oauthprompt"
+	"github.com/rsc/rsc/issue"
+	"github.com/rsc/rsc/oauthprompt"
 )
 
 var auth struct {

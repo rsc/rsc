@@ -371,7 +371,7 @@ type saslMechanisms struct {
 
 type saslAuth struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:xmpp-sasl auth"`
-	Mechanism string `xml:",attr"`
+	Mechanism string   `xml:",attr"`
 }
 
 type saslChallenge string
@@ -428,8 +428,8 @@ type clientPresence struct {
 	Type    string   `xml:"type,attr"` // error, probe, subscribe, subscribed, unavailable, unsubscribe, unsubscribed
 	Lang    string   `xml:"lang,attr"`
 
-	Show     string `xml:"show,attr"`// away, chat, dnd, xa
-	Status   string `xml:"status,attr"`// sb []clientText
+	Show     string `xml:"show,attr"`   // away, chat, dnd, xa
+	Status   string `xml:"status,attr"` // sb []clientText
 	Priority string `xml:"priority,attr"`
 	Error    *clientError
 }

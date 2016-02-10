@@ -1,7 +1,7 @@
-package code.google.com/p/rsc/c2go/liblink
-package code.google.com/p/rsc/c2go/liblink/amd64 6.out.h 6.c
-package code.google.com/p/rsc/c2go/liblink/arm 5.out.h 5.c
-package code.google.com/p/rsc/c2go/liblink/x86 8.out.h 8.c
+package github.com/rsc/rsc/c2go/liblink
+package github.com/rsc/rsc/c2go/liblink/amd64 6.out.h 6.c
+package github.com/rsc/rsc/c2go/liblink/arm 5.out.h 5.c
+package github.com/rsc/rsc/c2go/liblink/x86 8.out.h 8.c
 package none bio.h u.h fmt.h
 
 export linkamd64 linkamd64p32 linkarm link386
