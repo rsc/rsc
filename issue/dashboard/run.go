@@ -10,8 +10,8 @@ import (
 	"log"
 	"net/http"
 
-	"code.google.com/p/rsc/appfs/fs"
-	"code.google.com/p/rsc/issue/dashboard"
+	"github.com/TheJumpCloud/rsc/appfs/fs"
+	"github.com/TheJumpCloud/rsc/issue/dashboard"
 )
 
 func main() {

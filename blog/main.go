@@ -5,9 +5,8 @@
 package main
 
 import (
-	"code.google.com/p/rsc/devweb/slave"
-
-	_ "code.google.com/p/rsc/blog/post"
+	_ "github.com/TheJumpCloud/rsc/blog/post"
+	"github.com/TheJumpCloud/rsc/devweb/slave"
 )
 
 func main() {

@@ -14,7 +14,7 @@
 //
 //	import (
 //		"net/http"
-//		"code.google.com/p/rsc/websrv"
+//		"github.com/TheJumpCloud/rsc/websrv"
 //	)
 //
 //	func main() {

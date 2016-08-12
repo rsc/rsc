@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	"code.google.com/p/freetype-go/freetype"
-	"code.google.com/p/rsc/appfs/fs"
-	"code.google.com/p/rsc/qr"
-	"code.google.com/p/rsc/qr/coding"
+	"github.com/golang/freetype"
+	"github.com/TheJumpCloud/rsc/appfs/fs"
+	"github.com/TheJumpCloud/rsc/qr"
+	"github.com/TheJumpCloud/rsc/qr/coding"
 )
 
 func makeImage(req *http.Request, caption, font string, pt, size, border, scale int, f func(x, y int) uint32) *image.RGBA {

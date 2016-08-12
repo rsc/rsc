@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Crypt is a simple password-based encryption program,
-// demonstrating how to use code.google.com/p/rsc/crypt.
+// demonstrating how to use github.com/TheJumpCloud/rsc/crypt.
 //
 // Encrypt input to output using password:
 //	crypt password <input >output
@@ -12,7 +12,7 @@
 //	crypt -d password <input >output
 //
 // Yes, the password is a command-line argument. This is a demo of the
-// code.google.com/p/rsc/crypt package. It's not intended for real use.
+// github.com/TheJumpCloud/rsc/crypt package. It's not intended for real use.
 //
 package main
 
@@ -23,7 +23,7 @@ import (
 	"os"
 	"strings"
 
-	"code.google.com/p/rsc/crypt"
+	"github.com/TheJumpCloud/rsc/crypt"
 )
 
 func main() {

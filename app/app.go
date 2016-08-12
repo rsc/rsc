@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TheJumpCloud/rsc/appfs/fs"
+	_ "github.com/TheJumpCloud/rsc/appfs/server"
+	_ "github.com/TheJumpCloud/rsc/blog/post"
+	"github.com/TheJumpCloud/rsc/issue/dashboard"
+
 	"appengine"
 	"appengine/memcache"
 	"appengine/urlfetch"
-
-	"code.google.com/p/rsc/appfs/fs"
-	_ "code.google.com/p/rsc/appfs/server"
-	_ "code.google.com/p/rsc/blog/post"
-	"code.google.com/p/rsc/issue/dashboard"
 )
 
 func init() {
@@ -52,7 +52,7 @@ func Admin(w http.ResponseWriter, req *http.Request) {
 func Dashboard(w http.ResponseWriter, req *http.Request) {
 	httpCache(w, 5*time.Minute)
 	ctxt := fs.NewContext(req)
-	ctxt.ServeFile(w, req, "issue-dashboard/" + strings.TrimPrefix(req.URL.Path, "/dashboard/"))
+	ctxt.ServeFile(w, req, "issue-dashboard/"+strings.TrimPrefix(req.URL.Path, "/dashboard/"))
 }
 
 func AdminDashboard(w http.ResponseWriter, req *http.Request) {

@@ -5,15 +5,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"fmt"
-	"time"
 	"path"
-	"strings"
 	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
 	"code.google.com/p/goplan9/plan9/acme"
 )
@@ -71,7 +71,7 @@ func main() {
 		w.Fprintf("body", "error starting command: %v\n", err)
 		return
 	}
-	
+
 	//stop := blinker(w)
 	w.Ctl("cleartag")
 	w.Fprintf("tag", " Kill Stack")
@@ -85,7 +85,7 @@ func main() {
 		//stop <- true
 		done <- true
 	}()
-	
+
 	deleted := make(chan bool, 1)
 	go func() {
 		for e := range w.EventChan() {
@@ -109,10 +109,10 @@ func main() {
 			}
 		}
 	}()
-	
+
 	<-done
 	w.Ctl("cleartag")
-	
+
 	select {
 	case <-deleted:
 		w.Ctl("delete")
