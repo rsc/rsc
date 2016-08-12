@@ -15,7 +15,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rsc/rsc/ext2"
+	"github.com/TheJumpCloud/rsc/ext2"
 )
 
 func main() {

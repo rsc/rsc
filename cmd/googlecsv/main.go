@@ -24,7 +24,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rsc/rsc/oauthprompt"
+	"github.com/TheJumpCloud/rsc/oauthprompt"
 )
 
 const (

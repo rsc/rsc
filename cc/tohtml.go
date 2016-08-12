@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/rsc/rsc/cc"
+	"github.com/TheJumpCloud/rsc/cc"
 )
 
 func main() {

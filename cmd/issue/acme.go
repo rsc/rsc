@@ -18,7 +18,7 @@ import (
 
 	"code.google.com/p/goplan9/draw"
 	"code.google.com/p/goplan9/plan9/acme"
-	"github.com/rsc/rsc/issue"
+	"github.com/TheJumpCloud/rsc/issue"
 )
 
 func acmeMode() {

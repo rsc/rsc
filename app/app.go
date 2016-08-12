@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rsc/rsc/appfs/fs"
-	_ "github.com/rsc/rsc/appfs/server"
-	_ "github.com/rsc/rsc/blog/post"
-	"github.com/rsc/rsc/issue/dashboard"
+	"github.com/TheJumpCloud/rsc/appfs/fs"
+	_ "github.com/TheJumpCloud/rsc/appfs/server"
+	_ "github.com/TheJumpCloud/rsc/blog/post"
+	"github.com/TheJumpCloud/rsc/issue/dashboard"
 
 	"appengine"
 	"appengine/memcache"

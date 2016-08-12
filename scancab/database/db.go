@@ -18,7 +18,7 @@ import (
 	"time"
 
 	_ "code.google.com/p/gosqlite/sqlite3"
-	"github.com/rsc/rsc/dbstore"
+	"github.com/TheJumpCloud/rsc/dbstore"
 )
 
 // A DB holds metadata for the scanning cabinet.
@@ -168,7 +168,7 @@ func (db *DB) Delete(doc *Doc) error {
 // after skipping the first offset results.
 func (db *DB) Search(query, sortBy string, offset, count int) ([]*Doc, error) {
 	var docs []*Doc
-	err := db.store.Select(db.meta, &docs, `where "ID" in (select "ID" from "github.com/rsc/rsc/scancab/database.text" where "github.com/rsc/rsc/scancab/database.text" match ?) order by `+sortBy+` limit ? offset ?`, query, count, offset)
+	err := db.store.Select(db.meta, &docs, `where "ID" in (select "ID" from "github.com/TheJumpCloud/rsc/scancab/database.text" where "github.com/TheJumpCloud/rsc/scancab/database.text" match ?) order by `+sortBy+` limit ? offset ?`, query, count, offset)
 	if err != nil {
 		return nil, err
 	}

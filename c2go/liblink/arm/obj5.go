@@ -6,7 +6,7 @@ import (
 	"log"
 	"math"
 
-	"github.com/rsc/rsc/c2go/liblink"
+	"github.com/TheJumpCloud/rsc/c2go/liblink"
 )
 
 // Derived from Inferno utils/5c/swt.c

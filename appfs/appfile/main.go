@@ -12,8 +12,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/rsc/rsc/appfs/client"
-	"github.com/rsc/rsc/keychain"
+	"github.com/TheJumpCloud/rsc/appfs/client"
+	"github.com/TheJumpCloud/rsc/keychain"
 )
 
 var c client.Client

@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rsc/rsc/cc"
+	"github.com/TheJumpCloud/rsc/cc"
 )
 
 type Config struct {
