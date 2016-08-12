@@ -3,7 +3,7 @@ package arm
 import (
 	"fmt"
 
-	"github.com/rsc/rsc/c2go/liblink"
+	"github.com/TheJumpCloud/rsc/c2go/liblink"
 )
 
 // Inferno utils/5c/list.c

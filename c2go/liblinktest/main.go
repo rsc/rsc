@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rsc/rsc/c2go/liblink"
-	"github.com/rsc/rsc/c2go/liblink/amd64"
-	"github.com/rsc/rsc/c2go/liblink/arm"
-	"github.com/rsc/rsc/c2go/liblink/x86"
+	"github.com/TheJumpCloud/rsc/c2go/liblink"
+	"github.com/TheJumpCloud/rsc/c2go/liblink/amd64"
+	"github.com/TheJumpCloud/rsc/c2go/liblink/arm"
+	"github.com/TheJumpCloud/rsc/c2go/liblink/x86"
 )
 
 var arch *liblink.LinkArch

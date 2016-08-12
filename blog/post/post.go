@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rsc/rsc/appfs/fs"
-	"github.com/rsc/rsc/appfs/proto"
-	"github.com/rsc/rsc/blog/atom"
+	"github.com/TheJumpCloud/rsc/appfs/fs"
+	"github.com/TheJumpCloud/rsc/appfs/proto"
+	"github.com/TheJumpCloud/rsc/blog/atom"
 )
 
 func init() {

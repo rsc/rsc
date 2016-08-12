@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rsc/rsc/gf256"
+	"github.com/TheJumpCloud/rsc/gf256"
 )
 
 // Field is the field for QR error correction.

@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/rsc/rsc/appfs/proto"
+	"github.com/TheJumpCloud/rsc/appfs/proto"
 )
 
 type context struct{}

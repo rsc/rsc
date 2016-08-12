@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rsc/rsc/c2go"
-	"github.com/rsc/rsc/cc"
+	"github.com/TheJumpCloud/rsc/c2go"
+	"github.com/TheJumpCloud/rsc/cc"
 )
 
 func tryPrintf(curfn *cc.Decl, x *cc.Expr, name string, fmtpos int, newName string) bool {

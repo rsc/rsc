@@ -11,7 +11,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/rsc/rsc/keychain"
+	"github.com/TheJumpCloud/rsc/keychain"
 	"launchpad.net/goamz/aws"
 	"launchpad.net/goamz/s3"
 )

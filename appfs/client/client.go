@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rsc/rsc/appfs/proto"
+	"github.com/TheJumpCloud/rsc/appfs/proto"
 )
 
 type Client struct {

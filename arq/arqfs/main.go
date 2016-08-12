@@ -67,9 +67,9 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/rsc/rsc/arq"
-	"github.com/rsc/rsc/fuse"
-	"github.com/rsc/rsc/keychain"
+	"github.com/TheJumpCloud/rsc/arq"
+	"github.com/TheJumpCloud/rsc/fuse"
+	"github.com/TheJumpCloud/rsc/keychain"
 	"launchpad.net/goamz/aws"
 )
 

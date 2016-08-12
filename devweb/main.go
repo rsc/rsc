@@ -12,7 +12,7 @@
 //	package main
 //
 //	import (
-//		"github.com/rsc/rsc/devweb/slave"
+//		"github.com/TheJumpCloud/rsc/devweb/slave"
 //
 //		_ "this/package"
 //		_ "that/package"

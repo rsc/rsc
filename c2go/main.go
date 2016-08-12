@@ -17,8 +17,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/rsc/rsc/c2go"
-	"github.com/rsc/rsc/cc"
+	"github.com/TheJumpCloud/rsc/c2go"
+	"github.com/TheJumpCloud/rsc/cc"
 )
 
 var (

@@ -20,10 +20,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rsc/rsc/appfs/client"
-	"github.com/rsc/rsc/appfs/proto"
-	"github.com/rsc/rsc/fuse"
-	"github.com/rsc/rsc/keychain"
+	"github.com/TheJumpCloud/rsc/appfs/client"
+	"github.com/TheJumpCloud/rsc/appfs/proto"
+	"github.com/TheJumpCloud/rsc/fuse"
+	"github.com/TheJumpCloud/rsc/keychain"
 )
 
 var usageMessage = `usage: appmount [-h host] [-u user] [-p password] /mnt

@@ -11,7 +11,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rsc/rsc/cc"
+	"github.com/TheJumpCloud/rsc/cc"
 )
 
 type PrintSpecial int

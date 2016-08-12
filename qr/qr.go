@@ -12,7 +12,7 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/rsc/rsc/qr/coding"
+	"github.com/TheJumpCloud/rsc/qr/coding"
 )
 
 // A Level denotes a QR error correction level.

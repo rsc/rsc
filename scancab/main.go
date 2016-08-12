@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rsc/rsc/scancab/database"
-	"github.com/rsc/rsc/websrv"
+	"github.com/TheJumpCloud/rsc/scancab/database"
+	"github.com/TheJumpCloud/rsc/websrv"
 )
 
 var (
@@ -39,7 +39,7 @@ var (
 )
 
 func main() {
-	pkg, _ := build.Import("github.com/rsc/rsc/scancab", "", build.FindOnly)
+	pkg, _ := build.Import("github.com/TheJumpCloud/rsc/scancab", "", build.FindOnly)
 	if pkg.Dir != "" {
 		*lib = filepath.Join(pkg.Dir, "lib")
 	}
