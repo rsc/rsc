@@ -67,10 +67,11 @@ import (
 	"os/exec"
 	"syscall"
 
-	"code.google.com/p/rsc/arq"
-	"code.google.com/p/rsc/fuse"
-	"code.google.com/p/rsc/keychain"
-	"launchpad.net/goamz/aws"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"rsc.io/rsc/arq"
+	"rsc.io/rsc/fuse"
+	"rsc.io/rsc/keychain"
 )
 
 var mtpt = flag.String("m", "/mnt/arq", "")
@@ -120,16 +121,25 @@ func mountslave() {
 	stdout, _ := syscall.Dup(1)
 	syscall.Dup2(2, 1)
 
-	access, secret, err := keychain.UserPasswd("s3.amazonaws.com", "")
-	if err != nil {
-		log.Fatal(err)
-	}
-	auth := aws.Auth{AccessKey: access, SecretKey: secret}
+	/*
+		access, secret, err := keychain.UserPasswd("s3.amazonaws.com", "")
+		if err != nil {
+			log.Fatal(err)
+		}
+		auth := aws.Auth{AccessKey: access, SecretKey: secret}
 
-	conn, err := arq.Dial(auth)
+		conn, err := arq.Dial(auth)
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
+
+	const scopeReadOnly = "https://www.googleapis.com/auth/devstorage.read_only"
+	client, err := google.DefaultClient(oauth2.NoContext, scopeReadOnly)
 	if err != nil {
 		log.Fatal(err)
 	}
+	conn, err := arq.DialGoogle(client, "rsc-arq")
 
 	comps, err := conn.Computers()
 	if err != nil {

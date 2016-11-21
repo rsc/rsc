@@ -23,7 +23,7 @@ import (
 	"os"
 	"strings"
 
-	"code.google.com/p/rsc/crypt"
+	"rsc.io/rsc/crypt"
 )
 
 func main() {

@@ -15,7 +15,7 @@ import (
 	"os"
 	"strings"
 
-	"code.google.com/p/rsc/ext2"
+	"rsc.io/rsc/ext2"
 )
 
 func main() {

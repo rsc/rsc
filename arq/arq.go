@@ -11,19 +11,23 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
-	"code.google.com/p/rsc/plist"
-	"launchpad.net/goamz/aws"
-	"launchpad.net/goamz/s3"
+	"github.com/goamz/goamz/aws"
+	"github.com/goamz/goamz/s3"
+	"rsc.io/rsc/plist"
 )
 
 // A Conn represents a connection to an S3 server holding Arq backups.
@@ -31,6 +35,10 @@ type Conn struct {
 	b        *s3.Bucket
 	cache    string
 	altCache string
+
+	// GCS parameters
+	gbucket string
+	g       *http.Client
 }
 
 // cachedir returns the canonical directory in which to cache data.
@@ -63,15 +71,43 @@ func Dial(auth aws.Auth) (*Conn, error) {
 	return c, nil
 }
 
+func DialGoogle(client *http.Client, bucket string) (*Conn, error) {
+	c := &Conn{
+		g:       client,
+		gbucket: bucket,
+		cache:   filepath.Join(cachedir(), bucket),
+	}
+	if runtime.GOOS == "darwin" {
+		c.altCache = filepath.Join(os.Getenv("HOME"), "Library/Arq/Cache.noindex/"+bucket)
+	}
+
+	// Check that the bucket works by listing computers (relatively cheap).
+	if _, err := c.list("", "/", 10); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
 func (c *Conn) list(prefix, delim string, max int) (*s3.ListResp, error) {
-	resp, err := c.b.List(prefix, delim, "", max)
+	var resp *s3.ListResp
+	var err error
+	if c.g != nil {
+		resp, err = c.listGoogle(prefix, delim, "", max)
+	} else {
+		resp, err = c.b.List(prefix, delim, "", max)
+	}
 	if err != nil {
 		return nil, err
 	}
 	ret := resp
 	for max == 0 && resp.IsTruncated {
 		last := resp.Contents[len(resp.Contents)-1].Key
-		resp, err = c.b.List(prefix, delim, last, max)
+		if c.g != nil {
+			resp, err = c.listGoogle(prefix, delim, last, max)
+		} else {
+			resp, err = c.b.List(prefix, delim, last, max)
+		}
 		if err != nil {
 			return ret, err
 		}
@@ -79,6 +115,50 @@ func (c *Conn) list(prefix, delim string, max int) (*s3.ListResp, error) {
 		ret.CommonPrefixes = append(ret.CommonPrefixes, resp.CommonPrefixes...)
 	}
 	return ret, nil
+}
+
+func (c *Conn) listGoogle(prefix, delim, marker string, max int) (*s3.ListResp, error) {
+	u := "https://" + c.gbucket + ".storage.googleapis.com/?prefix=" + url.QueryEscape(prefix) + "&delimiter=" + url.QueryEscape(delim)
+	if marker != "" {
+		u += "&marker=" + url.QueryEscape(marker)
+	}
+	if max != 0 {
+		u += "&max-keys=" + url.QueryEscape(fmt.Sprint(max))
+	}
+	println("URL", u)
+	resp, err := c.g.Get(u)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("%s", resp.Status)
+	}
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	os.Stdout.Write(data)
+	var sresp s3.ListResp
+	err = xml.Unmarshal(data, &sresp)
+	if err != nil {
+		return nil, err
+	}
+	return &sresp, nil
+}
+
+func (c *Conn) bgetGoogle(name string) ([]byte, error) {
+	println("BGET", name)
+	u := "https://storage.googleapis.com/" + c.gbucket + "/" + name
+	resp, err := c.g.Get(u)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("%s", resp.Status)
+	}
+	return ioutil.ReadAll(resp.Body)
 }
 
 func (c *Conn) altCachePath(name string) string {
@@ -127,7 +207,11 @@ func (c *Conn) cget(name string) (data []byte, err error) {
 
 func (c *Conn) bget(name string) (data []byte, err error) {
 	for i := 0; ; {
-		data, err = c.b.Get(name)
+		if c.g != nil {
+			data, err = c.bgetGoogle(name)
+		} else {
+			data, err = c.b.Get(name)
+		}
 		if err == nil {
 			break
 		}
@@ -145,18 +229,22 @@ func (c *Conn) DeleteCache() {
 
 // Computers returns a list of the computers with backups available on the S3 server.
 func (c *Conn) Computers() ([]*Computer, error) {
+	println("COMPUTERS")
 	// Each backup is a top-level directory with a computerinfo file in it.
 	list, err := c.list("", "/", 0)
 	if err != nil {
+		println("FAIL", err.Error())
 		return nil, err
 	}
 	var out []*Computer
 	for _, p := range list.CommonPrefixes {
+		println("HAVE", p)
 		data, err := c.bget(p + "computerinfo")
 		if err != nil {
 			continue
 		}
 		var info computerInfo
+		println("PLIST", string(data))
 		if err := plist.Unmarshal(data, &info); err != nil {
 			return nil, err
 		}
@@ -204,6 +292,9 @@ func (c *Computer) Folders() ([]*Folder, error) {
 			return nil, err
 		}
 		var info folderInfo
+		println("PL3")
+		data = c.crypto.maybeDecrypt(data)
+		println("PLIST2", string(data))
 		if err := plist.Unmarshal(data, &info); err != nil {
 			return nil, err
 		}
@@ -221,6 +312,8 @@ func (c *Computer) Folders() ([]*Folder, error) {
 // backups from this computer.  It must be called before calling Trees
 // in any folder obtained for this computer.
 func (c *Computer) Unlock(pw string) {
+	print("UNLOCK <", pw, ">\n")
+	print(hex.Dump([]byte(pw)))
 	c.crypto.unlock(pw)
 }
 
@@ -394,6 +487,7 @@ func (f *Folder) Trees() ([]*Tree, error) {
 		}
 
 		var info folderInfo
+		println("PLIST3", string(com.BucketXML))
 		if err := plist.Unmarshal(com.BucketXML, &info); err != nil {
 			return nil, err
 		}
@@ -436,6 +530,7 @@ func (f *Folder) Trees2() ([]*Tree, error) {
 			return nil, err
 		}
 		var l reflog
+		println("PLIST4", string(data))
 		if err := plist.Unmarshal(data, &l); err != nil {
 			return nil, err
 		}
@@ -456,6 +551,7 @@ func (f *Folder) Trees2() ([]*Tree, error) {
 		}
 
 		var info folderInfo
+		println("PLIST5", string(com.BucketXML))
 		if err := plist.Unmarshal(com.BucketXML, &info); err != nil {
 			return nil, err
 		}

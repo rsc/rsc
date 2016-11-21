@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"code.google.com/p/rsc/cc"
+	"rsc.io/rsc/cc"
 )
 
 func main() {

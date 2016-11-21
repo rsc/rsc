@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.google.com/p/rsc/appfs/proto"
+	"rsc.io/rsc/appfs/proto"
 )
 
 type context struct{}

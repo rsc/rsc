@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.google.com/p/rsc/c2go"
-	"code.google.com/p/rsc/cc"
+	"rsc.io/rsc/c2go"
+	"rsc.io/rsc/cc"
 )
 
 // print an error; fprintf is a bad name but helps go vet.

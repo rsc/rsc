@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"code.google.com/p/rsc/scancab/database"
-	"code.google.com/p/rsc/websrv"
+	"rsc.io/rsc/scancab/database"
+	"rsc.io/rsc/websrv"
 )
 
 var (
@@ -39,7 +39,7 @@ var (
 )
 
 func main() {
-	pkg, _ := build.Import("code.google.com/p/rsc/scancab", "", build.FindOnly)
+	pkg, _ := build.Import("rsc.io/rsc/scancab", "", build.FindOnly)
 	if pkg.Dir != "" {
 		*lib = filepath.Join(pkg.Dir, "lib")
 	}

@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 
-	"code.google.com/p/rsc/c2go/liblink"
+	"rsc.io/rsc/c2go/liblink"
 )
 
 type Optab struct {

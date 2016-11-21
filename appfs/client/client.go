@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"code.google.com/p/rsc/appfs/proto"
+	"rsc.io/rsc/appfs/proto"
 )
 
 type Client struct {

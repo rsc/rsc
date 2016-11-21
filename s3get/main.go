@@ -11,7 +11,7 @@ import (
 	"log"
 	"os"
 
-	"code.google.com/p/rsc/keychain"
+	"rsc.io/rsc/keychain"
 	"launchpad.net/goamz/aws"
 	"launchpad.net/goamz/s3"
 )

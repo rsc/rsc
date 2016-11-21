@@ -5,13 +5,16 @@
 package arq
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha1"
+	"encoding/hex"
 	"hash"
 	"log"
 
-	"bitbucket.org/taruti/pbkdf2.go" // TODO: Pull in copy
+	//	"golang.org/x/crypto/pbkdf2"
+	"bitbucket.org/taruti/pbkdf2"
 )
 
 type cryptoState struct {
@@ -27,10 +30,20 @@ func (c *cryptoState) unlock(pw string) {
 		aesKeyLen = 32
 		aesIVLen  = 16
 	)
+	//	key1 := pbkdf2.Key([]byte(pw), c.salt, iter, keyLen, sha1.New)
 	key1 := pbkdf2.Pbkdf2([]byte(pw), c.salt, iter, sha1.New, keyLen)
 	var key2 []byte
 	key2, c.iv = bytesToKey(sha1.New, c.salt, key1, iter, aesKeyLen, aesIVLen)
 	c.c, _ = aes.NewCipher(key2)
+}
+
+func (c *cryptoState) maybeDecrypt(data []byte) []byte {
+	println("MAYBE")
+	println(hex.Dump(data))
+	if bytes.HasPrefix(data, []byte("encrypted")) {
+		return c.decrypt(data[len("encrypted"):])
+	}
+	return data
 }
 
 func (c *cryptoState) decrypt(data []byte) []byte {
@@ -43,6 +56,8 @@ func (c *cryptoState) decrypt(data []byte) []byte {
 	//	fmt.Printf("%s\n", data)
 
 	// unpad
+	println(hex.Dump(data))
+
 	{
 		n := len(data)
 		p := int(data[n-1])

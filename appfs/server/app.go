@@ -25,8 +25,8 @@ import (
 	"appengine/memcache"
 	"appengine/user"
 
-	"code.google.com/p/rsc/appfs/fs"
-	"code.google.com/p/rsc/appfs/proto"
+	"rsc.io/rsc/appfs/fs"
+	"rsc.io/rsc/appfs/proto"
 )
 
 const pwFile = "/.password"

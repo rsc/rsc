@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	qrweb "code.google.com/p/rsc/qr/web"
+	qrweb "rsc.io/rsc/qr/web"
 )
 
 func carp(f http.HandlerFunc) http.Handler {

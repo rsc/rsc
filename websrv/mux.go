@@ -14,7 +14,7 @@
 //
 //	import (
 //		"net/http"
-//		"code.google.com/p/rsc/websrv"
+//		"rsc.io/rsc/websrv"
 //	)
 //
 //	func main() {

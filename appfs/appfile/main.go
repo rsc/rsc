@@ -12,8 +12,8 @@ import (
 	"log"
 	"os"
 
-	"code.google.com/p/rsc/appfs/client"
-	"code.google.com/p/rsc/keychain"
+	"rsc.io/rsc/appfs/client"
+	"rsc.io/rsc/keychain"
 )
 
 var c client.Client

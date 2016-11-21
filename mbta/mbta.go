@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"code.google.com/p/goprotobuf/proto"
-	"code.google.com/p/rsc/gtfs"
+	"rsc.io/rsc/gtfs"
 )
 
 func main() {

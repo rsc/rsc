@@ -24,7 +24,7 @@ import (
 	"os"
 	"time"
 
-	"code.google.com/p/rsc/appfs/proto"
+	"rsc.io/rsc/appfs/proto"
 )
 
 type AppEngine interface {
