@@ -44,11 +44,11 @@ import (
 	"strings"
 	"time"
 
+	"rsc.io/qr"
+	"rsc.io/qr/coding"
+	"rsc.io/qr/gf256"
+	"rsc.io/qr/web/resize"
 	"rsc.io/rsc/appfs/fs"
-	"rsc.io/rsc/gf256"
-	"rsc.io/rsc/qr"
-	"rsc.io/rsc/qr/coding"
-	"rsc.io/rsc/qr/web/resize"
 )
 
 func runTemplate(c *fs.Context, w http.ResponseWriter, name string, data interface{}) {
