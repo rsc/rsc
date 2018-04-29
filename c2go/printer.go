@@ -855,7 +855,7 @@ func (p *Printer) printDecl(decl *cc.Decl) {
 
 	t := decl.Type
 	if decl.Storage&cc.Typedef != 0 {
-		if t.Kind == cc.Struct || t.Kind == cc.Union || t.Kind == cc.Union {
+		if t.Kind == cc.Struct || t.Kind == cc.Union || t.Kind == cc.Enum {
 			if t.Tag == "" {
 				t.Tag = decl.Name
 			} else if decl.Name != t.Tag {
